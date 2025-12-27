@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -42,8 +41,8 @@ export default function PromptCard({ prompt, onDelete, onEdit }: PromptCardProps
   const { toast } = useToast();
 
   const handleCardClick = (event: React.MouseEvent) => {
-    const target = event.target as HTMLElement;
-    if (target.closest('button')) {
+    // Evita la copia si se hace clic en un botón dentro de la tarjeta
+    if ((event.target as HTMLElement).closest('button')) {
       return;
     }
 
@@ -51,6 +50,7 @@ export default function PromptCard({ prompt, onDelete, onEdit }: PromptCardProps
     toast({
       title: 'Prompt Copiado',
       description: 'El contenido se ha copiado a tu portapapeles.',
+      className: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300',
     });
   };
 
