@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,16 +18,12 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogClose,
 } from '@/components/ui/dialog';
-import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
 import PromptForm from './prompt-form';
 import type { Prompt } from '@/lib/definitions';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { useState } from 'react';
 
 interface PromptCardActionsProps {
   prompt: Prompt;
@@ -37,19 +32,20 @@ interface PromptCardActionsProps {
 }
 
 export default function PromptCardActions({ prompt, onDelete, onDataChanged }: PromptCardActionsProps) {
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
-  const handleEditSuccess = (updatedPrompt: Prompt) => {
-    onDataChanged(updatedPrompt);
-    setIsEditDialogOpen(false);
-  };
+    const handleEditSuccess = (updatedPrompt: Prompt) => {
+        onDataChanged(updatedPrompt);
+        setIsEditDialogOpen(false); 
+    };
 
-  const handleDeleteConfirm = () => {
-    onDelete(prompt.id);
-  };
+    const handleDeleteConfirm = () => {
+        onDelete(prompt.id);
+    };
 
   return (
     <div className="flex items-center gap-1">
+      {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogTrigger asChild>
           <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -68,6 +64,7 @@ export default function PromptCardActions({ prompt, onDelete, onDataChanged }: P
         </DialogContent>
       </Dialog>
       
+      {/* Delete Alert Dialog */}
       <AlertDialog>
         <AlertDialogTrigger asChild>
           <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
