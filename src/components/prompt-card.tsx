@@ -1,3 +1,6 @@
+
+'use client';
+
 import {
   Card,
   CardContent,
@@ -12,6 +15,7 @@ import { es } from 'date-fns/locale';
 import PromptCardActions from './prompt-card-actions';
 import { Badge } from '@/components/ui/badge';
 import { Video, Image, FileText, Sparkles } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface PromptCardProps {
   prompt: Prompt;
@@ -35,8 +39,26 @@ const categoryColors = {
 
 
 export default function PromptCard({ prompt, onDelete, onEdit }: PromptCardProps) {
+  const { toast } = useToast();
+
+  const handleCardClick = (event: React.MouseEvent) => {
+    const target = event.target as HTMLElement;
+    if (target.closest('button')) {
+      return;
+    }
+
+    navigator.clipboard.writeText(prompt.content);
+    toast({
+      title: 'Prompt Copiado',
+      description: 'El contenido se ha copiado a tu portapapeles.',
+    });
+  };
+
   return (
-    <Card className="flex h-full flex-col rounded-xl border-transparent bg-card text-card-foreground shadow-md transition-all duration-300 hover:border-primary/10 hover:shadow-lg">
+    <Card 
+      onClick={handleCardClick}
+      className="flex h-full cursor-pointer flex-col rounded-xl border-border/20 bg-card text-card-foreground shadow-md transition-all duration-300 hover:shadow-lg"
+    >
       <CardHeader>
         <div className="flex justify-between items-start">
           <CardTitle className="font-semibold tracking-tight text-base">{prompt.title}</CardTitle>
