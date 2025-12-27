@@ -13,7 +13,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Plus } from 'lucide-react';
+import { Plus, Download } from 'lucide-react';
 import PromptForm from '@/components/prompt-form';
 import {
   Select,
@@ -63,6 +63,44 @@ export default function PromptPage() {
     setEditDialogOpen(true);
   };
 
+  const handleDownload = () => {
+    if (prompts.length === 0) {
+      alert('No hay prompts para descargar.');
+      return;
+    }
+
+    const headers = ['id', 'title', 'description', 'content', 'category', 'createdAt'];
+    const csvRows = [headers.join(',')];
+
+    const escapeCsvCell = (cell: string) => {
+      // If the cell contains a comma, a quote, or a newline, wrap it in double quotes.
+      // Also, double up any existing double quotes.
+      if (/[",\n]/.test(cell)) {
+        return `"${cell.replace(/"/g, '""')}"`;
+      }
+      return cell;
+    };
+
+    prompts.forEach((prompt) => {
+      const row = headers.map((header) => {
+        const value = prompt[header as keyof Prompt];
+        // Ensure value is a string before escaping
+        return escapeCsvCell(String(value instanceof Date ? value.toISOString() : value));
+      });
+      csvRows.push(row.join(','));
+    });
+
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'prompts.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const sortedPrompts = [...prompts].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   const filteredPrompts =
@@ -90,6 +128,11 @@ export default function PromptPage() {
               ))}
             </SelectContent>
           </Select>
+
+          <Button variant="outline" onClick={handleDownload}>
+            <Download className="-ml-1 h-4 w-4" />
+            Descargar
+          </Button>
 
           <Dialog open={isCreateDialogOpen} onOpenChange={setCreateDialogOpen}>
             <DialogTrigger asChild>
