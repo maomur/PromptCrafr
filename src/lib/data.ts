@@ -6,48 +6,7 @@ import { promptCategories } from './definitions';
 // It will be reset every time the server restarts.
 // In a real-world application, you would use a proper database
 // like PostgreSQL, MongoDB, or Firebase Firestore.
-let prompts: Prompt[] = [
-  {
-    id: '1',
-    title: 'Morning Journal Prompt',
-    description: 'A prompt to start the day with reflection.',
-    content: 'What are you most grateful for today, and what is one thing you want to accomplish?',
-    category: 'Textos',
-    createdAt: new Date('2023-10-26T10:00:00Z'),
-  },
-  {
-    id: '2',
-    title: 'Creative Writing Idea',
-    description: 'A starter for a short story.',
-    content: 'Write a story about a librarian who discovers a book that writes itself.',
-    category: 'Textos',
-    createdAt: new Date('2023-10-27T11:30:00Z'),
-  },
-  {
-    id: '3',
-    title: 'Code Generation for a Button',
-    description: 'A prompt for an AI to generate a React button component.',
-    content: 'Create a reusable React button component with primary and secondary variants using Tailwind CSS.',
-    category: 'Otros',
-    createdAt: new Date('2023-10-28T14:00:00Z'),
-  },
-  {
-    id: '4',
-    title: 'Generate hero image',
-    description: 'A prompt for an AI to generate a hero image for a website.',
-    content: 'Generate a hero image for a website about space exploration. The image should be in a 16:9 aspect ratio and have a futuristic feel.',
-    category: 'Imagen',
-    createdAt: new Date('2023-10-29T14:00:00Z'),
-  },
-  {
-    id: '5',
-    title: 'Generate video trailer',
-    description: 'A prompt for an AI to generate a video trailer for a movie.',
-    content: 'Generate a 30-second video trailer for a movie about a time-traveling detective. The trailer should be fast-paced and exciting.',
-    category: 'Video',
-    createdAt: new Date('2023-10-30T14:00:00Z'),
-  },
-];
+let prompts: Prompt[] = [];
 
 // Simulate network latency
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
