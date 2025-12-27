@@ -67,6 +67,9 @@ export async function updatePromptAction(prevState: FormState, formData: FormDat
   try {
     const updatedPrompt = await updatePrompt(id, dataToUpdate);
     revalidatePath('/');
+    if (!updatedPrompt) {
+      return { message: 'Error de base de datos: No se pudo encontrar el prompt para actualizar.' };
+    }
     return { message: 'Prompt actualizado con éxito.', prompt: updatedPrompt };
   } catch (e) {
     return { message: 'Error de base de datos: No se pudo actualizar el prompt.' };

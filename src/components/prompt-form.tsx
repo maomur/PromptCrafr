@@ -1,15 +1,12 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { useActionState } from 'react';
 import { createPromptAction, updatePromptAction, type FormState } from '@/app/actions';
 import { type Prompt, promptCategories } from '@/lib/definitions';
 import { useToast } from '@/hooks/use-toast';
-import { useActionState } from 'react';
 
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import SubmitButton from './submit-button';
@@ -20,17 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-
-const promptSchema = z.object({
-  title: z.string().min(1, { message: 'El título debe tener al menos 1 caracter.' }),
-  description: z.string().min(1, { message: 'La descripción debe tener al menos 1 caracter.' }),
-  content: z.string().min(1, { message: 'El contenido debe tener al menos 1 caracter.' }),
-  category: z.enum(promptCategories, {
-    errorMap: () => ({ message: 'Por favor, selecciona una categoría.' }),
-  }),
-});
-
-type PromptFormValues = z.infer<typeof promptSchema>;
+import { cn } from '@/lib/utils';
 
 interface PromptFormProps {
   prompt?: Prompt;
@@ -42,17 +29,7 @@ export default function PromptForm({ prompt, onDataChanged, onClose }: PromptFor
   const { toast } = useToast();
   const isEditMode = !!prompt;
   const initialState: FormState = { message: '' };
-
-  const form = useForm<PromptFormValues>({
-    resolver: zodResolver(promptSchema),
-    defaultValues: {
-      title: prompt?.title || '',
-      description: prompt?.description || '',
-      content: prompt?.content || '',
-      category: prompt?.category || undefined,
-    },
-  });
-
+  
   const action = isEditMode ? updatePromptAction : createPromptAction;
   const [state, formAction, isPending] = useActionState(action, initialState);
 
@@ -82,82 +59,50 @@ export default function PromptForm({ prompt, onDataChanged, onClose }: PromptFor
 
 
   return (
-    <Form {...form}>
       <form action={formAction} className="space-y-6">
         {isEditMode && <input type="hidden" name="id" value={prompt.id} />}
-        <FormField
-          control={form.control}
-          name="title"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Título</FormLabel>
-              <FormControl>
-                <Input placeholder="p. ej., Idea para escritura creativa" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField
-            control={form.control}
-            name="description"
-            render={({ field }) => (
-              <FormItem className="md:col-span-2">
-                <FormLabel>Descripción</FormLabel>
-                <FormControl>
-                  <Textarea placeholder="Una descripción corta y clara del prompt." {...field} className="min-h-[80px] resize-y" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="category"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Categoría</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona una categoría" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {promptCategories.map((category) => (
-                      <SelectItem key={category} value={category}>
-                        {category}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+        <div className="space-y-2">
+          <Label htmlFor='title'>Título</Label>
+          <Input id='title' name="title" placeholder="p. ej., Idea para escritura creativa" defaultValue={prompt?.title || ''} />
+          {state.errors?.title && <p className={cn("text-sm font-medium text-destructive")}>{state.errors.title[0]}</p>}
         </div>
-        <FormField
-          control={form.control}
-          name="content"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Contenido del Prompt</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="El contenido completo del prompt..."
-                  className="min-h-[150px] resize-y"
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="md:col-span-2 space-y-2">
+            <Label htmlFor='description'>Descripción</Label>
+            <Textarea id='description' name="description" placeholder="Una descripción corta y clara del prompt." defaultValue={prompt?.description || ''} className="min-h-[80px] resize-y" />
+            {state.errors?.description && <p className={cn("text-sm font-medium text-destructive")}>{state.errors.description[0]}</p>}
+          </div>
+          <div className="space-y-2">
+            <Label>Categoría</Label>
+            <Select name="category" defaultValue={prompt?.category || undefined}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecciona una categoría" />
+              </SelectTrigger>
+              <SelectContent>
+                {promptCategories.map((category) => (
+                  <SelectItem key={category} value={category}>
+                    {category}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {state.errors?.category && <p className={cn("text-sm font-medium text-destructive")}>{state.errors.category[0]}</p>}
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor='content'>Contenido del Prompt</Label>
+          <Textarea
+            id='content'
+            name="content"
+            placeholder="El contenido completo del prompt..."
+            className="min-h-[150px] resize-y"
+            defaultValue={prompt?.content || ''}
+          />
+          {state.errors?.content && <p className={cn("text-sm font-medium text-destructive")}>{state.errors.content[0]}</p>}
+        </div>
         <div className="flex justify-end">
           <SubmitButton isEditMode={isEditMode} isPending={isPending} />
         </div>
       </form>
-    </Form>
   );
 }
