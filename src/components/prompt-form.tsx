@@ -55,7 +55,7 @@ export default function PromptForm({ prompt, onDataChanged, onClose }: PromptFor
         }
       }
     }
-  }, [state, onDataChanged, toast, onClose]);
+  }, [state.message, state.errors, state.prompt, onDataChanged, toast, onClose]);
 
 
   return (
