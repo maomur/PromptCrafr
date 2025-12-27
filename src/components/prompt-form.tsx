@@ -53,12 +53,12 @@ export default function PromptForm({ prompt, onDataChanged, onClose }: PromptFor
     },
   });
 
-  const action = isEditMode ? updatePromptAction.bind(null, prompt.id) : createPromptAction;
+  const action = isEditMode ? updatePromptAction : createPromptAction;
   const [state, formAction, isPending] = useActionState(action, initialState);
 
   useEffect(() => {
     if (state.message) {
-      if (state.errors) {
+      if (state.errors || state.message.startsWith('Error:')) {
         toast({
           variant: 'destructive',
           title: 'Error',
@@ -74,7 +74,7 @@ export default function PromptForm({ prompt, onDataChanged, onClose }: PromptFor
 
         if (state.prompt) {
           onDataChanged(state.prompt);
-          onClose(); // Cierra el diálogo en caso de éxito
+          onClose();
         }
       }
     }
@@ -84,6 +84,7 @@ export default function PromptForm({ prompt, onDataChanged, onClose }: PromptFor
   return (
     <Form {...form}>
       <form action={formAction} className="space-y-6">
+        {isEditMode && <input type="hidden" name="id" value={prompt.id} />}
         <FormField
           control={form.control}
           name="title"
