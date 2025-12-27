@@ -5,9 +5,9 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
 const promptSchema = z.object({
-  title: z.string().min(1, { message: 'Title is required.' }),
-  description: z.string().min(1, { message: 'Description is required.' }),
-  content: z.string().min(1, { message: 'Content is required.' }),
+  title: z.string().min(1, { message: 'El título es obligatorio.' }),
+  description: z.string().min(1, { message: 'La descripción es obligatoria.' }),
+  content: z.string().min(1, { message: 'El contenido es obligatorio.' }),
 });
 
 export type FormState = {
@@ -24,7 +24,7 @@ export async function createPromptAction(prevState: FormState, formData: FormDat
 
   if (!validatedFields.success) {
     return {
-      message: 'Failed to create prompt.',
+      message: 'No se pudo crear el prompt.',
       errors: validatedFields.error.flatten().fieldErrors,
     };
   }
@@ -32,9 +32,9 @@ export async function createPromptAction(prevState: FormState, formData: FormDat
   try {
     await createPrompt(validatedFields.data);
     revalidatePath('/');
-    return { message: 'Prompt created successfully.' };
+    return { message: 'Prompt creado con éxito.' };
   } catch (e) {
-    return { message: 'Database Error: Failed to create prompt.' };
+    return { message: 'Error de base de datos: No se pudo crear el prompt.' };
   }
 }
 
@@ -43,7 +43,7 @@ export async function updatePromptAction(id: string, prevState: FormState, formD
 
   if (!validatedFields.success) {
     return {
-      message: 'Failed to update prompt.',
+      message: 'No se pudo actualizar el prompt.',
       errors: validatedFields.error.flatten().fieldErrors,
     };
   }
@@ -51,9 +51,9 @@ export async function updatePromptAction(id: string, prevState: FormState, formD
   try {
     await updatePrompt(id, validatedFields.data);
     revalidatePath('/');
-    return { message: 'Prompt updated successfully.' };
+    return { message: 'Prompt actualizado con éxito.' };
   } catch (e) {
-    return { message: 'Database Error: Failed to update prompt.' };
+    return { message: 'Error de base de datos: No se pudo actualizar el prompt.' };
   }
 }
 
@@ -63,6 +63,6 @@ export async function deletePromptAction(id: string) {
     revalidatePath('/');
   } catch (e) {
     // In a real app, you'd handle this more gracefully
-    console.error('Database Error: Failed to delete prompt.');
+    console.error('Error de base de datos: No se pudo eliminar el prompt.');
   }
 }

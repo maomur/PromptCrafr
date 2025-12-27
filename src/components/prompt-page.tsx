@@ -19,12 +19,12 @@ export default function PromptPage({ initialPrompts }: { initialPrompts: Prompt[
           <DialogTrigger asChild>
             <Button>
               <Plus className="-ml-1 h-4 w-4" />
-              New Prompt
+              Nuevo Prompt
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[625px]">
             <DialogHeader>
-              <DialogTitle>Create a New Prompt</DialogTitle>
+              <DialogTitle>Crear un Nuevo Prompt</DialogTitle>
             </DialogHeader>
             <PromptForm onSave={() => setOpen(false)} />
           </DialogContent>

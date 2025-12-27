@@ -13,7 +13,7 @@ export default function Header({ children }: { children?: ReactNode }) {
             PromptCraft
           </h1>
           <p className="mt-1 text-base text-muted-foreground">
-            Your personal library of creative prompts.
+            Tu biblioteca personal de prompts creativos.
           </p>
         </div>
       </div>

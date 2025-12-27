@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/card';
 import type { Prompt } from '@/lib/definitions';
 import { formatDistanceToNow } from 'date-fns';
+import { es } from 'date-fns/locale';
 import PromptCardActions from './prompt-card-actions';
 
 export default function PromptCard({ prompt }: { prompt: Prompt }) {
@@ -24,7 +25,7 @@ export default function PromptCard({ prompt }: { prompt: Prompt }) {
       </CardContent>
       <CardFooter className="flex justify-between items-center text-xs text-muted-foreground">
         <span>
-          Created {formatDistanceToNow(new Date(prompt.createdAt), { addSuffix: true })}
+          Creado {formatDistanceToNow(new Date(prompt.createdAt), { addSuffix: true, locale: es })}
         </span>
         <PromptCardActions prompt={prompt} />
       </CardFooter>

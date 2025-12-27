@@ -41,38 +41,38 @@ export default function PromptCardActions({ prompt }: { prompt: Prompt }) {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8">
               <MoreHorizontal className="h-4 w-4" />
-              <span className="sr-only">More options</span>
+              <span className="sr-only">Más opciones</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DialogTrigger asChild>
               <DropdownMenuItem>
                 <Pencil className="mr-2 h-4 w-4" />
-                <span>Edit</span>
+                <span>Editar</span>
               </DropdownMenuItem>
             </DialogTrigger>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <DropdownMenuItem className="text-destructive focus:text-destructive">
                   <Trash2 className="mr-2 h-4 w-4" />
-                  <span>Delete</span>
+                  <span>Eliminar</span>
                 </DropdownMenuItem>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete the prompt
+                    Esta acción no se puede deshacer. Esto eliminará permanentemente el prompt
                     &quot;{prompt.title}&quot;.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
                   <AlertDialogAction
                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     onClick={() => deletePromptAction(prompt.id)}
                   >
-                    Delete
+                    Eliminar
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -82,7 +82,7 @@ export default function PromptCardActions({ prompt }: { prompt: Prompt }) {
         
         <DialogContent className="sm:max-w-[625px]">
           <DialogHeader>
-            <DialogTitle>Edit Prompt</DialogTitle>
+            <DialogTitle>Editar Prompt</DialogTitle>
           </DialogHeader>
           <PromptForm
             prompt={prompt}
