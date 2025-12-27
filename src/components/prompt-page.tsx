@@ -15,7 +15,6 @@ import {
 } from '@/components/ui/dialog';
 import { Plus } from 'lucide-react';
 import PromptForm from '@/components/prompt-form';
-import { deletePromptAction } from '@/app/actions';
 import {
   Select,
   SelectContent,
@@ -23,32 +22,34 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import useLocalStorage from '@/hooks/use-local-storage';
 
-export default function PromptPage({
-  initialPrompts,
-}: {
-  initialPrompts: Prompt[];
-}) {
+export default function PromptPage() {
+  const [prompts, setPrompts] = useLocalStorage<Prompt[]>('prompts', []);
   const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
-  const [prompts, setPrompts] = useState<Prompt[]>(initialPrompts);
   const [filter, setFilter] = useState<PromptCategory | 'Todos'>('Todos');
 
   const handleDeletePrompt = (id: string) => {
-    deletePromptAction(id);
     setPrompts((currentPrompts) => currentPrompts.filter((p) => p.id !== id));
   };
 
-  const handleDataChange = (changedPrompt: Prompt) => {
-    const exists = prompts.some((p) => p.id === changedPrompt.id);
-    if (exists) {
-      setPrompts(
-        prompts.map((p) => (p.id === changedPrompt.id ? changedPrompt : p))
-      );
+  const handleSave = (promptData: Omit<Prompt, 'id' | 'createdAt'>, id?: string) => {
+    if (id) {
+      // Edit mode
+      setPrompts(prompts.map(p => p.id === id ? { ...p, ...promptData } : p));
     } else {
-      setPrompts((prevPrompts) => [changedPrompt, ...prevPrompts]);
+      // Create mode
+      const newPrompt: Prompt = {
+        id: crypto.randomUUID(),
+        createdAt: new Date(),
+        ...promptData,
+      };
+      setPrompts([newPrompt, ...prompts]);
     }
+    // Sort after modification
+    setPrompts(currentPrompts => [...currentPrompts].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
   };
 
   const closeAllDialogs = () => {
@@ -62,10 +63,12 @@ export default function PromptPage({
     setEditDialogOpen(true);
   };
 
+  const sortedPrompts = [...prompts].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
   const filteredPrompts =
     filter === 'Todos'
-      ? prompts
-      : prompts.filter((p) => p.category === filter);
+      ? sortedPrompts
+      : sortedPrompts.filter((p) => p.category === filter);
 
   return (
     <div className="space-y-8">
@@ -99,7 +102,7 @@ export default function PromptPage({
               <DialogHeader>
                 <DialogTitle>Crear un Nuevo Prompt</DialogTitle>
               </DialogHeader>
-              <PromptForm onDataChanged={handleDataChange} onClose={closeAllDialogs} />
+              <PromptForm onSave={handleSave} onClose={closeAllDialogs} />
             </DialogContent>
           </Dialog>
         </div>
@@ -115,7 +118,7 @@ export default function PromptPage({
       <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent
           onOpenAutoFocus={(e) => e.preventDefault()}
-          className="sm:max-w-[625px]"
+          className="sm:max-w-[625px] shadow-3xl"
         >
           <DialogHeader>
             <DialogTitle>Editar Prompt</DialogTitle>
@@ -123,7 +126,7 @@ export default function PromptPage({
           {selectedPrompt && (
             <PromptForm
               prompt={selectedPrompt}
-              onDataChanged={handleDataChange}
+              onSave={handleSave}
               onClose={closeAllDialogs}
             />
           )}

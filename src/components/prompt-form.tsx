@@ -1,9 +1,7 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { useActionState } from 'react';
-import { createPromptAction, updatePromptAction, type FormState } from '@/app/actions';
-import { type Prompt, promptCategories } from '@/lib/definitions';
+import { useState } from 'react';
+import { type Prompt, promptCategories, type PromptCategory } from '@/lib/definitions';
 import { useToast } from '@/hooks/use-toast';
 
 import { Label } from '@/components/ui/label';
@@ -17,79 +15,82 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { cn } from '@/lib/utils';
 
 interface PromptFormProps {
   prompt?: Prompt;
-  onDataChanged: (prompt: Prompt) => void;
+  onSave: (prompt: Omit<Prompt, 'id' | 'createdAt'>, id?: string) => void;
   onClose: () => void;
 }
 
-export default function PromptForm({ prompt, onDataChanged, onClose }: PromptFormProps) {
+export default function PromptForm({ prompt, onSave, onClose }: PromptFormProps) {
   const { toast } = useToast();
   const isEditMode = !!prompt;
-  const initialState: FormState = { message: '' };
-  
-  const action = isEditMode ? updatePromptAction : createPromptAction;
-  const [state, formAction, isPending] = useActionState(action, initialState);
+  const [title, setTitle] = useState(prompt?.title || '');
+  const [description, setDescription] = useState(prompt?.description || '');
+  const [category, setCategory] = useState<PromptCategory | ''>(prompt?.category || '');
+  const [content, setContent] = useState(prompt?.content || '');
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const formRef = useRef<HTMLFormElement>(null);
+  const validate = () => {
+    const newErrors: Record<string, string> = {};
+    if (!title) newErrors.title = 'El título es obligatorio.';
+    if (!description) newErrors.description = 'La descripción es obligatoria.';
+    if (!category) newErrors.category = 'Por favor, selecciona una categoría válida.';
+    if (!content) newErrors.content = 'El contenido es obligatorio.';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
-  useEffect(() => {
-    if (state.message) {
-      if (state.errors || state.message.startsWith('Error:')) {
-        toast({
-          variant: 'destructive',
-          title: 'Error',
-          description: state.message,
-        });
-      } else {
-        toast({
-          variant: 'default',
-          className: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300',
-          title: 'Éxito',
-          description: state.message,
-        });
-      }
-    }
-    
-    if (state.prompt) {
-      onDataChanged(state.prompt);
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (validate()) {
+      onSave({ title, description, content, category: category as PromptCategory }, prompt?.id);
+      toast({
+        variant: 'default',
+        className: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300',
+        title: 'Éxito',
+        description: `Prompt ${isEditMode ? 'actualizado' : 'creado'} con éxito.`,
+      });
       onClose();
+    } else {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Por favor, completa todos los campos obligatorios.',
+      });
     }
-  }, [state.message, state.errors, state.prompt]);
+  };
 
 
   return (
-      <form ref={formRef} action={formAction} className="space-y-6">
-        {isEditMode && <input type="hidden" name="id" value={prompt.id} />}
+      <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-2">
           <Label htmlFor='title'>Título</Label>
-          <Input id='title' name="title" placeholder="p. ej., Idea para escritura creativa" defaultValue={prompt?.title || ''} />
-          {state.errors?.title && <p className={cn("text-sm font-medium text-destructive")}>{state.errors.title[0]}</p>}
+          <Input id='title' name="title" placeholder="p. ej., Idea para escritura creativa" value={title} onChange={e => setTitle(e.target.value)} />
+          {errors.title && <p className="text-sm font-medium text-destructive">{errors.title}</p>}
         </div>
         
         <div className="space-y-2">
             <Label htmlFor='description'>Descripción</Label>
-            <Textarea id='description' name="description" placeholder="Una descripción corta y clara del prompt." defaultValue={prompt?.description || ''} className="min-h-[80px] resize-y" />
-            {state.errors?.description && <p className={cn("text-sm font-medium text-destructive")}>{state.errors.description[0]}</p>}
+            <Textarea id='description' name="description" placeholder="Una descripción corta y clara del prompt." value={description} onChange={e => setDescription(e.target.value)} className="min-h-[80px] resize-y" />
+            {errors.description && <p className="text-sm font-medium text-destructive">{errors.description}</p>}
         </div>
         
         <div className="space-y-2">
             <Label>Categoría</Label>
-            <Select name="category" defaultValue={prompt?.category}>
+            <Select name="category" value={category} onValueChange={(value: PromptCategory) => setCategory(value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecciona una categoría" />
               </SelectTrigger>
               <SelectContent>
-                {promptCategories.map((category) => (
-                  <SelectItem key={category} value={category}>
-                    {category}
+                {promptCategories.map((cat) => (
+                  <SelectItem key={cat} value={cat}>
+                    {cat}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            {state.errors?.category && <p className={cn("text-sm font-medium text-destructive")}>{state.errors.category[0]}</p>}
+            {errors.category && <p className="text-sm font-medium text-destructive">{errors.category}</p>}
         </div>
         
         <div className="space-y-2">
@@ -99,12 +100,13 @@ export default function PromptForm({ prompt, onDataChanged, onClose }: PromptFor
             name="content"
             placeholder="El contenido completo del prompt..."
             className="min-h-[150px] resize-y"
-            defaultValue={prompt?.content || ''}
+            value={content} 
+            onChange={e => setContent(e.target.value)}
           />
-          {state.errors?.content && <p className={cn("text-sm font-medium text-destructive")}>{state.errors.content[0]}</p>}
+          {errors.content && <p className="text-sm font-medium text-destructive">{errors.content}</p>}
         </div>
         <div className="flex justify-end">
-          <SubmitButton isEditMode={isEditMode} isPending={isPending} />
+          <SubmitButton isEditMode={isEditMode} isPending={false} />
         </div>
       </form>
   );
