@@ -1,0 +1,33 @@
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import type { Prompt } from '@/lib/definitions';
+import { formatDistanceToNow } from 'date-fns';
+import PromptCardActions from './prompt-card-actions';
+
+export default function PromptCard({ prompt }: { prompt: Prompt }) {
+  return (
+    <Card className="flex flex-col h-full transition-shadow duration-300 hover:shadow-xl dark:hover:shadow-primary/10">
+      <CardHeader>
+        <CardTitle className="font-headline tracking-tight">{prompt.title}</CardTitle>
+        <CardDescription>{prompt.description}</CardDescription>
+      </CardHeader>
+      <CardContent className="flex-grow">
+        <p className="text-sm text-muted-foreground line-clamp-3">
+          {prompt.content}
+        </p>
+      </CardContent>
+      <CardFooter className="flex justify-between items-center text-xs text-muted-foreground">
+        <span>
+          Created {formatDistanceToNow(new Date(prompt.createdAt), { addSuffix: true })}
+        </span>
+        <PromptCardActions prompt={prompt} />
+      </CardFooter>
+    </Card>
+  );
+}

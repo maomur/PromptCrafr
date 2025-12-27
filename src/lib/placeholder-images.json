@@ -1,3 +1,10 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "empty-state-1",
+      "description": "An abstract image for the empty state of the prompt list.",
+      "imageUrl": "https://images.unsplash.com/photo-1578842632254-3fe35b27809c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxhYnN0cmFjdCUyMGlkZWF8ZW58MHx8fHwxNzY2ODE4NTUyfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "abstract idea"
+    }
+  ]
 }
