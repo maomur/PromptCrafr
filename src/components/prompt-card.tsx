@@ -19,17 +19,17 @@ interface PromptCardProps {
 
 export default function PromptCard({ prompt, onDelete, onEdit }: PromptCardProps) {
   return (
-    <Card className="flex h-full flex-col rounded-xl border border-transparent bg-card text-card-foreground shadow-sm transition-all duration-300 hover:border-primary/10 hover:shadow-md">
+    <Card className="flex h-full flex-col rounded-xl border-transparent bg-card text-card-foreground shadow-md transition-all duration-300 hover:border-primary/10 hover:shadow-lg">
       <CardHeader>
-        <CardTitle className="font-semibold text-base tracking-tight">{prompt.title}</CardTitle>
-        <CardDescription className="mt-1 line-clamp-2 text-sm">{prompt.description}</CardDescription>
+        <CardTitle className="font-semibold tracking-tight text-base">{prompt.title}</CardTitle>
+        <CardDescription className="line-clamp-2 text-sm">{prompt.description}</CardDescription>
       </CardHeader>
       <CardContent className="flex-grow">
-        <p className="text-sm text-muted-foreground line-clamp-3 font-mono">
+        <p className="font-mono text-sm text-muted-foreground line-clamp-3">
           {prompt.content}
         </p>
       </CardContent>
-      <CardFooter className="flex justify-between items-center text-xs text-muted-foreground">
+      <CardFooter className="flex items-center justify-between text-xs text-muted-foreground">
         <span>
           Creado {formatDistanceToNow(new Date(prompt.createdAt), { addSuffix: true, locale: es })}
         </span>
