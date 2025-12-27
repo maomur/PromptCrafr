@@ -5,28 +5,40 @@ import type { Prompt } from '@/lib/definitions';
 import Header from '@/components/header';
 import PromptList from '@/components/prompt-list';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { Plus } from 'lucide-react';
 import PromptForm from '@/components/prompt-form';
 import { deletePromptAction } from '@/app/actions';
 
-export default function PromptPage({ initialPrompts }: { initialPrompts: Prompt[] }) {
+export default function PromptPage({
+  initialPrompts,
+}: {
+  initialPrompts: Prompt[];
+}) {
   const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
   const [prompts, setPrompts] = useState<Prompt[]>(initialPrompts);
 
   const handleDeletePrompt = (id: string) => {
-    setPrompts((currentPrompts) => currentPrompts.filter((p) => p.id !== id));
     deletePromptAction(id);
+    setPrompts((currentPrompts) => currentPrompts.filter((p) => p.id !== id));
   };
 
   const handleDataChange = (changedPrompt: Prompt) => {
-    const exists = prompts.some(p => p.id === changedPrompt.id);
+    const exists = prompts.some((p) => p.id === changedPrompt.id);
     if (exists) {
-      setPrompts(prompts.map(p => p.id === changedPrompt.id ? changedPrompt : p));
+      setPrompts(
+        prompts.map((p) => (p.id === changedPrompt.id ? changedPrompt : p))
+      );
     } else {
-       setPrompts(prevPrompts => [changedPrompt, ...prevPrompts]);
+      setPrompts((prevPrompts) => [changedPrompt, ...prevPrompts]);
     }
     setCreateDialogOpen(false);
     setEditDialogOpen(false);
@@ -57,15 +69,18 @@ export default function PromptPage({ initialPrompts }: { initialPrompts: Prompt[
         </Dialog>
       </Header>
 
-      <PromptList 
-        prompts={prompts} 
+      <PromptList
+        prompts={prompts}
         onDeletePrompt={handleDeletePrompt}
         onEditPrompt={handleEditClick}
       />
 
-      {/* Edit Dialog - ahora vive en la página principal */}
+      {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-[625px]">
+        <DialogContent
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          className="sm:max-w-[625px]"
+        >
           <DialogHeader>
             <DialogTitle>Editar Prompt</DialogTitle>
           </DialogHeader>
