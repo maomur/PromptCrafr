@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useActionState } from 'react';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { createPromptAction, updatePromptAction } from '@/app/actions';
+import { createPromptAction, updatePromptAction, type FormState } from '@/app/actions';
 import type { Prompt } from '@/lib/definitions';
 import { useToast } from '@/hooks/use-toast';
+import { useActionState } from 'react';
 
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -23,13 +24,13 @@ type PromptFormValues = z.infer<typeof promptSchema>;
 
 interface PromptFormProps {
   prompt?: Prompt;
-  onSave?: () => void;
-  onDataChanged?: (prompt: Prompt) => void;
+  onDataChanged: (prompt: Prompt) => void;
 }
 
-export default function PromptForm({ prompt, onSave, onDataChanged }: PromptFormProps) {
+export default function PromptForm({ prompt, onDataChanged }: PromptFormProps) {
   const { toast } = useToast();
   const isEditMode = !!prompt;
+  const initialState: FormState = { message: '' };
 
   const form = useForm<PromptFormValues>({
     resolver: zodResolver(promptSchema),
@@ -41,7 +42,7 @@ export default function PromptForm({ prompt, onSave, onDataChanged }: PromptForm
   });
 
   const action = isEditMode ? updatePromptAction.bind(null, prompt.id) : createPromptAction;
-  const [state, formAction, isPending] = useActionState(action, { message: '' });
+  const [state, formAction, isPending] = useActionState(action, initialState);
 
   useEffect(() => {
     if (state.message) {
@@ -62,11 +63,9 @@ export default function PromptForm({ prompt, onSave, onDataChanged }: PromptForm
         if (onDataChanged && state.prompt) {
           onDataChanged(state.prompt);
         }
-
-        onSave?.();
       }
     }
-  }, [state, onSave, toast, onDataChanged]);
+  }, [state, onDataChanged, toast]);
 
 
   return (

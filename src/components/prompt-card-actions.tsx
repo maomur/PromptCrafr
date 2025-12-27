@@ -10,7 +10,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import {
@@ -18,7 +17,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import PromptForm from './prompt-form';
@@ -37,49 +35,51 @@ interface PromptCardActionsProps {
 }
 
 export default function PromptCardActions({ prompt, onDelete, onDataChanged }: PromptCardActionsProps) {
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+  const handleEdit = (prompt: Prompt) => {
+    onDataChanged(prompt);
+    setIsEditDialogOpen(false);
+  }
+
   return (
     <>
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <MoreHorizontal className="h-4 w-4" />
-              <span className="sr-only">Más opciones</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DialogTrigger asChild>
-              <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                <Pencil className="mr-2 h-4 w-4" />
-                <span>Editar</span>
-              </DropdownMenuItem>
-            </DialogTrigger>
-            <DropdownMenuItem 
-              className="text-destructive focus:text-destructive"
-              onSelect={() => setDeleteDialogOpen(true)}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              <span>Eliminar</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <MoreHorizontal className="h-4 w-4" />
+            <span className="sr-only">Más opciones</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onSelect={() => setIsEditDialogOpen(true)}>
+            <Pencil className="mr-2 h-4 w-4" />
+            <span>Editar</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            className="text-destructive focus:text-destructive"
+            onSelect={() => setIsDeleteDialogOpen(true)}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            <span>Eliminar</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-[625px]">
           <DialogHeader>
             <DialogTitle>Editar Prompt</DialogTitle>
           </DialogHeader>
           <PromptForm
             prompt={prompt}
-            onSave={() => setEditDialogOpen(false)}
-            onDataChanged={onDataChanged}
+            onDataChanged={handleEdit}
           />
         </DialogContent>
       </Dialog>
-      
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
