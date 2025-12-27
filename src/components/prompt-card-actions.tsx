@@ -10,6 +10,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,6 +18,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from '@/components/ui/dialog';
 import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import PromptForm from './prompt-form';
@@ -36,44 +38,25 @@ interface PromptCardActionsProps {
 
 export default function PromptCardActions({ prompt, onDelete, onDataChanged }: PromptCardActionsProps) {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const handleEditSuccess = (updatedPrompt: Prompt) => {
     onDataChanged(updatedPrompt);
-    setIsEditDialogOpen(false); // Cierra el diálogo de edición
+    setIsEditDialogOpen(false);
   };
 
   const handleDeleteConfirm = () => {
     onDelete(prompt.id);
-    setIsDeleteDialogOpen(false); // Cierra el diálogo de confirmación
   };
 
   return (
-    <>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <MoreHorizontal className="h-4 w-4" />
-            <span className="sr-only">Más opciones</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onSelect={() => setIsEditDialogOpen(true)}>
-            <Pencil className="mr-2 h-4 w-4" />
-            <span>Editar</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            className="text-destructive focus:text-destructive"
-            onSelect={() => setIsDeleteDialogOpen(true)}
-          >
-            <Trash2 className="mr-2 h-4 w-4" />
-            <span>Eliminar</span>
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-
-      {/* --- Diálogo de Edición --- */}
+    <div className="flex items-center gap-1">
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogTrigger asChild>
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <Pencil className="h-4 w-4" />
+            <span className="sr-only">Editar</span>
+          </Button>
+        </DialogTrigger>
         <DialogContent className="sm:max-w-[625px]">
           <DialogHeader>
             <DialogTitle>Editar Prompt</DialogTitle>
@@ -84,9 +67,14 @@ export default function PromptCardActions({ prompt, onDelete, onDataChanged }: P
           />
         </DialogContent>
       </Dialog>
-
-      {/* --- Diálogo de Eliminación --- */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
+            <Trash2 className="h-4 w-4" />
+            <span className="sr-only">Eliminar</span>
+          </Button>
+        </AlertDialogTrigger>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
@@ -106,6 +94,6 @@ export default function PromptCardActions({ prompt, onDelete, onDataChanged }: P
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </div>
   );
 }
