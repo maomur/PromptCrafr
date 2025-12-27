@@ -14,7 +14,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Pencil, Trash2 } from 'lucide-react';
 import type { Prompt } from '@/lib/definitions';
-import { useState } from 'react';
 
 interface PromptCardActionsProps {
   prompt: Prompt;
@@ -23,23 +22,21 @@ interface PromptCardActionsProps {
 }
 
 export default function PromptCardActions({ prompt, onDelete, onEdit }: PromptCardActionsProps) {
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const handleDeleteConfirm = () => {
     onDelete(prompt.id);
-    setIsDeleteDialogOpen(false);
   };
 
   return (
     <div className="flex items-center gap-1">
-      {/* Edit Button - triggers the parent component's dialog */}
+      {/* Edit Button */}
       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onEdit}>
         <Pencil className="h-4 w-4" />
         <span className="sr-only">Editar</span>
       </Button>
 
       {/* Delete Alert Dialog */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      <AlertDialog>
         <AlertDialogTrigger asChild>
           <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
             <Trash2 className="h-4 w-4" />
