@@ -23,6 +23,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import useLocalStorage from '@/hooks/use-local-storage';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 export default function PromptPage() {
   const [prompts, setPrompts] = useLocalStorage<Prompt[]>('prompts', []);
@@ -90,7 +96,7 @@ export default function PromptPage() {
       csvRows.push(row.join(','));
     });
 
-    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-t8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
@@ -129,10 +135,19 @@ export default function PromptPage() {
             </SelectContent>
           </Select>
 
-          <Button variant="outline" onClick={handleDownload}>
-            <Download className="-ml-1 h-4 w-4" />
-            Descargar
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="icon" onClick={handleDownload}>
+                  <Download className="h-4 w-4" />
+                  <span className="sr-only">Descargar CSV</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Descargar CSV</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
 
           <Dialog open={isCreateDialogOpen} onOpenChange={setCreateDialogOpen}>
             <DialogTrigger asChild>
