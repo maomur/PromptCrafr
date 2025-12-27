@@ -12,7 +12,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Eye, Trash2 } from 'lucide-react';
 import type { Prompt } from '@/lib/definitions';
 
 interface PromptCardActionsProps {
@@ -31,7 +31,7 @@ export default function PromptCardActions({ prompt, onDelete, onEdit }: PromptCa
     <div className="flex items-center gap-1">
       {/* Edit Button */}
       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onEdit}>
-        <Pencil className="h-4 w-4" />
+        <Eye className="h-4 w-4" />
         <span className="sr-only">Editar</span>
       </Button>
 
