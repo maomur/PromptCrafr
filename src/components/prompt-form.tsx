@@ -74,7 +74,7 @@ export default function PromptForm({ prompt, onDataChanged, onClose }: PromptFor
           </div>
           <div className="space-y-2">
             <Label>Categoría</Label>
-            <Select name="category" defaultValue={prompt?.category || undefined}>
+            <Select name="category" defaultValue={prompt?.category}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecciona una categoría" />
               </SelectTrigger>
