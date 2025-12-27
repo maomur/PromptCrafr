@@ -17,6 +17,9 @@ export default {
       },
     },
     extend: {
+      boxShadow: {
+        '3xl': '0 40px 70px -15px rgba(0, 0, 0, 0.4)',
+      },
       fontFamily: {
         sans: ["var(--font-geist-sans)", ...fontFamily.sans],
         mono: ["var(--font-geist-mono)", ...fontFamily.mono],
