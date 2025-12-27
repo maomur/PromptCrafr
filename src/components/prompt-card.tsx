@@ -19,7 +19,7 @@ interface PromptCardProps {
 
 export default function PromptCard({ prompt, onDelete, onEdit }: PromptCardProps) {
   return (
-    <Card className="flex h-full flex-col border-transparent shadow-none hover:border-border hover:shadow-sm transition-all duration-300">
+    <Card className="flex h-full flex-col rounded-xl border border-transparent bg-card text-card-foreground shadow-sm transition-all duration-300 hover:border-primary/10 hover:shadow-md">
       <CardHeader>
         <CardTitle className="font-semibold text-base tracking-tight">{prompt.title}</CardTitle>
         <CardDescription className="mt-1 line-clamp-2 text-sm">{prompt.description}</CardDescription>
