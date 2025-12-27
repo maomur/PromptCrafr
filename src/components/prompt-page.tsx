@@ -153,7 +153,7 @@ export default function PromptPage() {
             <DialogTrigger asChild>
               <Button>
                 <Plus className="-ml-1 h-4 w-4" />
-                Nuevo Prompt
+                Nuevo
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[625px]">
