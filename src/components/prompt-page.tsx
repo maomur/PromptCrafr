@@ -14,11 +14,11 @@ export default function PromptPage({ initialPrompts }: { initialPrompts: Prompt[
   const [open, setOpen] = useState(false);
   const [prompts, setPrompts] = useState<Prompt[]>(initialPrompts);
 
-  const handleDeletePrompt = async (id: string) => {
+  const handleDeletePrompt = (id: string) => {
     // Optimistically update UI
-    setPrompts(prompts.filter((p) => p.id !== id));
+    setPrompts((currentPrompts) => currentPrompts.filter((p) => p.id !== id));
     // Call server action
-    await deletePromptAction(id);
+    deletePromptAction(id);
   };
 
   const handleDataChange = (changedPrompt: Prompt) => {

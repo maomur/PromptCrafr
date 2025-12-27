@@ -43,6 +43,11 @@ export default function PromptCardActions({ prompt, onDelete, onDataChanged }: P
     setIsEditDialogOpen(false);
   }
 
+  const handleDelete = () => {
+    onDelete(prompt.id);
+    setIsDeleteDialogOpen(false);
+  }
+
   return (
     <>
       <DropdownMenu>
@@ -92,7 +97,7 @@ export default function PromptCardActions({ prompt, onDelete, onDataChanged }: P
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => onDelete(prompt.id)}
+              onClick={handleDelete}
             >
               Eliminar
             </AlertDialogAction>
