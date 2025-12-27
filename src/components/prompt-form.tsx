@@ -50,14 +50,14 @@ export default function PromptForm({ prompt, onDataChanged, onClose }: PromptFor
           title: 'Éxito',
           description: state.message,
         });
-
-        if (state.prompt) {
-          onDataChanged(state.prompt);
-          onClose();
-        }
       }
     }
-  }, [state.message, state.errors, state.prompt, onDataChanged, toast, onClose]);
+    
+    if (state.prompt) {
+      onDataChanged(state.prompt);
+      onClose();
+    }
+  }, [state.message, state.errors, state.prompt]);
 
 
   return (
