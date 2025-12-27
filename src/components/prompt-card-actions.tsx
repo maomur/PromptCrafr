@@ -37,11 +37,12 @@ interface PromptCardActionsProps {
 }
 
 export default function PromptCardActions({ prompt, onDelete, onDataChanged }: PromptCardActionsProps) {
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   
   return (
-    <div className="flex items-center gap-1">
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+    <>
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -51,37 +52,18 @@ export default function PromptCardActions({ prompt, onDelete, onDataChanged }: P
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DialogTrigger asChild>
-              <DropdownMenuItem>
+              <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                 <Pencil className="mr-2 h-4 w-4" />
                 <span>Editar</span>
               </DropdownMenuItem>
             </DialogTrigger>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <DropdownMenuItem className="text-destructive focus:text-destructive">
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  <span>Eliminar</span>
-                </DropdownMenuItem>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>¿Estás absolutely seguro?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Esta acción no se puede deshacer. Esto eliminará permanentemente el prompt
-                    &quot;{prompt.title}&quot;.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    onClick={() => onDelete(prompt.id)}
-                  >
-                    Eliminar
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            <DropdownMenuItem 
+              className="text-destructive focus:text-destructive"
+              onSelect={() => setDeleteDialogOpen(true)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              <span>Eliminar</span>
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
         
@@ -91,11 +73,32 @@ export default function PromptCardActions({ prompt, onDelete, onDataChanged }: P
           </DialogHeader>
           <PromptForm
             prompt={prompt}
-            onSave={() => setDialogOpen(false)}
+            onSave={() => setEditDialogOpen(false)}
             onDataChanged={onDataChanged}
           />
         </DialogContent>
       </Dialog>
-    </div>
+      
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Esto eliminará permanentemente el prompt
+              &quot;{prompt.title}&quot;.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => onDelete(prompt.id)}
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
