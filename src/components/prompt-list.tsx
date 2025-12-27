@@ -5,10 +5,10 @@ import EmptyState from './empty-state';
 interface PromptListProps {
   prompts: Prompt[];
   onDeletePrompt: (id: string) => void;
-  onDataChanged: (prompt: Prompt) => void;
+  onEditPrompt: (prompt: Prompt) => void;
 }
 
-export default function PromptList({ prompts, onDeletePrompt, onDataChanged }: PromptListProps) {
+export default function PromptList({ prompts, onDeletePrompt, onEditPrompt }: PromptListProps) {
   if (prompts.length === 0) {
     return <EmptyState />;
   }
@@ -20,7 +20,7 @@ export default function PromptList({ prompts, onDeletePrompt, onDataChanged }: P
           key={prompt.id} 
           prompt={prompt} 
           onDelete={onDeletePrompt} 
-          onDataChanged={onDataChanged}
+          onEdit={onEditPrompt}
         />
       ))}
     </div>

@@ -12,60 +12,34 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogClose,
-} from '@/components/ui/dialog';
 import { Pencil, Trash2 } from 'lucide-react';
-import PromptForm from './prompt-form';
 import type { Prompt } from '@/lib/definitions';
 import { useState } from 'react';
 
 interface PromptCardActionsProps {
   prompt: Prompt;
   onDelete: (id: string) => void;
-  onDataChanged: (prompt: Prompt) => void;
+  onEdit: () => void;
 }
 
-export default function PromptCardActions({ prompt, onDelete, onDataChanged }: PromptCardActionsProps) {
-    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+export default function PromptCardActions({ prompt, onDelete, onEdit }: PromptCardActionsProps) {
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-    const handleEditSuccess = (updatedPrompt: Prompt) => {
-        onDataChanged(updatedPrompt);
-        setIsEditDialogOpen(false); 
-    };
-
-    const handleDeleteConfirm = () => {
-        onDelete(prompt.id);
-    };
+  const handleDeleteConfirm = () => {
+    onDelete(prompt.id);
+    setIsDeleteDialogOpen(false);
+  };
 
   return (
     <div className="flex items-center gap-1">
-      {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <Pencil className="h-4 w-4" />
-            <span className="sr-only">Editar</span>
-          </Button>
-        </DialogTrigger>
-        <DialogContent className="sm:max-w-[625px]">
-          <DialogHeader>
-            <DialogTitle>Editar Prompt</DialogTitle>
-          </DialogHeader>
-          <PromptForm
-            prompt={prompt}
-            onDataChanged={handleEditSuccess}
-          />
-        </DialogContent>
-      </Dialog>
-      
+      {/* Edit Button - triggers the parent component's dialog */}
+      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onEdit}>
+        <Pencil className="h-4 w-4" />
+        <span className="sr-only">Editar</span>
+      </Button>
+
       {/* Delete Alert Dialog */}
-      <AlertDialog>
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogTrigger asChild>
           <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
             <Trash2 className="h-4 w-4" />

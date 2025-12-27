@@ -14,10 +14,10 @@ import PromptCardActions from './prompt-card-actions';
 interface PromptCardProps {
   prompt: Prompt;
   onDelete: (id: string) => void;
-  onDataChanged: (prompt: Prompt) => void;
+  onEdit: (prompt: Prompt) => void;
 }
 
-export default function PromptCard({ prompt, onDelete, onDataChanged }: PromptCardProps) {
+export default function PromptCard({ prompt, onDelete, onEdit }: PromptCardProps) {
   return (
     <Card className="flex flex-col h-full transition-shadow duration-300 hover:shadow-xl dark:hover:shadow-primary/10">
       <CardHeader>
@@ -33,7 +33,7 @@ export default function PromptCard({ prompt, onDelete, onDataChanged }: PromptCa
         <span>
           Creado {formatDistanceToNow(new Date(prompt.createdAt), { addSuffix: true, locale: es })}
         </span>
-        <PromptCardActions prompt={prompt} onDelete={onDelete} onDataChanged={onDataChanged} />
+        <PromptCardActions prompt={prompt} onDelete={onDelete} onEdit={() => onEdit(prompt)} />
       </CardFooter>
     </Card>
   );
