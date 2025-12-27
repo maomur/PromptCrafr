@@ -22,9 +22,9 @@ import {
 } from '@/components/ui/select';
 
 const promptSchema = z.object({
-  title: z.string().min(3, { message: 'El título debe tener al menos 3 caracteres.' }),
-  description: z.string().min(10, { message: 'La descripción debe tener al menos 10 caracteres.' }),
-  content: z.string().min(20, { message: 'El contenido debe tener al menos 20 caracteres.' }),
+  title: z.string().min(1, { message: 'El título debe tener al menos 1 caracter.' }),
+  description: z.string().min(1, { message: 'La descripción debe tener al menos 1 caracter.' }),
+  content: z.string().min(1, { message: 'El contenido debe tener al menos 1 caracter.' }),
   category: z.enum(promptCategories, {
     errorMap: () => ({ message: 'Por favor, selecciona una categoría.' }),
   }),
@@ -103,10 +103,10 @@ export default function PromptForm({ prompt, onDataChanged, onClose }: PromptFor
             control={form.control}
             name="description"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="md:col-span-2">
                 <FormLabel>Descripción</FormLabel>
                 <FormControl>
-                  <Input placeholder="Una descripción corta y clara del prompt." {...field} />
+                  <Textarea placeholder="Una descripción corta y clara del prompt." {...field} className="min-h-[80px] resize-y" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
