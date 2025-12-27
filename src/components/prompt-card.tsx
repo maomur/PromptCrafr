@@ -11,7 +11,12 @@ import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import PromptCardActions from './prompt-card-actions';
 
-export default function PromptCard({ prompt }: { prompt: Prompt }) {
+interface PromptCardProps {
+  prompt: Prompt;
+  onDelete: (id: string) => void;
+}
+
+export default function PromptCard({ prompt, onDelete }: PromptCardProps) {
   return (
     <Card className="flex flex-col h-full transition-shadow duration-300 hover:shadow-xl dark:hover:shadow-primary/10">
       <CardHeader>
@@ -27,7 +32,7 @@ export default function PromptCard({ prompt }: { prompt: Prompt }) {
         <span>
           Creado {formatDistanceToNow(new Date(prompt.createdAt), { addSuffix: true, locale: es })}
         </span>
-        <PromptCardActions prompt={prompt} />
+        <PromptCardActions prompt={prompt} onDelete={onDelete} />
       </CardFooter>
     </Card>
   );

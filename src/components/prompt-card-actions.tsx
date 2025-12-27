@@ -22,7 +22,6 @@ import {
 } from '@/components/ui/dialog';
 import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import PromptForm from './prompt-form';
-import { deletePromptAction } from '@/app/actions';
 import type { Prompt } from '@/lib/definitions';
 import {
   DropdownMenu,
@@ -31,7 +30,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-export default function PromptCardActions({ prompt }: { prompt: Prompt }) {
+interface PromptCardActionsProps {
+  prompt: Prompt;
+  onDelete: (id: string) => void;
+}
+
+export default function PromptCardActions({ prompt, onDelete }: PromptCardActionsProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   
   return (
@@ -60,7 +64,7 @@ export default function PromptCardActions({ prompt }: { prompt: Prompt }) {
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
+                  <AlertDialogTitle>¿Estás absolutely seguro?</AlertDialogTitle>
                   <AlertDialogDescription>
                     Esta acción no se puede deshacer. Esto eliminará permanentemente el prompt
                     &quot;{prompt.title}&quot;.
@@ -70,7 +74,7 @@ export default function PromptCardActions({ prompt }: { prompt: Prompt }) {
                   <AlertDialogCancel>Cancelar</AlertDialogCancel>
                   <AlertDialogAction
                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    onClick={() => deletePromptAction(prompt.id)}
+                    onClick={() => onDelete(prompt.id)}
                   >
                     Eliminar
                   </AlertDialogAction>

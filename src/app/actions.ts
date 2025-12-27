@@ -31,7 +31,7 @@ export async function createPromptAction(prevState: FormState, formData: FormDat
 
   try {
     await createPrompt(validatedFields.data);
-    revalidatePath('/');
+    revalidatePath('/'); // Esto es importante para cuando recargues la página
     return { message: 'Prompt creado con éxito.' };
   } catch (e) {
     return { message: 'Error de base de datos: No se pudo crear el prompt.' };
@@ -50,7 +50,7 @@ export async function updatePromptAction(id: string, prevState: FormState, formD
 
   try {
     await updatePrompt(id, validatedFields.data);
-    revalidatePath('/');
+    revalidatePath('/'); // Esto es importante para cuando recargues la página
     return { message: 'Prompt actualizado con éxito.' };
   } catch (e) {
     return { message: 'Error de base de datos: No se pudo actualizar el prompt.' };
@@ -62,7 +62,9 @@ export async function deletePromptAction(id: string) {
     await deletePrompt(id);
     revalidatePath('/');
   } catch (e) {
-    // In a real app, you'd handle this more gracefully
+    // En una aplicación real, manejarías esto con más gracia
     console.error('Error de base de datos: No se pudo eliminar el prompt.');
+    // Podrías devolver un error aquí si quisieras manejarlo en el cliente
+    return { error: 'Error de base de datos: No se pudo eliminar el prompt.' };
   }
 }
