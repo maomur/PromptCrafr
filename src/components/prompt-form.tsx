@@ -35,9 +35,10 @@ type PromptFormValues = z.infer<typeof promptSchema>;
 interface PromptFormProps {
   prompt?: Prompt;
   onDataChanged: (prompt: Prompt) => void;
+  onClose: () => void;
 }
 
-export default function PromptForm({ prompt, onDataChanged }: PromptFormProps) {
+export default function PromptForm({ prompt, onDataChanged, onClose }: PromptFormProps) {
   const { toast } = useToast();
   const isEditMode = !!prompt;
   const initialState: FormState = { message: '' };
@@ -71,12 +72,13 @@ export default function PromptForm({ prompt, onDataChanged }: PromptFormProps) {
           description: state.message,
         });
 
-        if (onDataChanged && state.prompt) {
+        if (state.prompt) {
           onDataChanged(state.prompt);
+          onClose(); // Cierra el diálogo en caso de éxito
         }
       }
     }
-  }, [state, onDataChanged, toast]);
+  }, [state, onDataChanged, toast, onClose]);
 
 
   return (

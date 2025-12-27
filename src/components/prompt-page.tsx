@@ -49,6 +49,9 @@ export default function PromptPage({
     } else {
       setPrompts((prevPrompts) => [changedPrompt, ...prevPrompts]);
     }
+  };
+
+  const closeAllDialogs = () => {
     setCreateDialogOpen(false);
     setEditDialogOpen(false);
     setSelectedPrompt(null);
@@ -96,7 +99,7 @@ export default function PromptPage({
               <DialogHeader>
                 <DialogTitle>Crear un Nuevo Prompt</DialogTitle>
               </DialogHeader>
-              <PromptForm onDataChanged={handleDataChange} />
+              <PromptForm onDataChanged={handleDataChange} onClose={closeAllDialogs} />
             </DialogContent>
           </Dialog>
         </div>
@@ -121,6 +124,7 @@ export default function PromptPage({
             <PromptForm
               prompt={selectedPrompt}
               onDataChanged={handleDataChange}
+              onClose={closeAllDialogs}
             />
           )}
         </DialogContent>
