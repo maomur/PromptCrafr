@@ -27,7 +27,12 @@ export default function PromptPage({ initialPrompts }: { initialPrompts: Prompt[
     if (exists) {
       setPrompts(prompts.map(p => p.id === changedPrompt.id ? changedPrompt : p));
     } else {
-      setPrompts([changedPrompt, ...prompts]);
+      // For new prompts, we need to get the full list again
+      // A better approach would be for the action to return the created prompt
+      // For now, let's assume we can add it (this might have issues if the server data is different)
+      // A proper fix would be to refetch or get the new prompt from the action response.
+      // Let's prepend the new prompt optimistically.
+       setPrompts(prevPrompts => [changedPrompt, ...prevPrompts]);
     }
   };
 
@@ -45,11 +50,18 @@ export default function PromptPage({ initialPrompts }: { initialPrompts: Prompt[
             <DialogHeader>
               <DialogTitle>Crear un Nuevo Prompt</DialogTitle>
             </DialogHeader>
-            <PromptForm onSave={() => setOpen(false)} />
+            <PromptForm 
+              onSave={() => setOpen(false)}
+              onDataChanged={handleDataChange} 
+            />
           </DialogContent>
         </Dialog>
       </Header>
-      <PromptList prompts={prompts} onDeletePrompt={handleDeletePrompt} />
+      <PromptList 
+        prompts={prompts} 
+        onDeletePrompt={handleDeletePrompt}
+        onDataChanged={handleDataChange}
+      />
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { createPrompt, deletePrompt, updatePrompt } from '@/lib/data';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
+import type { Prompt } from '@/lib/definitions';
 
 const promptSchema = z.object({
   title: z.string().min(1, { message: 'El título es obligatorio.' }),
@@ -17,6 +18,7 @@ export type FormState = {
     description?: string[];
     content?: string[];
   };
+  prompt?: Prompt;
 };
 
 export async function createPromptAction(prevState: FormState, formData: FormData): Promise<FormState> {
@@ -30,9 +32,9 @@ export async function createPromptAction(prevState: FormState, formData: FormDat
   }
 
   try {
-    await createPrompt(validatedFields.data);
+    const newPrompt = await createPrompt(validatedFields.data);
     revalidatePath('/'); // Esto es importante para cuando recargues la página
-    return { message: 'Prompt creado con éxito.' };
+    return { message: 'Prompt creado con éxito.', prompt: newPrompt };
   } catch (e) {
     return { message: 'Error de base de datos: No se pudo crear el prompt.' };
   }
@@ -49,9 +51,9 @@ export async function updatePromptAction(id: string, prevState: FormState, formD
   }
 
   try {
-    await updatePrompt(id, validatedFields.data);
+    const updatedPrompt = await updatePrompt(id, validatedFields.data);
     revalidatePath('/'); // Esto es importante para cuando recargues la página
-    return { message: 'Prompt actualizado con éxito.' };
+    return { message: 'Prompt actualizado con éxito.', prompt: updatedPrompt };
   } catch (e) {
     return { message: 'Error de base de datos: No se pudo actualizar el prompt.' };
   }

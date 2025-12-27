@@ -24,9 +24,10 @@ type PromptFormValues = z.infer<typeof promptSchema>;
 interface PromptFormProps {
   prompt?: Prompt;
   onSave?: () => void;
+  onDataChanged?: (prompt: Prompt) => void;
 }
 
-export default function PromptForm({ prompt, onSave }: PromptFormProps) {
+export default function PromptForm({ prompt, onSave, onDataChanged }: PromptFormProps) {
   const { toast } = useToast();
   const isEditMode = !!prompt;
 
@@ -40,7 +41,7 @@ export default function PromptForm({ prompt, onSave }: PromptFormProps) {
   });
 
   const action = isEditMode ? updatePromptAction.bind(null, prompt.id) : createPromptAction;
-  const [state, formAction] = useActionState(action, { message: '' });
+  const [state, formAction, isPending] = useActionState(action, { message: '' });
 
   useEffect(() => {
     if (state.message) {
@@ -57,10 +58,15 @@ export default function PromptForm({ prompt, onSave }: PromptFormProps) {
           title: 'Éxito',
           description: state.message,
         });
+
+        if (onDataChanged && state.prompt) {
+          onDataChanged(state.prompt);
+        }
+
         onSave?.();
       }
     }
-  }, [state, onSave, toast]);
+  }, [state, onSave, toast, onDataChanged]);
 
 
   return (
@@ -110,7 +116,7 @@ export default function PromptForm({ prompt, onSave }: PromptFormProps) {
           )}
         />
         <div className="flex justify-end">
-          <SubmitButton isEditMode={isEditMode} />
+          <SubmitButton isEditMode={isEditMode} isPending={isPending} />
         </div>
       </form>
     </Form>

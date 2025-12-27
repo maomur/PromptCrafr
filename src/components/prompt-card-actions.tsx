@@ -33,9 +33,10 @@ import {
 interface PromptCardActionsProps {
   prompt: Prompt;
   onDelete: (id: string) => void;
+  onDataChanged: (prompt: Prompt) => void;
 }
 
-export default function PromptCardActions({ prompt, onDelete }: PromptCardActionsProps) {
+export default function PromptCardActions({ prompt, onDelete, onDataChanged }: PromptCardActionsProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   
   return (
@@ -91,6 +92,7 @@ export default function PromptCardActions({ prompt, onDelete }: PromptCardAction
           <PromptForm
             prompt={prompt}
             onSave={() => setDialogOpen(false)}
+            onDataChanged={onDataChanged}
           />
         </DialogContent>
       </Dialog>
