@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import type { Prompt } from '@/lib/definitions';
+import type { Prompt, PromptCategory } from '@/lib/definitions';
+import { promptCategories } from '@/lib/definitions';
 import Header from '@/components/header';
 import PromptList from '@/components/prompt-list';
 import { Button } from '@/components/ui/button';
@@ -15,6 +16,13 @@ import {
 import { Plus } from 'lucide-react';
 import PromptForm from '@/components/prompt-form';
 import { deletePromptAction } from '@/app/actions';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export default function PromptPage({
   initialPrompts,
@@ -25,6 +33,7 @@ export default function PromptPage({
   const [isEditDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
   const [prompts, setPrompts] = useState<Prompt[]>(initialPrompts);
+  const [filter, setFilter] = useState<PromptCategory | 'Todos'>('Todos');
 
   const handleDeletePrompt = (id: string) => {
     deletePromptAction(id);
@@ -50,27 +59,51 @@ export default function PromptPage({
     setEditDialogOpen(true);
   };
 
+  const filteredPrompts =
+    filter === 'Todos'
+      ? prompts
+      : prompts.filter((p) => p.category === filter);
+
   return (
     <div className="space-y-8">
       <Header>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="-ml-1 h-4 w-4" />
-              Nuevo Prompt
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[625px]">
-            <DialogHeader>
-              <DialogTitle>Crear un Nuevo Prompt</DialogTitle>
-            </DialogHeader>
-            <PromptForm onDataChanged={handleDataChange} />
-          </DialogContent>
-        </Dialog>
+        <div className="flex items-center gap-2">
+          <Select
+            value={filter}
+            onValueChange={(value) => setFilter(value as PromptCategory | 'Todos')}
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filtrar por categoría" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Todos">Todas las categorías</SelectItem>
+              {promptCategories.map((category) => (
+                <SelectItem key={category} value={category}>
+                  {category}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Dialog open={isCreateDialogOpen} onOpenChange={setCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="-ml-1 h-4 w-4" />
+                Nuevo Prompt
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[625px]">
+              <DialogHeader>
+                <DialogTitle>Crear un Nuevo Prompt</DialogTitle>
+              </DialogHeader>
+              <PromptForm onDataChanged={handleDataChange} />
+            </DialogContent>
+          </Dialog>
+        </div>
       </Header>
 
       <PromptList
-        prompts={prompts}
+        prompts={filteredPrompts}
         onDeletePrompt={handleDeletePrompt}
         onEditPrompt={handleEditClick}
       />

@@ -4,11 +4,15 @@ import { createPrompt, deletePrompt, updatePrompt } from '@/lib/data';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import type { Prompt } from '@/lib/definitions';
+import { promptCategories } from '@/lib/definitions';
 
 const promptSchema = z.object({
   title: z.string().min(1, { message: 'El título es obligatorio.' }),
   description: z.string().min(1, { message: 'La descripción es obligatoria.' }),
   content: z.string().min(1, { message: 'El contenido es obligatorio.' }),
+  category: z.enum(promptCategories, {
+    errorMap: () => ({ message: 'Por favor, selecciona una categoría válida.' }),
+  }),
 });
 
 export type FormState = {
@@ -17,6 +21,7 @@ export type FormState = {
     title?: string[];
     description?: string[];
     content?: string[];
+    category?: string[];
   };
   prompt?: Prompt;
 };

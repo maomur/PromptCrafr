@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { createPromptAction, updatePromptAction, type FormState } from '@/app/actions';
-import type { Prompt } from '@/lib/definitions';
+import { type Prompt, promptCategories } from '@/lib/definitions';
 import { useToast } from '@/hooks/use-toast';
 import { useActionState } from 'react';
 
@@ -13,11 +13,21 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import SubmitButton from './submit-button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const promptSchema = z.object({
   title: z.string().min(3, { message: 'El título debe tener al menos 3 caracteres.' }),
   description: z.string().min(10, { message: 'La descripción debe tener al menos 10 caracteres.' }),
   content: z.string().min(20, { message: 'El contenido debe tener al menos 20 caracteres.' }),
+  category: z.enum(promptCategories, {
+    errorMap: () => ({ message: 'Por favor, selecciona una categoría.' }),
+  }),
 });
 
 type PromptFormValues = z.infer<typeof promptSchema>;
@@ -38,6 +48,7 @@ export default function PromptForm({ prompt, onDataChanged }: PromptFormProps) {
       title: prompt?.title || '',
       description: prompt?.description || '',
       content: prompt?.content || '',
+      category: prompt?.category || undefined,
     },
   });
 
@@ -55,7 +66,7 @@ export default function PromptForm({ prompt, onDataChanged }: PromptFormProps) {
       } else {
         toast({
           variant: 'default',
-          className: 'bg-accent text-accent-foreground',
+          className: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300',
           title: 'Éxito',
           description: state.message,
         });
@@ -84,19 +95,45 @@ export default function PromptForm({ prompt, onDataChanged }: PromptFormProps) {
             </FormItem>
           )}
         />
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Descripción</FormLabel>
-              <FormControl>
-                <Input placeholder="Una descripción corta y clara del prompt." {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField
+            control={form.control}
+            name="description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Descripción</FormLabel>
+                <FormControl>
+                  <Input placeholder="Una descripción corta y clara del prompt." {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="category"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Categoría</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona una categoría" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {promptCategories.map((category) => (
+                      <SelectItem key={category} value={category}>
+                        {category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
         <FormField
           control={form.control}
           name="content"
