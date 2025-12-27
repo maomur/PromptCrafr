@@ -1,6 +1,9 @@
-import type {Metadata} from 'next';
+import type { Metadata } from 'next';
+import { Geist_Sans as GeistSans } from 'geist/font/sans';
+import { Geist_Mono as GeistMono } from 'geist/font/mono';
 import './globals.css';
-import { Toaster } from "@/components/ui/toaster"
+import { Toaster } from '@/components/ui/toaster';
+import { cn } from '@/lib/utils';
 
 export const metadata: Metadata = {
   title: 'PromptCraft',
@@ -13,13 +16,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className="dark">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-      </head>
-      <body className="font-body antialiased">
+    <html lang="es" className={cn(GeistSans.variable, GeistMono.variable)}>
+      <body className="font-sans antialiased">
         {children}
         <Toaster />
       </body>
