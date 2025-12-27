@@ -38,15 +38,15 @@ export default function PromptCardActions({ prompt, onDelete, onDataChanged }: P
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  const handleEdit = (prompt: Prompt) => {
-    onDataChanged(prompt);
-    setIsEditDialogOpen(false);
-  }
+  const handleEditSuccess = (updatedPrompt: Prompt) => {
+    onDataChanged(updatedPrompt);
+    setIsEditDialogOpen(false); // Cierra el diálogo de edición
+  };
 
-  const handleDelete = () => {
+  const handleDeleteConfirm = () => {
     onDelete(prompt.id);
-    setIsDeleteDialogOpen(false);
-  }
+    setIsDeleteDialogOpen(false); // Cierra el diálogo de confirmación
+  };
 
   return (
     <>
@@ -72,6 +72,7 @@ export default function PromptCardActions({ prompt, onDelete, onDataChanged }: P
         </DropdownMenuContent>
       </DropdownMenu>
 
+      {/* --- Diálogo de Edición --- */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-[625px]">
           <DialogHeader>
@@ -79,11 +80,12 @@ export default function PromptCardActions({ prompt, onDelete, onDataChanged }: P
           </DialogHeader>
           <PromptForm
             prompt={prompt}
-            onDataChanged={handleEdit}
+            onDataChanged={handleEditSuccess}
           />
         </DialogContent>
       </Dialog>
 
+      {/* --- Diálogo de Eliminación --- */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -97,7 +99,7 @@ export default function PromptCardActions({ prompt, onDelete, onDataChanged }: P
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={handleDelete}
+              onClick={handleDeleteConfirm}
             >
               Eliminar
             </AlertDialogAction>
