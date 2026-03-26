@@ -10,7 +10,7 @@ export default function Header({ children }: { children?: ReactNode }) {
       {/* Logotipo centrado */}
       <div className="flex items-center gap-3 md:absolute md:left-1/2 md:-translate-x-1/2 z-10">
         <Image 
-          src="https://www.pulseai.ws/logo193.png" 
+          src="https://www.pulseai.ws/logo192.png" 
           alt="Pulse AI Logo" 
           width={40} 
           height={40} 
