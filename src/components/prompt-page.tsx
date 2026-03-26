@@ -15,11 +15,9 @@ import {
 } from '@/components/ui/dialog';
 import { 
   Plus, 
-  FolderPlus, 
   Folder, 
   Folders, 
   Trash2, 
-  ChevronRight,
   Filter
 } from 'lucide-react';
 import PromptForm from '@/components/prompt-form';
@@ -146,42 +144,25 @@ export default function PromptPage() {
   }, [prompts, activeProjectId, categoryFilter]);
 
   return (
-    <div className="space-y-8">
+    <div className="relative min-h-[80vh]">
       <Header>
-        <div className="flex items-center gap-2">
-          <Select
-            value={categoryFilter}
-            onValueChange={(value) => setCategoryFilter(value as PromptCategory | 'Todos')}
-          >
-            <SelectTrigger className="w-[180px]">
-              <Filter className="mr-2 h-4 w-4 opacity-70" />
-              <SelectValue placeholder="Categoría" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Todos">Todas las categorías</SelectItem>
-              {promptCategories.map((category) => (
-                <SelectItem key={category} value={category}>
-                  {category}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Dialog open={isCreateDialogOpen} onOpenChange={setCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="-ml-1 h-4 w-4" />
-                Nuevo
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[625px]">
-              <DialogHeader>
-                <DialogTitle>Crear un Nuevo Prompt</DialogTitle>
-              </DialogHeader>
-              <PromptForm onSave={handleSave} onClose={closeAllDialogs} projects={projects} />
-            </DialogContent>
-          </Dialog>
-        </div>
+        <Select
+          value={categoryFilter}
+          onValueChange={(value) => setCategoryFilter(value as PromptCategory | 'Todos')}
+        >
+          <SelectTrigger className="w-[180px]">
+            <Filter className="mr-2 h-4 w-4 opacity-70" />
+            <SelectValue placeholder="Categoría" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Todos">Todas las categorías</SelectItem>
+            {promptCategories.map((category) => (
+              <SelectItem key={category} value={category}>
+                {category}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </Header>
 
       <div className="flex flex-col md:flex-row gap-8">
@@ -278,7 +259,7 @@ export default function PromptPage() {
           </div>
         </aside>
 
-        <div className="flex-1">
+        <div className="flex-1 pb-20">
           <PromptList
             prompts={filteredPrompts}
             onDeletePrompt={handleDeletePrompt}
@@ -290,6 +271,25 @@ export default function PromptPage() {
           />
         </div>
       </div>
+
+      {/* Floating Action Button */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <DialogTrigger asChild>
+          <Button 
+            className="fixed bottom-8 right-8 h-16 w-16 rounded-full shadow-2xl z-50 transition-transform hover:scale-110 active:scale-95"
+            size="icon"
+          >
+            <Plus className="h-8 w-8" />
+            <span className="sr-only">Nuevo</span>
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-[625px]">
+          <DialogHeader>
+            <DialogTitle>Crear un Nuevo Prompt</DialogTitle>
+          </DialogHeader>
+          <PromptForm onSave={handleSave} onClose={closeAllDialogs} projects={projects} />
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent

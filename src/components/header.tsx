@@ -3,22 +3,17 @@ import { BotMessageSquare } from 'lucide-react';
 
 export default function Header({ children }: { children?: ReactNode }) {
   return (
-    <header className="flex flex-col items-center justify-center gap-6 border-b border-border/60 pb-8 pt-2">
-      <div className="flex flex-col items-center gap-4 text-center">
-        <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-accent text-accent-foreground shadow-lg shadow-accent/20">
-          <BotMessageSquare className="h-7 w-7" />
+    <header className="flex items-center justify-between border-b border-border/60 py-4 mb-8">
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent text-accent-foreground shadow-sm">
+          <BotMessageSquare className="h-5 w-5" />
         </div>
-        <div>
-          <h1 className="font-sans text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            PromptCraft
-          </h1>
-          <p className="mt-2 text-muted-foreground text-sm sm:text-base">
-            Tu biblioteca personal de prompts creativos.
-          </p>
-        </div>
+        <h1 className="font-sans text-xl font-bold tracking-tight text-foreground">
+          PromptCraft
+        </h1>
       </div>
       {children && (
-        <div className="flex w-full items-center justify-center gap-3">
+        <div className="flex items-center gap-3">
           {children}
         </div>
       )}
