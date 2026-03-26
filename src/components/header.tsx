@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { BotMessageSquare } from 'lucide-react';
+import Image from 'next/image';
 
 export default function Header({ children }: { children?: ReactNode }) {
   return (
@@ -9,9 +9,13 @@ export default function Header({ children }: { children?: ReactNode }) {
 
       {/* Logotipo centrado */}
       <div className="flex items-center gap-3 md:absolute md:left-1/2 md:-translate-x-1/2 z-10">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent text-accent-foreground shadow-sm">
-          <BotMessageSquare className="h-5 w-5" />
-        </div>
+        <Image 
+          src="https://www.pulseai.ws/logo193.png" 
+          alt="Pulse AI Logo" 
+          width={40} 
+          height={40} 
+          className="rounded-lg shadow-sm"
+        />
         <h1 className="font-sans text-xl font-bold tracking-tight text-foreground">
           PromptCraft
         </h1>
