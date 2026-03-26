@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Download, X, Share } from 'lucide-react';
+import { Download, Share } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -12,18 +12,27 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 
+const SNOOZE_KEY = 'pwa_install_snooze_until';
+const SNOOZE_DAYS = 7;
+
 export default function InstallPWABanner() {
   const [installPrompt, setInstallPrompt] = useState<any>(null);
   const [showBanner, setShowBanner] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
 
   useEffect(() => {
-    // Detectar si ya está instalada o en modo standalone
+    // 1. Verificar si ya está en modo standalone (instalada)
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches 
       || (window.navigator as any).standalone 
       || document.referrer.includes('android-app://');
 
     if (isStandalone) return;
+
+    // 2. Verificar si el usuario ha pospuesto la instalación recientemente
+    const snoozeUntil = localStorage.getItem(SNOOZE_KEY);
+    if (snoozeUntil && Date.now() < parseInt(snoozeUntil, 10)) {
+      return;
+    }
 
     // Detectar iOS
     const userAgent = window.navigator.userAgent.toLowerCase();
@@ -41,12 +50,18 @@ export default function InstallPWABanner() {
 
     // En iOS, sugerir instalación después de unos segundos
     if (isAppleDevice) {
-      const timer = setTimeout(() => setShowBanner(true), 3000);
+      const timer = setTimeout(() => setShowBanner(true), 4000);
       return () => clearTimeout(timer);
     }
 
     return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
   }, []);
+
+  const snoozeInstallation = () => {
+    const snoozeUntil = Date.now() + SNOOZE_DAYS * 24 * 60 * 60 * 1000;
+    localStorage.setItem(SNOOZE_KEY, snoozeUntil.toString());
+    setShowBanner(false);
+  };
 
   const handleInstallClick = async () => {
     if (!installPrompt) return;
@@ -57,13 +72,23 @@ export default function InstallPWABanner() {
     if (outcome === 'accepted') {
       setInstallPrompt(null);
       setShowBanner(false);
+    } else {
+      snoozeInstallation();
+    }
+  };
+
+  const onOpenChange = (open: boolean) => {
+    if (!open) {
+      snoozeInstallation();
+    } else {
+      setShowBanner(true);
     }
   };
 
   if (!showBanner) return null;
 
   return (
-    <Dialog open={showBanner} onOpenChange={setShowBanner}>
+    <Dialog open={showBanner} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -102,7 +127,7 @@ export default function InstallPWABanner() {
               Instalar ahora
             </Button>
           )}
-          <Button variant="outline" onClick={() => setShowBanner(false)} className="w-full sm:w-auto">
+          <Button variant="outline" onClick={snoozeInstallation} className="w-full sm:w-auto">
             {isIOS ? "Entendido" : "Más tarde"}
           </Button>
         </DialogFooter>
