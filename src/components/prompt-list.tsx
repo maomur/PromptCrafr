@@ -1,15 +1,24 @@
-import type { Prompt } from '@/lib/definitions';
+import type { Prompt, Project } from '@/lib/definitions';
 import PromptCard from '@/components/prompt-card';
 import EmptyState from './empty-state';
 
 interface PromptListProps {
   prompts: Prompt[];
+  projects: Project[];
   onDeletePrompt: (id: string) => void;
   onEditPrompt: (prompt: Prompt) => void;
   onReorder: (draggedId: string, targetId: string) => void;
+  onMoveToProject: (promptId: string, projectId: string | undefined) => void;
 }
 
-export default function PromptList({ prompts, onDeletePrompt, onEditPrompt, onReorder }: PromptListProps) {
+export default function PromptList({ 
+  prompts, 
+  projects,
+  onDeletePrompt, 
+  onEditPrompt, 
+  onReorder,
+  onMoveToProject
+}: PromptListProps) {
   if (prompts.length === 0) {
     return <EmptyState />;
   }
@@ -26,6 +35,20 @@ export default function PromptList({ prompts, onDeletePrompt, onEditPrompt, onRe
     }
   };
 
+  const moveUp = (id: string) => {
+    const index = prompts.findIndex(p => p.id === id);
+    if (index > 0) {
+      onReorder(id, prompts[index - 1].id);
+    }
+  };
+
+  const moveDown = (id: string) => {
+    const index = prompts.findIndex(p => p.id === id);
+    if (index < prompts.length - 1) {
+      onReorder(id, prompts[index + 1].id);
+    }
+  };
+
   return (
     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {prompts.map((prompt) => (
@@ -33,11 +56,16 @@ export default function PromptList({ prompts, onDeletePrompt, onEditPrompt, onRe
           key={prompt.id} 
           onDragOver={handleDragOver}
           onDrop={(e) => handleDrop(e, prompt.id)}
+          className="h-full"
         >
           <PromptCard 
             prompt={prompt} 
+            projects={projects}
             onDelete={onDeletePrompt} 
             onEdit={onEditPrompt}
+            onMoveToProject={onMoveToProject}
+            onMoveUp={moveUp}
+            onMoveDown={moveDown}
           />
         </div>
       ))}

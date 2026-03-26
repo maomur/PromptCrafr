@@ -91,11 +91,7 @@ export default function PromptPage() {
     });
   };
 
-  const handleDropOnProject = (projectId: string | undefined, e: React.DragEvent) => {
-    e.preventDefault();
-    const promptId = e.dataTransfer.getData('promptId');
-    if (!promptId) return;
-
+  const handleMoveToProject = (promptId: string, projectId: string | undefined) => {
     setPrompts(prompts.map(p => p.id === promptId ? { ...p, projectId } : p));
     toast({
       title: "Prompt movido",
@@ -103,6 +99,13 @@ export default function PromptPage() {
         ? `Prompt movido a ${projects.find(p => p.id === projectId)?.name}`
         : "Prompt movido a General",
     });
+  };
+
+  const handleDropOnProject = (projectId: string | undefined, e: React.DragEvent) => {
+    e.preventDefault();
+    const promptId = e.dataTransfer.getData('promptId');
+    if (!promptId) return;
+    handleMoveToProject(promptId, projectId);
   };
 
   const handleReorderPrompts = (draggedId: string, targetId: string) => {
@@ -262,12 +265,14 @@ export default function PromptPage() {
         <div className="flex-1 pb-20">
           <PromptList
             prompts={filteredPrompts}
+            projects={projects}
             onDeletePrompt={handleDeletePrompt}
             onEditPrompt={(prompt) => {
               setSelectedPrompt(prompt);
               setEditDialogOpen(true);
             }}
             onReorder={handleReorderPrompts}
+            onMoveToProject={handleMoveToProject}
           />
         </div>
       </div>

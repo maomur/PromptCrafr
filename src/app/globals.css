@@ -67,3 +67,14 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Soporte para Drag and Drop en móviles */
+[draggable="true"] {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.grabbing {
+  cursor: grabbing !important;
+}
