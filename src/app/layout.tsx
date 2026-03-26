@@ -35,7 +35,7 @@ export default function RootLayout({
   return (
     <html lang="es" className={cn(GeistSans.variable, GeistMono.variable)}>
       <head>
-        <link rel="apple-touch-icon" href="https://picsum.photos/seed/promptcraft/180/180" />
+        <link rel="apple-touch-icon" href="https://www.pulseai.ws/logo193.png" />
       </head>
       <body className="font-sans antialiased flex flex-col min-h-screen">
         <div className="flex-grow">{children}</div>

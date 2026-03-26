@@ -11,13 +11,13 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: '#007AFF',
     icons: [
       {
-        src: 'https://picsum.photos/seed/promptcraft/192/192',
+        src: 'https://www.pulseai.ws/logo193.png',
         sizes: '192x192',
         type: 'image/png',
         purpose: 'maskable',
       },
       {
-        src: 'https://picsum.photos/seed/promptcraft/512/512',
+        src: 'https://www.pulseai.ws/logo193.png',
         sizes: '512x512',
         type: 'image/png',
       },
