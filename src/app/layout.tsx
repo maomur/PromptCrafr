@@ -5,6 +5,7 @@ import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
 import Script from 'next/script';
+import InstallPWABanner from '@/components/install-pwa-banner';
 
 export const metadata: Metadata = {
   title: 'PromptCraft',
@@ -39,6 +40,7 @@ export default function RootLayout({
       </head>
       <body className="font-sans antialiased flex flex-col min-h-screen">
         <div className="flex-grow">{children}</div>
+        <InstallPWABanner />
         <Toaster />
         <footer className="py-6 text-center text-sm text-muted-foreground">
           Creado por:{' '}
