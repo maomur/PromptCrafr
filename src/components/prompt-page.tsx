@@ -85,7 +85,6 @@ export default function PromptPage() {
   const handleDeleteProject = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setProjects(projects.filter(p => p.id !== id));
-    // Mover prompts huérfanos a 'Sin Proyecto'
     setPrompts(prompts.map(p => p.projectId === id ? { ...p, projectId: undefined } : p));
     if (activeProjectId === id) setActiveProjectId('all');
     toast({
@@ -108,6 +107,22 @@ export default function PromptPage() {
     });
   };
 
+  const handleReorderPrompts = (draggedId: string, targetId: string) => {
+    if (draggedId === targetId) return;
+
+    setPrompts((prev) => {
+      const result = [...prev];
+      const draggedIndex = result.findIndex(p => p.id === draggedId);
+      const targetIndex = result.findIndex(p => p.id === targetId);
+      
+      if (draggedIndex === -1 || targetIndex === -1) return prev;
+
+      const [removed] = result.splice(draggedIndex, 1);
+      result.splice(targetIndex, 0, removed);
+      return result;
+    });
+  };
+
   const closeAllDialogs = () => {
     setCreateDialogOpen(false);
     setEditDialogOpen(false);
@@ -117,20 +132,17 @@ export default function PromptPage() {
   const filteredPrompts = useMemo(() => {
     let result = [...prompts];
     
-    // Filtro por Proyecto
     if (activeProjectId === 'none') {
       result = result.filter(p => !p.projectId);
     } else if (activeProjectId !== 'all') {
       result = result.filter(p => p.projectId === activeProjectId);
     }
 
-    // Filtro por Categoría
     if (categoryFilter !== 'Todos') {
       result = result.filter(p => p.category === categoryFilter);
     }
 
-    // Ordenar por fecha
-    return result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return result;
   }, [prompts, activeProjectId, categoryFilter]);
 
   return (
@@ -173,7 +185,6 @@ export default function PromptPage() {
       </Header>
 
       <div className="flex flex-col md:flex-row gap-8">
-        {/* Sidebar de Proyectos */}
         <aside className="w-full md:w-64 shrink-0 space-y-6">
           <div className="space-y-2">
             <div className="flex items-center justify-between px-2 pb-2 border-b border-border/40">
@@ -267,7 +278,6 @@ export default function PromptPage() {
           </div>
         </aside>
 
-        {/* Lista de Prompts */}
         <div className="flex-1">
           <PromptList
             prompts={filteredPrompts}
@@ -276,11 +286,11 @@ export default function PromptPage() {
               setSelectedPrompt(prompt);
               setEditDialogOpen(true);
             }}
+            onReorder={handleReorderPrompts}
           />
         </div>
       </div>
 
-      {/* Diálogo de Edición */}
       <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent
           onOpenAutoFocus={(e) => e.preventDefault()}

@@ -15,6 +15,8 @@ import PromptCardActions from './prompt-card-actions';
 import { Badge } from '@/components/ui/badge';
 import { Video, Image, FileText, Sparkles, GripVertical } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
+import { useState } from 'react';
 
 interface PromptCardProps {
   prompt: Prompt;
@@ -36,9 +38,9 @@ const categoryColors = {
   Otros: 'bg-gray-100 text-gray-800 dark:bg-gray-700/50 dark:text-gray-300',
 }
 
-
 export default function PromptCard({ prompt, onDelete, onEdit }: PromptCardProps) {
   const { toast } = useToast();
+  const [isDragging, setIsDragging] = useState(false);
 
   const handleCardClick = (event: React.MouseEvent) => {
     if ((event.target as HTMLElement).closest('button')) {
@@ -56,24 +58,33 @@ export default function PromptCard({ prompt, onDelete, onEdit }: PromptCardProps
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.setData('promptId', prompt.id);
     e.dataTransfer.effectAllowed = 'move';
+    setIsDragging(true);
+  };
+
+  const handleDragEnd = () => {
+    setIsDragging(false);
   };
 
   return (
     <Card 
       draggable
       onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
       onClick={handleCardClick}
-      className="group flex h-full cursor-grab active:cursor-grabbing flex-col rounded-xl border-border/20 bg-card text-card-foreground shadow-md transition-all duration-300 hover:shadow-lg relative overflow-hidden"
+      className={cn(
+        "group flex h-full cursor-grab active:cursor-grabbing flex-col rounded-xl border-border/20 bg-card text-card-foreground shadow-md transition-all duration-300 hover:shadow-lg relative overflow-hidden",
+        isDragging && "opacity-40 grayscale-[0.5]"
+      )}
     >
-      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity cursor-move p-1 bg-background/50 rounded shadow-sm">
         <GripVertical className="h-4 w-4 text-muted-foreground" />
       </div>
       <CardHeader>
-        <div className="flex justify-between items-start pr-4">
-          <CardTitle className="font-semibold tracking-tight text-base">{prompt.title}</CardTitle>
+        <div className="flex justify-between items-start pr-6">
+          <CardTitle className="font-semibold tracking-tight text-base truncate pr-2">{prompt.title}</CardTitle>
           <Badge 
             variant="outline"
-            className={`flex items-center border-0 text-xs font-medium ${categoryColors[prompt.category]}`}
+            className={cn("flex items-center border-0 text-[10px] px-2 py-0 h-5 font-medium shrink-0", categoryColors[prompt.category])}
           >
             {categoryIcons[prompt.category]}
             {prompt.category}
@@ -82,12 +93,12 @@ export default function PromptCard({ prompt, onDelete, onEdit }: PromptCardProps
         <CardDescription className="line-clamp-2 text-sm pt-1">{prompt.description}</CardDescription>
       </CardHeader>
       <CardContent className="flex-grow">
-        <p className="font-mono text-sm text-muted-foreground line-clamp-3">
+        <p className="font-mono text-sm text-muted-foreground line-clamp-3 bg-muted/30 p-2 rounded-md">
           {prompt.content}
         </p>
       </CardContent>
-      <CardFooter className="flex items-center justify-between text-xs text-muted-foreground">
-        <span>
+      <CardFooter className="flex items-center justify-between text-[10px] text-muted-foreground pt-0">
+        <span className="opacity-70">
           {formatDistanceToNow(new Date(prompt.createdAt), { addSuffix: true, locale: es })}
         </span>
         <PromptCardActions prompt={prompt} onDelete={onDelete} onEdit={() => onEdit(prompt)} />
