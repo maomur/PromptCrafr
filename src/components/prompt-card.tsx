@@ -13,7 +13,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import PromptCardActions from './prompt-card-actions';
 import { Badge } from '@/components/ui/badge';
-import { Video, Image, FileText, Sparkles } from 'lucide-react';
+import { Video, Image, FileText, Sparkles, GripVertical } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface PromptCardProps {
@@ -41,7 +41,6 @@ export default function PromptCard({ prompt, onDelete, onEdit }: PromptCardProps
   const { toast } = useToast();
 
   const handleCardClick = (event: React.MouseEvent) => {
-    // Evita la copia si se hace clic en un botón dentro de la tarjeta
     if ((event.target as HTMLElement).closest('button')) {
       return;
     }
@@ -54,13 +53,23 @@ export default function PromptCard({ prompt, onDelete, onEdit }: PromptCardProps
     });
   };
 
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData('promptId', prompt.id);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
   return (
     <Card 
+      draggable
+      onDragStart={handleDragStart}
       onClick={handleCardClick}
-      className="flex h-full cursor-pointer flex-col rounded-xl border-border/20 bg-card text-card-foreground shadow-md transition-all duration-300 hover:shadow-lg"
+      className="group flex h-full cursor-grab active:cursor-grabbing flex-col rounded-xl border-border/20 bg-card text-card-foreground shadow-md transition-all duration-300 hover:shadow-lg relative overflow-hidden"
     >
+      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <GripVertical className="h-4 w-4 text-muted-foreground" />
+      </div>
       <CardHeader>
-        <div className="flex justify-between items-start">
+        <div className="flex justify-between items-start pr-4">
           <CardTitle className="font-semibold tracking-tight text-base">{prompt.title}</CardTitle>
           <Badge 
             variant="outline"
@@ -79,7 +88,7 @@ export default function PromptCard({ prompt, onDelete, onEdit }: PromptCardProps
       </CardContent>
       <CardFooter className="flex items-center justify-between text-xs text-muted-foreground">
         <span>
-          Creado {formatDistanceToNow(new Date(prompt.createdAt), { addSuffix: true, locale: es })}
+          {formatDistanceToNow(new Date(prompt.createdAt), { addSuffix: true, locale: es })}
         </span>
         <PromptCardActions prompt={prompt} onDelete={onDelete} onEdit={() => onEdit(prompt)} />
       </CardFooter>
