@@ -274,13 +274,15 @@ export default function PromptPage({ user }: PromptPageProps) {
     if (!promptToDelete || !firestore || !user?.uid) return;
     
     const targetId = promptToDelete.id;
+    // Cerramos el diálogo primero para que Radix limpie los eventos
     setDeleteDialogOpen(false);
     
+    // Pequeño retardo para permitir que la animación de cierre de Radix complete y libere el body
     setTimeout(() => {
       deleteDocumentNonBlocking(doc(firestore, 'users', user.uid, 'prompts', targetId));
       setPromptToDelete(null);
       toast({ title: "Prompt eliminado", description: "El prompt ha sido borrado." });
-    }, 200);
+    }, 150);
   }, [promptToDelete, firestore, user?.uid, toast]);
 
   const filteredPrompts = useMemo(() => {
