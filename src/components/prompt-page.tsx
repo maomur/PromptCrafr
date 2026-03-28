@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
@@ -191,9 +190,9 @@ export default function PromptPage({ user }: PromptPageProps) {
       createdAt: new Date().toISOString(),
       url: linkData.url,
       projectId: linkData.projectId,
-      title: linkData.title,
-      description: linkData.description,
-      category: linkData.category,
+      title: linkData.title || null,
+      description: linkData.description || null,
+      category: linkData.category || null,
     };
 
     setDocumentNonBlocking(newDocRef, newLink);
