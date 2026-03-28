@@ -102,14 +102,22 @@ export default function PromptPage({ user }: PromptPageProps) {
   const prompts = useMemo(() => rawPrompts || [], [rawPrompts]);
   const links = useMemo(() => rawLinks || [], [rawLinks]);
 
-  // EFECTO MAESTRO: Garantiza que el body recupere siempre su interactividad cuando no hay diálogos abiertos.
-  // Esto previene de forma definitiva el "congelamiento" causado por Radix UI al eliminar items.
+  // UNBLOCKER MAESTRO: Esta es la solución definitiva al congelamiento.
+  // Cuando todos los diálogos se cierran, forzamos la liberación del body.
   useEffect(() => {
     const isAnyDialogOpen = isCreateDialogOpen || isCreateLinkDialogOpen || isEditDialogOpen || isEditLinkDialogOpen || isNewProjectDialogOpen || isDeleteDialogOpen;
     
     if (!isAnyDialogOpen) {
-      document.body.style.pointerEvents = 'auto';
-      document.body.style.overflow = 'auto';
+      // Usamos un pequeño delay para asegurar que Radix UI haya intentado su limpieza fallida antes
+      const timer = setTimeout(() => {
+        document.body.style.pointerEvents = '';
+        document.body.style.overflow = '';
+        document.documentElement.style.pointerEvents = '';
+        document.documentElement.style.overflow = '';
+        // Eliminar posibles clases de bloqueo inyectadas
+        document.body.classList.remove('pointer-events-none');
+      }, 50);
+      return () => clearTimeout(timer);
     }
   }, [isCreateDialogOpen, isCreateLinkDialogOpen, isEditDialogOpen, isEditLinkDialogOpen, isNewProjectDialogOpen, isDeleteDialogOpen]);
 
