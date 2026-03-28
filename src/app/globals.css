@@ -79,6 +79,7 @@
 .drag-handle {
   cursor: grab;
   touch-action: none !important;
+  -webkit-touch-callout: none !important;
 }
 
 .drag-handle:active {

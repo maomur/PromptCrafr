@@ -51,9 +51,8 @@ export default function PromptCard({
   onMoveDown
 }: PromptCardProps) {
   const { toast } = useToast();
-  const cardRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [isDragInitiated, setIsDragInitiated] = useState(false);
+  const [canDrag, setCanDrag] = useState(false);
 
   const project = useMemo(() => 
     projects.find(p => p.id === prompt.projectId),
@@ -80,45 +79,47 @@ export default function PromptCard({
   }, [prompt.content, toast]);
 
   const handleDragStart = (e: React.DragEvent) => {
+    // IMPORTANTE: Solo permitir el arrastre si se inició desde el manejador
+    const target = e.target as HTMLElement;
+    const isHandle = target.closest('.drag-handle');
+    
+    if (!isHandle) {
+      e.preventDefault();
+      return;
+    }
+
     e.dataTransfer.setData('itemId', prompt.id);
     e.dataTransfer.setData('itemType', 'prompt');
     e.dataTransfer.effectAllowed = 'move';
+    
+    // Pequeño timeout para que la clase de dragging se aplique después de que empiece el arrastre
     setTimeout(() => setIsDragging(true), 0);
   };
 
   const handleDragEnd = () => {
     setIsDragging(false);
-    setIsDragInitiated(false);
-    if (cardRef.current) {
-      cardRef.current.setAttribute('draggable', 'false');
-    }
-  };
-
-  const initiateDrag = () => {
-    setIsDragInitiated(true);
-    if (cardRef.current) {
-      cardRef.current.setAttribute('draggable', 'true');
-    }
+    setCanDrag(false);
   };
 
   return (
     <Card 
-      ref={cardRef}
-      draggable="false"
+      draggable="true" // Siempre true, pero validamos en onDragStart
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onClick={handleCardClick}
       className={cn(
         "group flex h-full flex-col rounded-xl border-border/20 bg-card text-card-foreground shadow-md transition-all duration-300 hover:shadow-lg relative overflow-hidden select-none touch-pan-y",
         isDragging && "opacity-40 grayscale-[0.5] scale-95",
-        isDragInitiated && "grabbing"
+        canDrag && "grabbing"
       )}
     >
       <div 
         className="drag-handle absolute top-2 right-2 p-2 bg-background/80 backdrop-blur-sm rounded-md shadow-sm z-10 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
         title="Arrastrar para organizar"
-        onMouseDown={initiateDrag}
-        onTouchStart={initiateDrag}
+        onMouseEnter={() => setCanDrag(true)}
+        onMouseLeave={() => !isDragging && setCanDrag(false)}
+        onTouchStart={() => setCanDrag(true)}
+        onTouchEnd={() => !isDragging && setCanDrag(false)}
       >
         <GripVertical className="h-4 w-4 text-muted-foreground" />
       </div>

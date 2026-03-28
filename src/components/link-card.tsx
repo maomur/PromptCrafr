@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Link as LinkIcon, ExternalLink, Trash2, GripVertical, Eye, MoreVertical, FolderInput, ChevronUp, ChevronDown, Folder } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useState, useCallback, useMemo, useRef } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import {
   DropdownMenu,
@@ -40,9 +40,8 @@ interface LinkCardProps {
 
 export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToProject, onMoveUp, onMoveDown }: LinkCardProps) {
   const { toast } = useToast();
-  const cardRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [isDragInitiated, setIsDragInitiated] = useState(false);
+  const [canDrag, setCanDrag] = useState(false);
 
   const project = useMemo(() => 
     projects.find(p => p.id === link.projectId),
@@ -50,6 +49,14 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
   );
 
   const handleDragStart = (e: React.DragEvent) => {
+    const target = e.target as HTMLElement;
+    const isHandle = target.closest('.drag-handle');
+    
+    if (!isHandle) {
+      e.preventDefault();
+      return;
+    }
+
     e.dataTransfer.setData('itemId', link.id);
     e.dataTransfer.setData('itemType', 'link');
     e.dataTransfer.effectAllowed = 'move';
@@ -58,17 +65,7 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
 
   const handleDragEnd = () => {
     setIsDragging(false);
-    setIsDragInitiated(false);
-    if (cardRef.current) {
-      cardRef.current.setAttribute('draggable', 'false');
-    }
-  };
-
-  const initiateDrag = () => {
-    setIsDragInitiated(true);
-    if (cardRef.current) {
-      cardRef.current.setAttribute('draggable', 'true');
-    }
+    setCanDrag(false);
   };
 
   const handleCardClick = useCallback((event: React.MouseEvent) => {
@@ -92,22 +89,23 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
 
   return (
     <Card 
-      ref={cardRef}
-      draggable="false"
+      draggable="true"
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onClick={handleCardClick}
       className={cn(
         "group flex flex-col h-full rounded-xl border-border/20 bg-card shadow-md transition-all duration-300 hover:shadow-lg relative overflow-hidden select-none touch-pan-y",
         isDragging && "opacity-40 grayscale-[0.5] scale-95",
-        isDragInitiated && "grabbing"
+        canDrag && "grabbing"
       )}
     >
       <div 
         className="drag-handle absolute top-2 right-2 p-2 bg-background/80 backdrop-blur-sm rounded-md shadow-sm z-10 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
         title="Arrastrar para organizar"
-        onMouseDown={initiateDrag}
-        onTouchStart={initiateDrag}
+        onMouseEnter={() => setCanDrag(true)}
+        onMouseLeave={() => !isDragging && setCanDrag(false)}
+        onTouchStart={() => setCanDrag(true)}
+        onTouchEnd={() => !isDragging && setCanDrag(false)}
       >
         <GripVertical className="h-4 w-4 text-muted-foreground" />
       </div>

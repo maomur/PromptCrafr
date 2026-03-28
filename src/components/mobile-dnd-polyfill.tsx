@@ -16,13 +16,15 @@ export default function MobileDndPolyfill() {
               x: offset.x,
               y: offset.y
             };
-          }
+          },
+          // Forzamos que el polyfill escuche incluso si no hay draggable="true" inicialmente
+          holdToDrag: 100 
         });
 
-        // Aseguramos que los eventos táctiles en el handle inicien el drag
+        // Necesario para evitar el scroll mientras se arrastra en iOS/Android
         window.addEventListener('touchmove', function() {}, { passive: false });
       } catch (error) {
-        // Fallback silencioso
+        console.error('Error initializing DND polyfill:', error);
       }
     };
 
