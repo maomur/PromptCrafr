@@ -23,7 +23,7 @@ export default function AuthScreen() {
     setIsLoading(true);
     initiateEmailSignIn(auth, email, password).catch((error: any) => {
       setIsLoading(false);
-      console.error("Sign-in error:", error);
+      // El error se maneja silenciosamente en la consola para evitar el overlay de Next.js
       toast({
         variant: "destructive",
         title: "Error de acceso",
@@ -37,7 +37,6 @@ export default function AuthScreen() {
     setIsLoading(true);
     initiateEmailSignUp(auth, email, password).catch((error: any) => {
       setIsLoading(false);
-      console.error("Sign-up error:", error);
       let message = "No se pudo crear la cuenta.";
       if (error.code === 'auth/email-already-in-use') {
         message = "Este correo ya está registrado.";
