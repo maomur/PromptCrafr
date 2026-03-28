@@ -52,6 +52,7 @@ export default function PromptCard({
 }: PromptCardProps) {
   const { toast } = useToast();
   const [isDragging, setIsDragging] = useState(false);
+  const [canDrag, setCanDrag] = useState(false);
 
   const project = useMemo(() => 
     projects.find(p => p.id === prompt.projectId),
@@ -96,14 +97,24 @@ export default function PromptCard({
 
   const handleDragEnd = () => {
     setIsDragging(false);
+    setCanDrag(false); // Resetear estado al terminar
+  };
+
+  // Activar draggable solo cuando se toca el manejador (para móviles)
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('.drag-handle')) {
+      setCanDrag(true);
+    }
   };
 
   return (
     <Card 
-      draggable="true" 
+      draggable={canDrag || undefined}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onClick={handleCardClick}
+      onTouchStart={handleTouchStart}
       className={cn(
         "group flex h-full flex-col rounded-xl border-border/20 bg-card text-card-foreground shadow-md transition-all duration-300 hover:shadow-lg relative overflow-hidden select-none touch-pan-y",
         isDragging && "opacity-40 grayscale-[0.5] scale-95",
@@ -112,6 +123,11 @@ export default function PromptCard({
       <div 
         className="drag-handle absolute top-2 right-2 p-2 bg-background/80 backdrop-blur-sm rounded-md shadow-sm z-50 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
         title="Arrastrar para organizar"
+        onMouseDown={() => setCanDrag(true)}
+        onTouchMove={(e) => {
+          // Importante: prevenir scroll cuando se mueve sobre el manejador
+          if (e.cancelable) e.preventDefault();
+        }}
       >
         <GripVertical className="h-4 w-4 text-muted-foreground" />
       </div>

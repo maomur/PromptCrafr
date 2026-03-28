@@ -21,16 +21,15 @@ export default function MobileDndPolyfill() {
           holdToDrag: 0 
         });
 
-        // Necesario para evitar el scroll mientras se arrastra en iOS/Android
-        // Solo prevenimos si el objetivo es un elemento de arrastre o el manejador
-        const handleTouchMove = (e: TouchEvent) => {
+        // Este manejador global ayuda a prevenir el scroll nativo cuando se arrastra
+        const handleGlobalTouchMove = (e: TouchEvent) => {
           if ((e.target as HTMLElement).closest('.drag-handle')) {
             if (e.cancelable) e.preventDefault();
           }
         };
 
-        window.addEventListener('touchmove', handleTouchMove, { passive: false });
-        return () => window.removeEventListener('touchmove', handleTouchMove);
+        window.addEventListener('touchmove', handleGlobalTouchMove, { passive: false });
+        return () => window.removeEventListener('touchmove', handleGlobalTouchMove);
       } catch (error) {
         console.error('Error initializing DND polyfill:', error);
       }
