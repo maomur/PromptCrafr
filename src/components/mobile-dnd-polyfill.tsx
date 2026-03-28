@@ -10,23 +10,25 @@ export default function MobileDndPolyfill() {
       try {
         const { polyfill } = await import('mobile-drag-drop');
         
-        // Inicialización robusta del polyfill
+        // Inicialización robusta para respuesta instantánea
         polyfill({
-          holdToDrag: 0, // Respuesta inmediata
+          holdToDrag: 0, 
         });
 
-        // Forzamos un evento táctil no pasivo en los manejadores para asegurar el bloqueo del scroll
-        const handleTouchStart = (e: TouchEvent) => {
+        // Este listener no pasivo es CRÍTICO para permitir que e.preventDefault() funcione en móviles
+        // y bloquee el scroll cuando el usuario toca el manejador de arrastre.
+        const handleTouchMove = (e: TouchEvent) => {
           const target = e.target as HTMLElement;
           if (target.closest('.drag-handle')) {
-            // El touch-action: none en CSS debería bastar, pero esto es un seguro extra
+            // El scroll se bloquea solo si estamos en el mango
+            if (e.cancelable) e.preventDefault();
           }
         };
 
-        window.addEventListener('touchstart', handleTouchStart, { passive: true });
+        window.addEventListener('touchmove', handleTouchMove, { passive: false });
 
         return () => {
-          window.removeEventListener('touchstart', handleTouchStart);
+          window.removeEventListener('touchmove', handleTouchMove);
         };
       } catch (error) {
         console.error('Error initializing DND polyfill:', error);

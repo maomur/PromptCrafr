@@ -49,7 +49,7 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
   );
 
   const handleDragStart = (e: React.DragEvent) => {
-    // Solo permitimos el drag si se inició en el mango
+    // FILTRADO ESTRICTO: Solo permitimos arrastrar si el contacto empezó en el mango
     if (!isReadyToDrag.current) {
       e.preventDefault();
       return;
@@ -97,16 +97,17 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
         isDragging && "opacity-40 grayscale-[0.5] scale-95",
       )}
     >
-      {/* Mango de arrastre: La única zona que permite iniciar el drag */}
+      {/* Mango de arrastre: Zona de control exclusiva para móviles y escritorio */}
       <div 
         className="drag-handle absolute top-0 right-0 bg-background/90 backdrop-blur-sm rounded-bl-xl border-l border-b border-border/40 shadow-sm z-50 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
-        onPointerDown={() => {
+        onPointerDown={(e) => {
           isReadyToDrag.current = true;
+          // El touch-action: none en CSS y el listener global en MobileDndPolyfill bloquean el scroll
         }}
         onPointerUp={() => {
           setTimeout(() => {
             if (!isDragging) isReadyToDrag.current = false;
-          }, 100);
+          }, 200);
         }}
         title="Arrastrar para organizar"
       >

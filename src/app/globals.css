@@ -71,7 +71,7 @@
 /* DRAG AND DROP - SOPORTE DEFINITIVO PARA MÓVILES */
 .drag-handle {
   cursor: grab;
-  touch-action: none !important; /* CRÍTICO: Desactiva el scroll del sistema en esta zona */
+  touch-action: none !important; /* BLOQUEO DE SCROLL DEL SISTEMA */
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;

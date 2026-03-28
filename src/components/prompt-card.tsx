@@ -79,7 +79,7 @@ export default function PromptCard({
   }, [prompt.content, toast]);
 
   const handleDragStart = (e: React.DragEvent) => {
-    // Si no se inició desde el mango, cancelamos el arrastre para permitir el scroll
+    // FILTRADO ESTRICTO: Solo permitimos arrastrar si el contacto empezó en el mango
     if (!isReadyToDrag.current) {
       e.preventDefault();
       return;
@@ -89,7 +89,7 @@ export default function PromptCard({
     e.dataTransfer.setData('itemType', 'prompt');
     e.dataTransfer.effectAllowed = 'move';
     
-    // Pequeño timeout para feedback visual sin romper el inicio del arrastre
+    // El feedback visual se retrasa un milisegundo para no interrumpir el inicio del drag
     setTimeout(() => setIsDragging(true), 0);
   };
 
@@ -109,17 +109,21 @@ export default function PromptCard({
         isDragging && "opacity-40 grayscale-[0.5] scale-95",
       )}
     >
-      {/* Mango de arrastre: La única zona que permite iniciar el drag */}
+      {/* Mango de arrastre: Zona de control exclusiva para móviles y escritorio */}
       <div 
         className="drag-handle absolute top-0 right-0 bg-background/90 backdrop-blur-sm rounded-bl-xl border-l border-b border-border/40 shadow-sm z-50 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
-        onPointerDown={() => {
+        onPointerDown={(e) => {
           isReadyToDrag.current = true;
+          // Evitamos que el scroll se active en el mango inmediatamente
+          if (e.pointerType === 'touch') {
+            // El touch-action: none en CSS y el listener global en MobileDndPolyfill hacen el resto
+          }
         }}
         onPointerUp={() => {
-          // Si el usuario solo hizo click sin arrastrar, reseteamos
+          // No reseteamos inmediatamente para dar tiempo al evento 'dragstart' a dispararse
           setTimeout(() => {
             if (!isDragging) isReadyToDrag.current = false;
-          }, 100);
+          }, 200);
         }}
         title="Arrastrar para organizar"
       >
