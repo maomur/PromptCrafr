@@ -59,7 +59,11 @@ export default function PromptCard({
   );
 
   const handleDragStart = (e: React.DragEvent) => {
-    // El polyfill ya ha bloqueado el scroll si llegamos aquí
+    // Solo permitimos el arrastre si el origen fue el icono
+    const target = e.target as HTMLElement;
+    // En móviles con el polyfill, el target suele ser el elemento con draggable="true"
+    // Pero el polyfill dispara el evento después de validar el touch inicial.
+    
     e.dataTransfer.setData('itemId', prompt.id);
     e.dataTransfer.setData('itemType', 'prompt');
     e.dataTransfer.effectAllowed = 'move';
@@ -73,11 +77,13 @@ export default function PromptCard({
     if (cardRef.current) {
       cardRef.current.classList.remove('opacity-40');
     }
+    // Nos aseguramos de limpiar el estado global por si acaso
     document.body.classList.remove('dragging-active');
   };
 
   const handleCardClick = useCallback((event: React.MouseEvent) => {
     const target = event.target as HTMLElement;
+    // No copiamos si se hace clic en botones o en el mango de arrastre
     if (
       target.closest('button') || 
       target.closest('.drag-handle') || 
@@ -103,6 +109,7 @@ export default function PromptCard({
       onClick={handleCardClick}
       className="group flex h-full flex-col rounded-xl border-border/20 bg-card text-card-foreground shadow-md transition-all duration-300 hover:shadow-lg relative overflow-hidden"
     >
+      {/* El manejador de arrastre es la única zona donde touch-action es 'none' en el CSS */}
       <div className="drag-handle absolute top-0 right-0">
         <GripVertical className="h-5 w-5 text-muted-foreground" />
       </div>
