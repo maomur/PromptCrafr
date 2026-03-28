@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import type { Prompt, PromptCategory, Project } from '@/lib/definitions';
 import { promptCategories } from '@/lib/definitions';
 import Header from '@/components/header';
@@ -59,7 +58,7 @@ export default function PromptPage() {
     }
   }, [user, isUserLoading, auth]);
 
-  // Consultas de Firestore
+  // Consultas de Firestore memoizadas
   const projectsQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
     return collection(firestore, 'users', user.uid, 'projects');
@@ -83,17 +82,10 @@ export default function PromptPage() {
   const [categoryFilter, setCategoryFilter] = useState<PromptCategory | 'Todos'>('Todos');
   const [activeProjectId, setActiveProjectId] = useState<string | 'all' | 'none'>('all');
 
-  // Asegurar que siempre tengamos arrays para evitar errores de iteración
   const projects = useMemo(() => rawProjects || [], [rawProjects]);
   const prompts = useMemo(() => rawPrompts || [], [rawPrompts]);
 
-  const handleDeletePrompt = (id: string) => {
-    if (!user?.uid || !firestore) return;
-    const docRef = doc(firestore, 'users', user.uid, 'prompts', id);
-    deleteDocumentNonBlocking(docRef);
-  };
-
-  const handleSave = (promptData: {
+  const handleSave = useCallback((promptData: {
     title: string;
     description: string;
     content: string;
@@ -119,18 +111,18 @@ export default function PromptPage() {
         ownerId: user.uid,
         createdAt: now,
         updatedAt: now,
-        title: promptData.title,
-        description: promptData.description,
-        content: promptData.content,
+        title: promptData.title || '',
+        description: promptData.description || '',
+        content: promptData.content || '',
         category: promptData.category,
         projectId: promptData.projectId || null,
       };
 
       setDocumentNonBlocking(newDocRef, newPrompt, { merge: true });
     }
-  };
+  }, [user?.uid, firestore]);
 
-  const handleCreateProject = () => {
+  const handleCreateProject = useCallback(() => {
     if (!newProjectName.trim() || !user?.uid || !firestore) return;
     
     const colRef = collection(firestore, 'users', user.uid, 'projects');
@@ -151,16 +143,16 @@ export default function PromptPage() {
       title: "Proyecto creado",
       description: `Se ha creado el proyecto "${newProjectName}"`,
     });
-  };
+  }, [newProjectName, user?.uid, firestore, toast]);
 
-  const handleDeleteProject = (id: string, e: React.MouseEvent) => {
+  const handleDeleteProject = useCallback((id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!user?.uid || !firestore) return;
 
     const projectRef = doc(firestore, 'users', user.uid, 'projects', id);
     deleteDocumentNonBlocking(projectRef);
 
-    // Mover prompts huérfanos a General
+    // Desasociar prompts de este proyecto
     prompts.forEach(p => {
       if (p.projectId === id) {
         const promptRef = doc(firestore, 'users', user.uid, 'prompts', p.id);
@@ -173,9 +165,9 @@ export default function PromptPage() {
       title: "Proyecto eliminado",
       description: "Los prompts han sido movidos a la sección general.",
     });
-  };
+  }, [user?.uid, firestore, prompts, activeProjectId, toast]);
 
-  const handleMoveToProject = (promptId: string, projectId: string | null) => {
+  const handleMoveToProject = useCallback((promptId: string, projectId: string | null) => {
     if (!user?.uid || !firestore) return;
     const promptRef = doc(firestore, 'users', user.uid, 'prompts', promptId);
     updateDocumentNonBlocking(promptRef, { projectId });
@@ -186,26 +178,13 @@ export default function PromptPage() {
         ? `Prompt movido a ${projects.find(p => p.id === projectId)?.name}`
         : "Prompt movido a General",
     });
-  };
+  }, [user?.uid, firestore, projects, toast]);
 
-  const handleDropOnProject = (projectId: string | null, e: React.DragEvent) => {
+  const handleDropOnProject = useCallback((projectId: string | null, e: React.DragEvent) => {
     e.preventDefault();
     const promptId = e.dataTransfer.getData('promptId');
-    if (!promptId) return;
-    handleMoveToProject(promptId, projectId);
-  };
-
-  const handleReorderPrompts = (draggedId: string, targetId: string) => {
-    // La funcionalidad de reordenar requiere un campo de 'order' en el esquema.
-    // Por ahora, mantenemos el toast informativo.
-    toast({ title: "Orden actualizado", description: "El orden visual se ha modificado." });
-  };
-
-  const closeAllDialogs = () => {
-    setCreateDialogOpen(false);
-    setEditDialogOpen(false);
-    setSelectedPrompt(null);
-  };
+    if (promptId) handleMoveToProject(promptId, projectId);
+  }, [handleMoveToProject]);
 
   const filteredPrompts = useMemo(() => {
     let result = [...prompts];
@@ -227,7 +206,12 @@ export default function PromptPage() {
     });
   }, [prompts, activeProjectId, categoryFilter]);
 
-  // Pantalla de carga persistente mientras se sincronizan los datos iniciales
+  const closeAllDialogs = useCallback(() => {
+    setCreateDialogOpen(false);
+    setEditDialogOpen(false);
+    setSelectedPrompt(null);
+  }, []);
+
   if (isUserLoading || (user && (projectsLoading || promptsLoading))) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
@@ -357,12 +341,15 @@ export default function PromptPage() {
           <PromptList
             prompts={filteredPrompts}
             projects={projects}
-            onDeletePrompt={handleDeletePrompt}
+            onDeletePrompt={(id) => {
+              if (!user?.uid || !firestore) return;
+              deleteDocumentNonBlocking(doc(firestore, 'users', user.uid, 'prompts', id));
+            }}
             onEditPrompt={(prompt) => {
               setSelectedPrompt(prompt);
               setEditDialogOpen(true);
             }}
-            onReorder={handleReorderPrompts}
+            onReorder={() => toast({ title: "Reordenar", description: "Orden actualizado visualmente." })}
             onMoveToProject={handleMoveToProject}
           />
         </div>
