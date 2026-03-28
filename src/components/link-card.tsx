@@ -40,6 +40,7 @@ interface LinkCardProps {
 
 export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToProject, onMoveUp, onMoveDown }: LinkCardProps) {
   const { toast } = useToast();
+  const [isDraggable, setIsDraggable] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
   const project = useMemo(() => 
@@ -48,25 +49,19 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
   );
 
   const handleDragStart = (e: React.DragEvent) => {
-    // Si el evento no proviene del manejador de arrastre, cancelamos para permitir el scroll
-    const target = e.target as HTMLElement;
-    const isFromHandle = target.closest('.drag-handle');
-
-    if (!isFromHandle) {
+    if (!isDraggable) {
       e.preventDefault();
       return;
     }
-
     e.dataTransfer.setData('itemId', link.id);
     e.dataTransfer.setData('itemType', 'link');
     e.dataTransfer.effectAllowed = 'move';
-    
-    // Feedback visual inmediato
     setTimeout(() => setIsDragging(true), 0);
   };
 
   const handleDragEnd = () => {
     setIsDragging(false);
+    setIsDraggable(false);
   };
 
   const handleCardClick = useCallback((event: React.MouseEvent) => {
@@ -90,7 +85,7 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
 
   return (
     <Card 
-      draggable={true}
+      draggable={isDraggable}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onClick={handleCardClick}
@@ -99,9 +94,13 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
         isDragging && "opacity-40 grayscale-[0.5] scale-95",
       )}
     >
-      {/* Manejador de arrastre (REJILLA) - Hitbox optimizada para touch */}
+      {/* Mango de arrastre: Activa draggable dinámicamente al tocar/hacer click */}
       <div 
         className="drag-handle absolute top-0 right-0 bg-background/90 backdrop-blur-sm rounded-bl-xl border-l border-b border-border/40 shadow-sm z-50 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+        onPointerDown={(e) => {
+          e.stopPropagation();
+          setIsDraggable(true);
+        }}
         title="Arrastrar para organizar"
       >
         <GripVertical className="h-5 w-5 text-muted-foreground" />
