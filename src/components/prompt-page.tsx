@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import type { Prompt, PromptCategory, Project, Link } from '@/lib/definitions';
 import { promptCategories } from '@/lib/definitions';
 import Header from '@/components/header';
@@ -276,6 +276,7 @@ export default function PromptPage({ user }: PromptPageProps) {
     const targetId = promptToDelete.id;
     setDeleteDialogOpen(false);
     
+    // Pequeño delay para dejar que Radix UI limpie el foco antes de borrar el elemento del DOM
     setTimeout(() => {
       deleteDocumentNonBlocking(doc(firestore, 'users', user.uid, 'prompts', targetId));
       setPromptToDelete(null);
