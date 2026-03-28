@@ -8,22 +8,36 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import type { Link } from '@/lib/definitions';
+import type { Link, Project } from '@/lib/definitions';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
-import { Link as LinkIcon, ExternalLink, Trash2, GripVertical } from 'lucide-react';
+import { Link as LinkIcon, ExternalLink, Trash2, GripVertical, Eye, MoreVertical, FolderInput } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface LinkCardProps {
   link: Link;
+  projects: Project[];
   onDelete: (id: string) => void;
+  onEdit: (link: Link) => void;
+  onMoveToProject: (linkId: string, projectId: string | null) => void;
 }
 
-export default function LinkCard({ link, onDelete }: LinkCardProps) {
+export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToProject }: LinkCardProps) {
   const { toast } = useToast();
   const [isDragging, setIsDragging] = useState(false);
 
@@ -69,18 +83,58 @@ export default function LinkCard({ link, onDelete }: LinkCardProps) {
         <GripVertical className="h-4 w-4 text-muted-foreground" />
       </div>
 
-      <div className="absolute top-2 right-10 p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+      <div className="absolute top-2 right-10 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10">
         <Button 
           variant="ghost" 
           size="icon" 
-          className="h-8 w-8 text-destructive hover:bg-destructive/10"
+          className="h-8 w-8"
           onClick={(e) => {
             e.stopPropagation();
-            onDelete(link.id);
+            onEdit(link);
           }}
         >
-          <Trash2 className="h-4 w-4" />
+          <Eye className="h-4 w-4" />
         </Button>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel>Organizar</DropdownMenuLabel>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <FolderInput className="mr-2 h-4 w-4" />
+                Mover a Proyecto
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                <DropdownMenuItem onSelect={() => onMoveToProject(link.id, null)}>
+                  Sin Proyecto
+                </DropdownMenuItem>
+                {projects.length > 0 && <DropdownMenuSeparator />}
+                {projects.map((project) => (
+                  <DropdownMenuItem 
+                    key={project.id} 
+                    onSelect={() => onMoveToProject(link.id, project.id)}
+                    disabled={link.projectId === project.id}
+                  >
+                    {project.name}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem 
+              className="text-destructive focus:bg-destructive focus:text-destructive-foreground"
+              onSelect={() => onDelete(link.id)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Eliminar Enlace
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <CardHeader className="pb-2 pt-8 md:pt-6">

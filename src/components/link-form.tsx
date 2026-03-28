@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { promptCategories, type PromptCategory, type Project } from '@/lib/definitions';
+import { promptCategories, type PromptCategory, type Project, type Link } from '@/lib/definitions';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 
 interface LinkFormProps {
+  link?: Link;
   projects: Project[];
   onSave: (linkData: {
     url: string;
@@ -24,22 +25,24 @@ interface LinkFormProps {
     title?: string;
     description?: string;
     category?: PromptCategory;
-  }) => void;
+  }, id?: string) => void;
   onClose: () => void;
 }
 
-export default function LinkForm({ projects, onSave, onClose }: LinkFormProps) {
+export default function LinkForm({ link, projects, onSave, onClose }: LinkFormProps) {
   const { toast } = useToast();
-  const [url, setUrl] = useState('');
-  const [projectId, setProjectId] = useState<string>(projects[0]?.id || '');
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [category, setCategory] = useState<PromptCategory | 'none'>('none');
+  const isEditMode = !!link;
+  
+  const [url, setUrl] = useState(link?.url || '');
+  const [projectId, setProjectId] = useState<string>(link?.projectId || projects[0]?.id || 'none');
+  const [title, setTitle] = useState(link?.title || '');
+  const [description, setDescription] = useState(link?.description || '');
+  const [category, setCategory] = useState<PromptCategory | 'none'>(link?.category || 'none');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!url.trim() || !projectId) {
+    if (!url.trim() || !projectId || projectId === 'none') {
       toast({
         variant: 'destructive',
         title: 'Campos incompletos',
@@ -55,7 +58,7 @@ export default function LinkForm({ projects, onSave, onClose }: LinkFormProps) {
       title: title.trim() || undefined,
       description: description.trim() || undefined,
       category: category === 'none' ? undefined : category,
-    });
+    }, link?.id);
   };
 
   return (
@@ -79,6 +82,7 @@ export default function LinkForm({ projects, onSave, onClose }: LinkFormProps) {
             <SelectValue placeholder="Selecciona un proyecto" />
           </SelectTrigger>
           <SelectContent position="popper" sideOffset={4}>
+            <SelectItem value="none">Sin proyecto</SelectItem>
             {projects.map((p) => (
               <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
             ))}
@@ -125,7 +129,7 @@ export default function LinkForm({ projects, onSave, onClose }: LinkFormProps) {
       <div className="flex justify-end pt-2">
         <Button type="submit" disabled={isSubmitting} className="bg-orange-500 hover:bg-orange-600 text-white border-none">
           {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Guardar Enlace
+          {isEditMode ? 'Guardar Cambios' : 'Guardar Enlace'}
         </Button>
       </div>
     </form>

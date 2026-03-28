@@ -33,7 +33,8 @@ import {
   Filter,
   Loader2,
   LogOut,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Sparkles
 } from 'lucide-react';
 import PromptForm from '@/components/prompt-form';
 import LinkForm from '@/components/link-form';
@@ -85,11 +86,13 @@ export default function PromptPage({ user }: PromptPageProps) {
   const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
   const [isCreateLinkDialogOpen, setCreateLinkDialogOpen] = useState(false);
   const [isEditDialogOpen, setEditDialogOpen] = useState(false);
+  const [isEditLinkDialogOpen, setEditLinkDialogOpen] = useState(false);
   const [isNewProjectDialogOpen, setNewProjectDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
+  const [selectedLink, setSelectedLink] = useState<Link | null>(null);
   const [promptToDelete, setPromptToDelete] = useState<Prompt | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<PromptCategory | 'Todos'>('Todos');
   const [activeProjectId, setActiveProjectId] = useState<string | 'all' | 'none'>('all');
@@ -155,29 +158,44 @@ export default function PromptPage({ user }: PromptPageProps) {
     title?: string;
     description?: string;
     category?: PromptCategory;
-  }) => {
+  }, id?: string) => {
     if (!firestore || !user?.uid) return;
     
     const userId = user.uid;
-    const colRef = collection(firestore, 'users', userId, 'links');
-    const newDocRef = doc(colRef);
-    const maxOrder = links.length > 0 ? Math.max(...links.map(l => l.order || 0)) : 0;
     
-    const newLink: Link = {
-      id: newDocRef.id,
-      ownerId: userId,
-      createdAt: new Date().toISOString(),
-      url: linkData.url,
-      projectId: linkData.projectId,
-      title: linkData.title || null,
-      description: linkData.description || null,
-      category: linkData.category || null,
-      order: maxOrder + 1
-    };
+    if (id) {
+      const docRef = doc(firestore, 'users', userId, 'links', id);
+      updateDocumentNonBlocking(docRef, {
+        url: linkData.url,
+        projectId: linkData.projectId,
+        title: linkData.title || null,
+        description: linkData.description || null,
+        category: linkData.category || null,
+      });
+      toast({ title: 'Enlace actualizado' });
+      setEditLinkDialogOpen(false);
+      setSelectedLink(null);
+    } else {
+      const colRef = collection(firestore, 'users', userId, 'links');
+      const newDocRef = doc(colRef);
+      const maxOrder = links.length > 0 ? Math.max(...links.map(l => l.order || 0)) : 0;
+      
+      const newLink: Link = {
+        id: newDocRef.id,
+        ownerId: userId,
+        createdAt: new Date().toISOString(),
+        url: linkData.url,
+        projectId: linkData.projectId,
+        title: linkData.title || null,
+        description: linkData.description || null,
+        category: linkData.category || null,
+        order: maxOrder + 1
+      };
 
-    setDocumentNonBlocking(newDocRef, newLink);
-    toast({ title: 'Enlace guardado' });
-    setCreateLinkDialogOpen(false);
+      setDocumentNonBlocking(newDocRef, newLink);
+      toast({ title: 'Enlace guardado' });
+      setCreateLinkDialogOpen(false);
+    }
   }, [user?.uid, firestore, links, toast]);
 
   const handleCreateProject = useCallback(() => {
@@ -436,8 +454,14 @@ export default function PromptPage({ user }: PromptPageProps) {
                   </h3>
                   <LinkList 
                     links={filteredLinks} 
+                    projects={projects}
                     onDeleteLink={handleDeleteLink} 
+                    onEditLink={(link) => {
+                      setSelectedLink(link);
+                      setEditLinkDialogOpen(true);
+                    }}
                     onReorder={handleLinkReorder}
+                    onMoveToProject={(linkId, projectId) => handleMoveToProject(linkId, 'link', projectId)}
                   />
                 </div>
               )}
@@ -538,27 +562,23 @@ export default function PromptPage({ user }: PromptPageProps) {
           )}
         </DialogContent>
       </Dialog>
+
+      <Dialog open={isEditLinkDialogOpen} onOpenChange={setEditLinkDialogOpen}>
+        <DialogContent className="sm:max-w-[525px]">
+          <DialogHeader><DialogTitle>Editar Enlace</DialogTitle></DialogHeader>
+          {selectedLink && (
+            <LinkForm
+              link={selectedLink}
+              projects={projects}
+              onSave={handleSaveLink}
+              onClose={() => {
+                setEditLinkDialogOpen(false);
+                setSelectedLink(null);
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
-
-const Sparkles = ({ className }: { className?: string }) => (
-  <svg 
-    xmlns="http://www.w3.org/2000/svg" 
-    width="24" 
-    height="24" 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    stroke="currentColor" 
-    strokeWidth="2" 
-    strokeLinecap="round" 
-    strokeLinejoin="round" 
-    className={className}
-  >
-    <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
-    <path d="M5 3v4"/>
-    <path d="M19 17v4"/>
-    <path d="M3 5h4"/>
-    <path d="M17 19h4"/>
-  </svg>
-);

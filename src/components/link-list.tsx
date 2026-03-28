@@ -1,20 +1,26 @@
 'use client';
 
-import type { Link } from '@/lib/definitions';
+import type { Link, Project } from '@/lib/definitions';
 import LinkCard from '@/components/link-card';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 
 interface LinkListProps {
   links: Link[];
+  projects: Project[];
   onDeleteLink: (id: string) => void;
+  onEditLink: (link: Link) => void;
   onReorder: (draggedId: string, targetId: string) => void;
+  onMoveToProject: (linkId: string, projectId: string | null) => void;
 }
 
 export default function LinkList({ 
   links, 
+  projects,
   onDeleteLink, 
+  onEditLink,
   onReorder,
+  onMoveToProject
 }: LinkListProps) {
   const [dragOverId, setDragOverId] = useState<string | null>(null);
 
@@ -54,7 +60,10 @@ export default function LinkList({
         >
           <LinkCard 
             link={link} 
+            projects={projects}
             onDelete={onDeleteLink}
+            onEdit={onEditLink}
+            onMoveToProject={onMoveToProject}
           />
         </div>
       ))}
