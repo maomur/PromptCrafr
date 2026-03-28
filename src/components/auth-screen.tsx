@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -10,9 +9,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, Sparkles } from 'lucide-react';
 import Image from 'next/image';
+import { useToast } from '@/hooks/use-toast';
 
 export default function AuthScreen() {
   const auth = useAuth();
+  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -20,14 +21,35 @@ export default function AuthScreen() {
   const handleSignIn = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    initiateEmailSignIn(auth, email, password);
-    // La redirección ocurre automáticamente vía useUser() en el componente padre
+    initiateEmailSignIn(auth, email, password).catch((error: any) => {
+      setIsLoading(false);
+      console.error("Sign-in error:", error);
+      toast({
+        variant: "destructive",
+        title: "Error de acceso",
+        description: "Credenciales inválidas. Por favor, verifica tu correo y contraseña.",
+      });
+    });
   };
 
   const handleSignUp = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    initiateEmailSignUp(auth, email, password);
+    initiateEmailSignUp(auth, email, password).catch((error: any) => {
+      setIsLoading(false);
+      console.error("Sign-up error:", error);
+      let message = "No se pudo crear la cuenta.";
+      if (error.code === 'auth/email-already-in-use') {
+        message = "Este correo ya está registrado.";
+      } else if (error.code === 'auth/weak-password') {
+        message = "La contraseña es muy débil (mínimo 6 caracteres).";
+      }
+      toast({
+        variant: "destructive",
+        title: "Error de registro",
+        description: message,
+      });
+    });
   };
 
   return (
@@ -66,6 +88,7 @@ export default function AuthScreen() {
                     required 
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    disabled={isLoading}
                   />
                 </div>
                 <div className="space-y-2">
@@ -76,6 +99,7 @@ export default function AuthScreen() {
                     required 
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    disabled={isLoading}
                   />
                 </div>
                 <Button className="w-full mt-6" type="submit" disabled={isLoading}>
@@ -95,6 +119,7 @@ export default function AuthScreen() {
                     required 
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    disabled={isLoading}
                   />
                 </div>
                 <div className="space-y-2">
@@ -105,6 +130,7 @@ export default function AuthScreen() {
                     required 
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    disabled={isLoading}
                   />
                 </div>
                 <Button className="w-full mt-6" type="submit" disabled={isLoading}>
