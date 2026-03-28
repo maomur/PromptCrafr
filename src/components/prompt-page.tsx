@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
@@ -7,6 +6,7 @@ import { promptCategories } from '@/lib/definitions';
 import Header from '@/components/header';
 import PromptList from '@/components/prompt-list';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Dialog,
   DialogContent,
