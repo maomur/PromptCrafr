@@ -12,10 +12,10 @@ import type { Link, Project } from '@/lib/definitions';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
-import { Link as LinkIcon, ExternalLink, Trash2, GripVertical, Eye, MoreVertical, FolderInput, ChevronUp, ChevronDown } from 'lucide-react';
+import { Link as LinkIcon, ExternalLink, Trash2, GripVertical, Eye, MoreVertical, FolderInput, ChevronUp, ChevronDown, Folder } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import {
   DropdownMenu,
@@ -43,6 +43,11 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
   const { toast } = useToast();
   const [isDragging, setIsDragging] = useState(false);
 
+  const project = useMemo(() => 
+    projects.find(p => p.id === link.projectId),
+    [projects, link.projectId]
+  );
+
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.setData('itemId', link.id);
     e.dataTransfer.setData('itemType', 'link');
@@ -56,7 +61,6 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
 
   const handleCardClick = useCallback((event: React.MouseEvent) => {
     const target = event.target as HTMLElement;
-    // Evitar copiar si el clic es en botones, menús, el icono de arrastre o cualquier componente de interacción
     if (
       target.closest('button') || 
       target.closest('.drag-handle') || 
@@ -92,14 +96,20 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
       </div>
 
       <CardHeader className="pt-8 md:pt-6">
-        <div className="flex justify-between items-start pr-6">
-          <div className="flex items-center gap-2 mb-1">
+        <div className="flex justify-between items-start pr-6 mb-2">
+          <div className="flex flex-wrap items-center gap-2">
             <div className="p-1.5 bg-orange-100 rounded-lg">
               <LinkIcon className="h-4 w-4 text-orange-600" />
             </div>
             {link.category && (
               <Badge variant="secondary" className="text-[10px] py-0 h-4 font-medium bg-orange-50 text-orange-700 border-orange-100">
                 {link.category}
+              </Badge>
+            )}
+            {project && (
+              <Badge variant="secondary" className="text-[9px] h-4 bg-muted text-muted-foreground font-normal border-none flex items-center gap-1">
+                <Folder className="h-2.5 w-2.5" />
+                {project.name}
               </Badge>
             )}
           </div>

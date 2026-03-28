@@ -13,10 +13,10 @@ import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import PromptCardActions from './prompt-card-actions';
 import { Badge } from '@/components/ui/badge';
-import { Video, Image, FileText, Sparkles, GripVertical } from 'lucide-react';
+import { Video, Image, FileText, Sparkles, GripVertical, Folder } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 
 interface PromptCardProps {
   prompt: Prompt;
@@ -54,9 +54,13 @@ export default function PromptCard({
   const { toast } = useToast();
   const [isDragging, setIsDragging] = useState(false);
 
+  const project = useMemo(() => 
+    projects.find(p => p.id === prompt.projectId),
+    [projects, prompt.projectId]
+  );
+
   const handleCardClick = useCallback((event: React.MouseEvent) => {
     const target = event.target as HTMLElement;
-    // Evitar copiar si el clic es en botones, menús, el icono de arrastre o cualquier componente de interacción
     if (
       target.closest('button') || 
       target.closest('.drag-handle') || 
@@ -103,8 +107,8 @@ export default function PromptCard({
       </div>
 
       <CardHeader className="pt-8 md:pt-6">
-        <div className="flex justify-between items-start pr-6">
-          <CardTitle className="font-semibold tracking-tight text-base truncate pr-2">{prompt.title}</CardTitle>
+        <div className="flex justify-between items-start gap-2 pr-6 mb-2">
+          <CardTitle className="font-semibold tracking-tight text-base truncate pr-2 flex-grow">{prompt.title}</CardTitle>
           <Badge 
             variant="outline"
             className={cn("flex items-center border-0 text-[10px] px-2 py-0 h-5 font-medium shrink-0", categoryColors[prompt.category])}
@@ -113,13 +117,25 @@ export default function PromptCard({
             {prompt.category}
           </Badge>
         </div>
-        <CardDescription className="line-clamp-2 text-sm pt-1">{prompt.description}</CardDescription>
+        
+        {project && (
+          <div className="flex mb-2">
+            <Badge variant="secondary" className="text-[9px] h-4 bg-muted text-muted-foreground font-normal border-none flex items-center gap-1">
+              <Folder className="h-2.5 w-2.5" />
+              {project.name}
+            </Badge>
+          </div>
+        )}
+        
+        <CardDescription className="line-clamp-2 text-sm">{prompt.description}</CardDescription>
       </CardHeader>
+      
       <CardContent className="flex-grow">
         <p className="font-mono text-sm text-muted-foreground line-clamp-3 bg-muted/30 p-2 rounded-md">
           {prompt.content}
         </p>
       </CardContent>
+      
       <CardFooter className="flex items-center justify-between text-[10px] text-muted-foreground pt-0">
         <span className="opacity-70">
           {formatDistanceToNow(new Date(prompt.createdAt), { addSuffix: true, locale: es })}
