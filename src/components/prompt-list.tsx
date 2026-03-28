@@ -8,7 +8,7 @@ interface PromptListProps {
   onDeletePrompt: (id: string) => void;
   onEditPrompt: (prompt: Prompt) => void;
   onReorder: (draggedId: string, targetId: string) => void;
-  onMoveToProject: (promptId: string, projectId: string | undefined) => void;
+  onMoveToProject: (promptId: string, projectId: string | null) => void;
 }
 
 export default function PromptList({ 

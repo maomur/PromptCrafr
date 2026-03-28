@@ -19,7 +19,13 @@ import {
 interface PromptFormProps {
   prompt?: Prompt;
   projects?: Project[];
-  onSave: (prompt: Omit<Prompt, 'id' | 'createdAt'>, id?: string) => void;
+  onSave: (promptData: {
+    title: string;
+    description: string;
+    content: string;
+    category: PromptCategory;
+    projectId: string | null;
+  }, id?: string) => void;
   onClose: () => void;
 }
 
@@ -51,7 +57,7 @@ export default function PromptForm({ prompt, projects = [], onSave, onClose }: P
         description, 
         content, 
         category: category as PromptCategory,
-        projectId: projectId === 'none' ? undefined : projectId
+        projectId: projectId === 'none' ? null : projectId
       }, prompt?.id);
       
       toast({

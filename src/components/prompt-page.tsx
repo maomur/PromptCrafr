@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -92,26 +91,37 @@ export default function PromptPage() {
     deleteDocumentNonBlocking(docRef);
   };
 
-  const handleSave = (promptData: Omit<Prompt, 'id' | 'createdAt'>, id?: string) => {
+  const handleSave = (promptData: {
+    title: string;
+    description: string;
+    content: string;
+    category: PromptCategory;
+    projectId: string | null;
+  }, id?: string) => {
     if (!user || !firestore) return;
+    
+    const now = new Date().toISOString();
     
     if (id) {
       const docRef = doc(firestore, 'users', user.uid, 'prompts', id);
       updateDocumentNonBlocking(docRef, { 
         ...promptData, 
-        updatedAt: new Date().toISOString() 
+        updatedAt: now 
       });
     } else {
       const colRef = collection(firestore, 'users', user.uid, 'prompts');
       const newId = crypto.randomUUID();
       const docRef = doc(colRef, newId);
-      setDocumentNonBlocking(docRef, {
+      
+      const newPrompt: Prompt = {
         id: newId,
         ownerId: user.uid,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        createdAt: now,
+        updatedAt: now,
         ...promptData,
-      }, { merge: true });
+      };
+
+      setDocumentNonBlocking(docRef, newPrompt, { merge: true });
     }
   };
 
@@ -122,12 +132,14 @@ export default function PromptPage() {
     const newId = crypto.randomUUID();
     const docRef = doc(colRef, newId);
     
-    setDocumentNonBlocking(docRef, {
+    const newProject: Project = {
       id: newId,
       name: newProjectName,
       ownerId: user.uid,
       createdAt: new Date().toISOString(),
-    }, { merge: true });
+    };
+
+    setDocumentNonBlocking(docRef, newProject, { merge: true });
 
     setNewProjectName('');
     setNewProjectDialogOpen(false);
@@ -160,10 +172,10 @@ export default function PromptPage() {
     });
   };
 
-  const handleMoveToProject = (promptId: string, projectId: string | undefined) => {
+  const handleMoveToProject = (promptId: string, projectId: string | null) => {
     if (!user || !firestore) return;
     const promptRef = doc(firestore, 'users', user.uid, 'prompts', promptId);
-    updateDocumentNonBlocking(promptRef, { projectId: projectId || null });
+    updateDocumentNonBlocking(promptRef, { projectId });
     
     toast({
       title: "Prompt movido",
@@ -173,7 +185,7 @@ export default function PromptPage() {
     });
   };
 
-  const handleDropOnProject = (projectId: string | undefined, e: React.DragEvent) => {
+  const handleDropOnProject = (projectId: string | null, e: React.DragEvent) => {
     e.preventDefault();
     const promptId = e.dataTransfer.getData('promptId');
     if (!promptId) return;
@@ -273,7 +285,7 @@ export default function PromptPage() {
               <button
                 onClick={() => setActiveProjectId('all')}
                 onDragOver={e => e.preventDefault()}
-                onDrop={e => handleDropOnProject(undefined, e)}
+                onDrop={e => handleDropOnProject(null, e)}
                 className={cn(
                   "w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-colors",
                   activeProjectId === 'all' ? "bg-accent text-accent-foreground" : "hover:bg-accent/50"
@@ -289,7 +301,7 @@ export default function PromptPage() {
               <button
                 onClick={() => setActiveProjectId('none')}
                 onDragOver={e => e.preventDefault()}
-                onDrop={e => handleDropOnProject(undefined, e)}
+                onDrop={e => handleDropOnProject(null, e)}
                 className={cn(
                   "w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-colors",
                   activeProjectId === 'none' ? "bg-accent text-accent-foreground" : "hover:bg-accent/50"

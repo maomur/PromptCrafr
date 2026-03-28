@@ -38,7 +38,7 @@ interface PromptCardActionsProps {
   projects: Project[];
   onDelete: (id: string) => void;
   onEdit: () => void;
-  onMoveToProject: (promptId: string, projectId: string | undefined) => void;
+  onMoveToProject: (promptId: string, projectId: string | null) => void;
   onMoveUp?: (id: string) => void;
   onMoveDown?: (id: string) => void;
 }
@@ -98,7 +98,7 @@ export default function PromptCardActions({
               Mover a Proyecto
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent>
-              <DropdownMenuItem onClick={() => onMoveToProject(prompt.id, undefined)}>
+              <DropdownMenuItem onClick={() => onMoveToProject(prompt.id, null)}>
                 Sin Proyecto (General)
               </DropdownMenuItem>
               {projects.length > 0 && <DropdownMenuSeparator />}

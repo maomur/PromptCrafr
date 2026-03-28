@@ -6,6 +6,7 @@ export type Project = {
   id: string;
   name: string;
   createdAt: string;
+  ownerId: string;
 };
 
 export type Prompt = {
@@ -15,5 +16,7 @@ export type Prompt = {
   content: string;
   category: PromptCategory;
   createdAt: string;
-  projectId?: string;
+  updatedAt: string;
+  ownerId: string;
+  projectId: string | null;
 };

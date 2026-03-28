@@ -23,7 +23,7 @@ interface PromptCardProps {
   projects: Project[];
   onDelete: (id: string) => void;
   onEdit: (prompt: Prompt) => void;
-  onMoveToProject: (promptId: string, projectId: string | undefined) => void;
+  onMoveToProject: (promptId: string, projectId: string | null) => void;
   onMoveUp?: (id: string) => void;
   onMoveDown?: (id: string) => void;
 }
