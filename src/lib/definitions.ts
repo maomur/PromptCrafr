@@ -22,3 +22,14 @@ export type Prompt = {
   projectId: string | null;
   order: number;
 };
+
+export type Link = {
+  id: string;
+  url: string;
+  projectId: string;
+  title?: string;
+  description?: string;
+  category?: PromptCategory;
+  createdAt: string;
+  ownerId: string;
+};

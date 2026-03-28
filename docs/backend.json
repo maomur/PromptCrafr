@@ -30,6 +30,22 @@
         "order": { "type": "integer", "description": "The position of the prompt in the list." }
       },
       "required": ["id", "title", "content", "category", "createdAt", "updatedAt", "ownerId"]
+    },
+    "Link": {
+      "title": "Link",
+      "description": "Represents a bookmarked URL within a project.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "url": { "type": "string", "format": "uri" },
+        "projectId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string", "enum": ["Video", "Imagen", "Textos", "Otros"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "ownerId": { "type": "string" }
+      },
+      "required": ["id", "url", "projectId", "createdAt", "ownerId"]
     }
   },
   "auth": {
@@ -43,6 +59,10 @@
     "/users/{userId}/prompts/{promptId}": {
       "schema": { "$ref": "#/backend/entities/Prompt" },
       "description": "User-specific AI prompts."
+    },
+    "/users/{userId}/links/{linkId}": {
+      "schema": { "$ref": "#/backend/entities/Link" },
+      "description": "User-specific links or bookmarks."
     }
   }
 }

@@ -1,10 +1,12 @@
+
 'use client';
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import type { Prompt, PromptCategory, Project } from '@/lib/definitions';
+import type { Prompt, PromptCategory, Project, Link } from '@/lib/definitions';
 import { promptCategories } from '@/lib/definitions';
 import Header from '@/components/header';
 import PromptList from '@/components/prompt-list';
+import LinkCard from '@/components/link-card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -31,9 +33,11 @@ import {
   Trash2, 
   Filter,
   Loader2,
-  LogOut
+  LogOut,
+  Link as LinkIcon
 } from 'lucide-react';
 import PromptForm from '@/components/prompt-form';
+import LinkForm from '@/components/link-form';
 import {
   Select,
   SelectContent,
@@ -76,11 +80,18 @@ export default function PromptPage({ user }: PromptPageProps) {
     return collection(firestore, 'users', user.uid, 'prompts');
   }, [firestore, user?.uid]);
 
+  const linksQuery = useMemoFirebase(() => {
+    if (!firestore || !user?.uid) return null;
+    return collection(firestore, 'users', user.uid, 'links');
+  }, [firestore, user?.uid]);
+
   const { data: rawProjects, isLoading: projectsLoading } = useCollection<Project>(projectsQuery);
   const { data: rawPrompts, isLoading: promptsLoading } = useCollection<Prompt>(promptsQuery);
+  const { data: rawLinks, isLoading: linksLoading } = useCollection<Link>(linksQuery);
 
   // States
   const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
+  const [isCreateLinkDialogOpen, setCreateLinkDialogOpen] = useState(false);
   const [isEditDialogOpen, setEditDialogOpen] = useState(false);
   const [isNewProjectDialogOpen, setNewProjectDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -88,29 +99,29 @@ export default function PromptPage({ user }: PromptPageProps) {
   
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
   const [promptToDelete, setPromptToDelete] = useState<Prompt | null>(null);
+  const [linkToDeleteId, setLinkToDeleteId] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<PromptCategory | 'Todos'>('Todos');
   const [activeProjectId, setActiveProjectId] = useState<string | 'all' | 'none'>('all');
   const [dragOverProject, setDragOverProject] = useState<string | null>(null);
 
   const projects = useMemo(() => rawProjects || [], [rawProjects]);
   const prompts = useMemo(() => rawPrompts || [], [rawPrompts]);
+  const links = useMemo(() => rawLinks || [], [rawLinks]);
 
   // FIX CRÍTICO: Limpieza forzada de pointer-events para evitar bloqueos de Radix UI
   useEffect(() => {
     const cleanup = () => {
-      const anyOpen = isDeleteDialogOpen || isCreateDialogOpen || isEditDialogOpen || isNewProjectDialogOpen;
+      const anyOpen = isDeleteDialogOpen || isCreateDialogOpen || isEditDialogOpen || isNewProjectDialogOpen || isCreateLinkDialogOpen;
       if (!anyOpen) {
-        // Forzamos la interactividad en el body por si Radix no la restauró
         document.body.style.pointerEvents = 'auto';
         document.body.style.overflow = 'auto';
       }
     };
 
     cleanup();
-    // Ejecutamos de nuevo tras un pequeño delay para cubrir el final de las animaciones
     const timer = setTimeout(cleanup, 350);
     return () => clearTimeout(timer);
-  }, [isDeleteDialogOpen, isCreateDialogOpen, isEditDialogOpen, isNewProjectDialogOpen]);
+  }, [isDeleteDialogOpen, isCreateDialogOpen, isEditDialogOpen, isNewProjectDialogOpen, isCreateLinkDialogOpen]);
 
   const handleSave = useCallback((promptData: {
     title: string;
@@ -161,6 +172,34 @@ export default function PromptPage({ user }: PromptPageProps) {
     setSelectedPrompt(null);
   }, [user?.uid, firestore, prompts]);
 
+  const handleSaveLink = useCallback((linkData: {
+    url: string;
+    projectId: string;
+    title?: string;
+    description?: string;
+    category?: PromptCategory;
+  }) => {
+    if (!firestore || !user?.uid) return;
+    
+    const userId = user.uid;
+    const colRef = collection(firestore, 'users', userId, 'links');
+    const newDocRef = doc(colRef);
+    
+    const newLink: Link = {
+      id: newDocRef.id,
+      ownerId: userId,
+      createdAt: new Date().toISOString(),
+      url: linkData.url,
+      projectId: linkData.projectId,
+      title: linkData.title,
+      description: linkData.description,
+      category: linkData.category,
+    };
+
+    setDocumentNonBlocking(newDocRef, newLink);
+    setCreateLinkDialogOpen(false);
+  }, [user?.uid, firestore]);
+
   const handleCreateProject = useCallback(() => {
     const name = newProjectName.trim();
     if (!name || !firestore || !user?.uid) return;
@@ -193,6 +232,13 @@ export default function PromptPage({ user }: PromptPageProps) {
     if (activeProjectId === id) setActiveProjectId('all');
     toast({ title: "Proyecto eliminado", description: "El proyecto ha sido borrado." });
   }, [user?.uid, firestore, activeProjectId, toast]);
+
+  const handleDeleteLink = useCallback((id: string) => {
+    if (!firestore || !user?.uid) return;
+    const linkRef = doc(firestore, 'users', user.uid, 'links', id);
+    deleteDocumentNonBlocking(linkRef);
+    toast({ title: "Enlace eliminado", description: "El enlace ha sido borrado de tu biblioteca." });
+  }, [user?.uid, firestore, toast]);
 
   const handleMoveToProject = useCallback((promptId: string, projectId: string | null) => {
     if (!firestore || !user?.uid) return;
@@ -245,11 +291,8 @@ export default function PromptPage({ user }: PromptPageProps) {
     if (!promptToDelete || !firestore || !user?.uid) return;
     
     const targetId = promptToDelete.id;
-    
-    // PRIMERO cerramos el diálogo y limpiamos estados para permitir que Radix limpie el DOM
     setDeleteDialogOpen(false);
     
-    // Un retardo de seguridad asegura que el diálogo se cierre visualmente antes de que desaparezca el componente de la lista
     setTimeout(() => {
       deleteDocumentNonBlocking(doc(firestore, 'users', user.uid, 'prompts', targetId));
       setPromptToDelete(null);
@@ -259,19 +302,29 @@ export default function PromptPage({ user }: PromptPageProps) {
 
   const filteredPrompts = useMemo(() => {
     let result = [...prompts];
-    
     if (activeProjectId === 'none') {
       result = result.filter(p => !p.projectId || p.projectId === 'none');
     } else if (activeProjectId !== 'all') {
       result = result.filter(p => p.projectId === activeProjectId);
     }
-
     if (categoryFilter !== 'Todos') {
       result = result.filter(p => p.category === categoryFilter);
     }
-
     return result.sort((a, b) => (b.order || 0) - (a.order || 0));
   }, [prompts, activeProjectId, categoryFilter]);
+
+  const filteredLinks = useMemo(() => {
+    let result = [...links];
+    if (activeProjectId === 'none') {
+      result = result.filter(l => !l.projectId || l.projectId === 'none');
+    } else if (activeProjectId !== 'all') {
+      result = result.filter(l => l.projectId === activeProjectId);
+    }
+    if (categoryFilter !== 'Todos') {
+      result = result.filter(l => l.category === categoryFilter);
+    }
+    return result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [links, activeProjectId, categoryFilter]);
 
   return (
     <div className="relative min-h-[80vh]">
@@ -362,7 +415,7 @@ export default function PromptPage({ user }: PromptPageProps) {
                   Todos
                 </div>
                 <span className={cn("text-xs", activeProjectId === 'all' ? "text-primary-foreground/80" : "opacity-60")}>
-                  {prompts.length}
+                  {prompts.length + links.length}
                 </span>
               </button>
 
@@ -382,7 +435,7 @@ export default function PromptPage({ user }: PromptPageProps) {
                   Sin Proyecto
                 </div>
                 <span className={cn("text-xs", activeProjectId === 'none' ? "text-primary-foreground/80" : "opacity-60")}>
-                  {prompts.filter(p => !p.projectId || p.projectId === 'none').length}
+                  {prompts.filter(p => !p.projectId || p.projectId === 'none').length + links.filter(l => !l.projectId || l.projectId === 'none').length}
                 </span>
               </button>
 
@@ -405,7 +458,7 @@ export default function PromptPage({ user }: PromptPageProps) {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className={cn("text-xs", activeProjectId === project.id ? "text-primary-foreground/80" : "opacity-60")}>
-                      {prompts.filter(p => p.projectId === project.id).length}
+                      {prompts.filter(p => p.projectId === project.id).length + links.filter(l => l.projectId === project.id).length}
                     </span>
                     <Trash2 
                       className="h-3 w-3 text-destructive opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110" 
@@ -419,29 +472,53 @@ export default function PromptPage({ user }: PromptPageProps) {
         </aside>
 
         <main className="flex-1 pb-20">
-          {projectsLoading || promptsLoading ? (
+          {projectsLoading || promptsLoading || linksLoading ? (
              <div className="flex flex-col items-center justify-center pt-20 gap-4">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               <p className="text-sm text-muted-foreground">Cargando biblioteca...</p>
             </div>
           ) : (
-            <PromptList
-              prompts={filteredPrompts}
-              projects={projects}
-              onDeletePrompt={(id) => {
-                const prompt = prompts.find(p => p.id === id);
-                if (prompt) {
-                  setPromptToDelete(prompt);
-                  setTimeout(() => setDeleteDialogOpen(true), 10);
-                }
-              }}
-              onEditPrompt={(prompt) => {
-                setSelectedPrompt(prompt);
-                setTimeout(() => setEditDialogOpen(true), 10);
-              }}
-              onReorder={handleReorder}
-              onMoveToProject={handleMoveToProject}
-            />
+            <div className="space-y-8">
+              {filteredLinks.length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-orange-600 flex items-center gap-2 px-1">
+                    <LinkIcon className="h-4 w-4" />
+                    Enlaces Guardados ({filteredLinks.length})
+                  </h3>
+                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    {filteredLinks.map((link) => (
+                      <LinkCard key={link.id} link={link} onDelete={handleDeleteLink} />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-4">
+                {filteredLinks.length > 0 && (
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-primary flex items-center gap-2 px-1">
+                    <Folders className="h-4 w-4" />
+                    Biblioteca de Prompts ({filteredPrompts.length})
+                  </h3>
+                )}
+                <PromptList
+                  prompts={filteredPrompts}
+                  projects={projects}
+                  onDeletePrompt={(id) => {
+                    const prompt = prompts.find(p => p.id === id);
+                    if (prompt) {
+                      setPromptToDelete(prompt);
+                      setTimeout(() => setDeleteDialogOpen(true), 10);
+                    }
+                  }}
+                  onEditPrompt={(prompt) => {
+                    setSelectedPrompt(prompt);
+                    setTimeout(() => setEditDialogOpen(true), 10);
+                  }}
+                  onReorder={handleReorder}
+                  onMoveToProject={handleMoveToProject}
+                />
+              </div>
+            </div>
           )}
         </main>
       </div>
@@ -466,23 +543,46 @@ export default function PromptPage({ user }: PromptPageProps) {
         </AlertDialogContent>
       </AlertDialog>
 
-      <Dialog open={isCreateDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogTrigger asChild>
-          <Button 
-            className="fixed bottom-8 right-8 h-16 w-16 rounded-full shadow-2xl z-50 transition-all hover:scale-110 active:scale-95 bg-primary hover:bg-primary/90"
-            size="icon"
-          >
-            <Plus className="h-8 w-8 text-primary-foreground" />
-            <span className="sr-only">Nuevo Prompt</span>
-          </Button>
-        </DialogTrigger>
-        <DialogContent className="sm:max-w-[625px]" onOpenAutoFocus={(e) => e.preventDefault()} onCloseAutoFocus={(e) => e.preventDefault()}>
-          <DialogHeader>
-            <DialogTitle>Crear Nuevo Prompt</DialogTitle>
-          </DialogHeader>
-          <PromptForm onSave={handleSave} onClose={() => setCreateDialogOpen(false)} projects={projects} />
-        </DialogContent>
-      </Dialog>
+      {/* Botones Flotantes */}
+      <div className="fixed bottom-8 right-8 flex items-center gap-3 z-50">
+        <Dialog open={isCreateLinkDialogOpen} onOpenChange={setCreateLinkDialogOpen}>
+          <DialogTrigger asChild>
+            <Button 
+              className="h-16 w-16 rounded-full shadow-2xl transition-all hover:scale-110 active:scale-95 bg-orange-500 hover:bg-orange-600 text-white border-none"
+              size="icon"
+              title="Añadir Enlace"
+            >
+              <LinkIcon className="h-8 w-8" />
+              <span className="sr-only">Nuevo Enlace</span>
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[525px]" onOpenAutoFocus={(e) => e.preventDefault()} onCloseAutoFocus={(e) => e.preventDefault()}>
+            <DialogHeader>
+              <DialogTitle>Nuevo Enlace Externo</DialogTitle>
+            </DialogHeader>
+            <LinkForm projects={projects} onSave={handleSaveLink} onClose={() => setCreateLinkDialogOpen(false)} />
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isCreateDialogOpen} onOpenChange={setCreateDialogOpen}>
+          <DialogTrigger asChild>
+            <Button 
+              className="h-16 w-16 rounded-full shadow-2xl transition-all hover:scale-110 active:scale-95 bg-primary hover:bg-primary/90"
+              size="icon"
+              title="Nuevo Prompt"
+            >
+              <Plus className="h-8 w-8 text-primary-foreground" />
+              <span className="sr-only">Nuevo Prompt</span>
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[625px]" onOpenAutoFocus={(e) => e.preventDefault()} onCloseAutoFocus={(e) => e.preventDefault()}>
+            <DialogHeader>
+              <DialogTitle>Crear Nuevo Prompt</DialogTitle>
+            </DialogHeader>
+            <PromptForm onSave={handleSave} onClose={() => setCreateDialogOpen(false)} projects={projects} />
+          </DialogContent>
+        </Dialog>
+      </div>
 
       <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent
