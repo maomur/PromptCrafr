@@ -81,8 +81,6 @@ const SelectContent = React.forwardRef<
         className
       )}
       position={position}
-      // CRITICAL: Prevent focus from jumping back to trigger in a way that locks the Dialog
-      onCloseAutoFocus={(e) => e.preventDefault()}
       {...props}
     >
       <SelectScrollUpButton />

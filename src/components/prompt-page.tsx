@@ -267,6 +267,7 @@ export default function PromptPage({ user }: PromptPageProps) {
     if (!promptToDelete || !firestore || !user?.uid) return;
     
     const targetId = promptToDelete.id;
+    // IMPORTANTE: Cerramos el diálogo ANTES de eliminar para que Radix UI limpie el DOM correctamente
     setDeleteDialogOpen(false);
     
     setTimeout(() => {
