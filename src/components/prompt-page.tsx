@@ -77,6 +77,7 @@ export default function PromptPage({ user }: PromptPageProps) {
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<PromptCategory | 'Todos'>('Todos');
   const [activeProjectId, setActiveProjectId] = useState<string | 'all' | 'none'>('all');
+  const [dragOverProject, setDragOverProject] = useState<string | null>(null);
 
   const projects = useMemo(() => rawProjects || [], [rawProjects]);
   const prompts = useMemo(() => rawPrompts || [], [rawPrompts]);
@@ -185,17 +186,29 @@ export default function PromptPage({ user }: PromptPageProps) {
     const draggedRef = doc(firestore, 'users', user.uid, 'prompts', draggedId);
     const targetRef = doc(firestore, 'users', user.uid, 'prompts', targetId);
     
-    const draggedOrder = draggedPrompt.order || 0;
-    const targetOrder = targetPrompt.order || 0;
+    let draggedOrder = draggedPrompt.order ?? 0;
+    let targetOrder = targetPrompt.order ?? 0;
 
-    // Swap order values
+    // Si los órdenes son iguales, forzamos una diferencia para que el intercambio sea real
+    if (draggedOrder === targetOrder) {
+      targetOrder = draggedOrder + 1;
+    }
+
+    // Intercambio de valores de orden
     updateDocumentNonBlocking(draggedRef, { order: targetOrder, updatedAt: new Date().toISOString() });
     updateDocumentNonBlocking(targetRef, { order: draggedOrder, updatedAt: new Date().toISOString() });
   }, [prompts, firestore, user?.uid]);
 
+  const handleDragOverProject = (e: React.DragEvent, id: string | null) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverProject !== id) setDragOverProject(id);
+  };
+
   const handleDropOnProject = (projectId: string | null, e: React.DragEvent) => {
     e.preventDefault();
-    const promptId = e.dataTransfer.getData('promptId');
+    setDragOverProject(null);
+    const promptId = e.dataTransfer.getData('text/plain');
     if (promptId) {
       handleMoveToProject(promptId, projectId);
     }
@@ -214,7 +227,7 @@ export default function PromptPage({ user }: PromptPageProps) {
       result = result.filter(p => p.category === categoryFilter);
     }
 
-    // Sort by order (highest first)
+    // Ordenar por el campo 'order' (más alto primero)
     return result.sort((a, b) => (b.order || 0) - (a.order || 0));
   }, [prompts, activeProjectId, categoryFilter]);
 
@@ -293,11 +306,13 @@ export default function PromptPage({ user }: PromptPageProps) {
             <nav className="space-y-1">
               <button
                 onClick={() => setActiveProjectId('all')}
-                onDragOver={e => e.preventDefault()}
+                onDragOver={e => handleDragOverProject(e, 'all')}
                 onDrop={e => handleDropOnProject(null, e)}
+                onDragLeave={() => setDragOverProject(null)}
                 className={cn(
                   "w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-lg transition-all",
-                  activeProjectId === 'all' ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50"
+                  activeProjectId === 'all' ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50",
+                  dragOverProject === 'all' && "ring-2 ring-primary ring-offset-1 bg-accent/30"
                 )}
               >
                 <div className="flex items-center">
@@ -311,11 +326,13 @@ export default function PromptPage({ user }: PromptPageProps) {
 
               <button
                 onClick={() => setActiveProjectId('none')}
-                onDragOver={e => e.preventDefault()}
+                onDragOver={e => handleDragOverProject(e, 'none')}
                 onDrop={e => handleDropOnProject(null, e)}
+                onDragLeave={() => setDragOverProject(null)}
                 className={cn(
                   "w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-lg transition-all",
-                  activeProjectId === 'none' ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50"
+                  activeProjectId === 'none' ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50",
+                  dragOverProject === 'none' && "ring-2 ring-primary ring-offset-1 bg-accent/30"
                 )}
               >
                 <div className="flex items-center">
@@ -331,11 +348,13 @@ export default function PromptPage({ user }: PromptPageProps) {
                 <button
                   key={project.id}
                   onClick={() => setActiveProjectId(project.id)}
-                  onDragOver={e => e.preventDefault()}
+                  onDragOver={e => handleDragOverProject(e, project.id)}
                   onDrop={e => handleDropOnProject(project.id, e)}
+                  onDragLeave={() => setDragOverProject(null)}
                   className={cn(
                     "group w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-lg transition-all",
-                    activeProjectId === project.id ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50"
+                    activeProjectId === project.id ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50",
+                    dragOverProject === project.id && "ring-2 ring-primary ring-offset-1 bg-accent/30"
                   )}
                 >
                   <div className="flex items-center truncate">

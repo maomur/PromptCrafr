@@ -69,9 +69,9 @@ export default function PromptCard({
   };
 
   const handleDragStart = (e: React.DragEvent) => {
-    e.dataTransfer.setData('promptId', prompt.id);
+    e.dataTransfer.setData('text/plain', prompt.id);
     e.dataTransfer.effectAllowed = 'move';
-    // Small delay to ensure the visual state updates correctly
+    // Pequeño retardo para asegurar que la imagen fantasma se cree antes de cambiar la opacidad
     setTimeout(() => setIsDragging(true), 0);
   };
 

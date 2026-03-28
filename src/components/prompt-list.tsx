@@ -1,6 +1,11 @@
+
+'use client';
+
 import type { Prompt, Project } from '@/lib/definitions';
 import PromptCard from '@/components/prompt-card';
 import EmptyState from './empty-state';
+import { cn } from '@/lib/utils';
+import { useState } from 'react';
 
 interface PromptListProps {
   prompts: Prompt[];
@@ -19,17 +24,26 @@ export default function PromptList({
   onReorder,
   onMoveToProject
 }: PromptListProps) {
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+
   if (prompts.length === 0) {
     return <EmptyState />;
   }
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = (e: React.DragEvent, id: string) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
+    if (dragOverId !== id) setDragOverId(id);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverId(null);
   };
 
   const handleDrop = (e: React.DragEvent, targetId: string) => {
-    const draggedId = e.dataTransfer.getData('promptId');
+    e.preventDefault();
+    setDragOverId(null);
+    const draggedId = e.dataTransfer.getData('text/plain');
     if (draggedId && draggedId !== targetId) {
       onReorder(draggedId, targetId);
     }
@@ -54,9 +68,13 @@ export default function PromptList({
       {prompts.map((prompt) => (
         <div 
           key={prompt.id} 
-          onDragOver={handleDragOver}
+          onDragOver={(e) => handleDragOver(e, prompt.id)}
+          onDragLeave={handleDragLeave}
           onDrop={(e) => handleDrop(e, prompt.id)}
-          className="h-full"
+          className={cn(
+            "h-full transition-all duration-200",
+            dragOverId === prompt.id && "scale-[1.02] ring-2 ring-primary ring-offset-2 rounded-xl"
+          )}
         >
           <PromptCard 
             prompt={prompt} 
