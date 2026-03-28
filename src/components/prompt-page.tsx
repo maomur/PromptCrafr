@@ -102,25 +102,29 @@ export default function PromptPage({ user }: PromptPageProps) {
   const prompts = useMemo(() => rawPrompts || [], [rawPrompts]);
   const links = useMemo(() => rawLinks || [], [rawLinks]);
 
-  // UNBLOCKER MAESTRO: Solución definitiva al congelamiento tras eliminar o cerrar modales.
+  // UNBLOCKER MAESTRO: Limpiador de seguridad ultra-robusto para evitar congelamientos de Radix UI.
+  const unblockInterface = useCallback(() => {
+    const cleanup = () => {
+      if (typeof document !== 'undefined') {
+        document.body.style.pointerEvents = 'auto';
+        document.body.style.overflow = 'auto';
+        document.documentElement.style.pointerEvents = 'auto';
+        document.documentElement.style.overflow = 'auto';
+        document.body.classList.remove('pointer-events-none');
+      }
+    };
+    cleanup();
+    setTimeout(cleanup, 50);
+    setTimeout(cleanup, 150);
+    setTimeout(cleanup, 300);
+  }, []);
+
   useEffect(() => {
     const isAnyDialogOpen = isCreateDialogOpen || isCreateLinkDialogOpen || isEditDialogOpen || isEditLinkDialogOpen || isNewProjectDialogOpen || isDeleteDialogOpen;
-    
     if (!isAnyDialogOpen) {
-      const cleanup = () => {
-        document.body.style.pointerEvents = '';
-        document.body.style.overflow = '';
-        document.documentElement.style.pointerEvents = '';
-        document.documentElement.style.overflow = '';
-        document.body.classList.remove('pointer-events-none');
-      };
-      
-      cleanup();
-      // Ejecutamos una segunda limpieza con retraso para capturar el final de las animaciones de Radix
-      const timer = setTimeout(cleanup, 100);
-      return () => clearTimeout(timer);
+      unblockInterface();
     }
-  }, [isCreateDialogOpen, isCreateLinkDialogOpen, isEditDialogOpen, isEditLinkDialogOpen, isNewProjectDialogOpen, isDeleteDialogOpen]);
+  }, [isCreateDialogOpen, isCreateLinkDialogOpen, isEditDialogOpen, isEditLinkDialogOpen, isNewProjectDialogOpen, isDeleteDialogOpen, unblockInterface]);
 
   const handleSave = useCallback((promptData: {
     title: string;
@@ -525,13 +529,23 @@ export default function PromptPage({ user }: PromptPageProps) {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground"
-              onClick={() => {
-                if (promptToDelete) {
-                  const docRef = doc(firestore, 'users', user.uid, 'prompts', promptToDelete.id);
+              onClick={(e) => {
+                e.preventDefault(); // Evitamos el cierre inmediato para gestionar la limpieza
+                if (promptToDelete && firestore) {
+                  const docId = promptToDelete.id;
+                  const docRef = doc(firestore, 'users', user.uid, 'prompts', docId);
+                  
+                  // Iniciamos la eliminación
                   deleteDocumentNonBlocking(docRef);
-                  setPromptToDelete(null);
-                  setDeleteDialogOpen(false);
-                  toast({ title: "Prompt eliminado" });
+                  
+                  // Ejecutamos el cierre con un ligero retraso para permitir que Radix limpie y React actualice
+                  setTimeout(() => {
+                    setPromptToDelete(null);
+                    setDeleteDialogOpen(false);
+                    toast({ title: "Prompt eliminado" });
+                    // Forzamos el desbloqueo final
+                    setTimeout(unblockInterface, 100);
+                  }, 50);
                 }
               }}
             >
