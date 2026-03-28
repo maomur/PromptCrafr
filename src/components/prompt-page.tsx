@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import type { Prompt, PromptCategory, Project, Link } from '@/lib/definitions';
 import { promptCategories } from '@/lib/definitions';
 import Header from '@/components/header';
@@ -98,13 +98,6 @@ export default function PromptPage({ user }: PromptPageProps) {
   const projects = useMemo(() => rawProjects || [], [rawProjects]);
   const prompts = useMemo(() => rawPrompts || [], [rawPrompts]);
   const links = useMemo(() => rawLinks || [], [rawLinks]);
-
-  // Recuperar interactividad del body tras cerrar diálogos
-  useEffect(() => {
-    if (!isCreateDialogOpen && !isEditDialogOpen && !isCreateLinkDialogOpen && !isNewProjectDialogOpen && !isDeleteDialogOpen) {
-      document.body.style.pointerEvents = 'auto';
-    }
-  }, [isCreateDialogOpen, isEditDialogOpen, isCreateLinkDialogOpen, isNewProjectDialogOpen, isDeleteDialogOpen]);
 
   const handleSave = useCallback((promptData: {
     title: string;
