@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -18,32 +17,20 @@ export type WithId<T> = T & { id: string };
 
 /**
  * Interface for the return value of the useCollection hook.
- * @template T Type of the document data.
  */
 export interface UseCollectionResult<T> {
-  data: WithId<T>[] | null; // Document data with ID, or null.
-  isLoading: boolean;       // True if loading.
-  error: FirestoreError | Error | null; // Error object, or null.
+  data: WithId<T>[] | null;
+  isLoading: boolean;
+  error: FirestoreError | Error | null;
 }
 
 /**
  * React hook to subscribe to a Firestore collection or query in real-time.
- * Handles nullable references/queries.
- * 
- * IMPORTANT! YOU MUST MEMOIZE the inputted memoizedTargetRefOrQuery using useMemoFirebase.
- *  
- * @template T Optional type for document data. Defaults to any.
- * @param {CollectionReference<DocumentData> | Query<DocumentData> | null | undefined} targetRefOrQuery -
- * The Firestore CollectionReference or Query.
- * @returns {UseCollectionResult<T>} Object with data, isLoading, error.
  */
 export function useCollection<T = any>(
     memoizedTargetRefOrQuery: ((CollectionReference<DocumentData> | Query<DocumentData>) & {__memo?: boolean})  | null | undefined,
 ): UseCollectionResult<T> {
-  type ResultItemType = WithId<T>;
-  type StateDataType = ResultItemType[] | null;
-
-  const [data, setData] = useState<StateDataType>(null);
+  const [data, setData] = useState<WithId<T>[] | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
@@ -61,7 +48,7 @@ export function useCollection<T = any>(
     const unsubscribe = onSnapshot(
       memoizedTargetRefOrQuery,
       (snapshot: QuerySnapshot<DocumentData>) => {
-        const results: ResultItemType[] = [];
+        const results: WithId<T>[] = [];
         snapshot.forEach((doc) => {
           results.push({ ...(doc.data() as T), id: doc.id });
         });
@@ -70,10 +57,11 @@ export function useCollection<T = any>(
         setIsLoading(false);
       },
       (err: FirestoreError) => {
-        // Fallback safety for path extraction
-        const path = 'path' in memoizedTargetRefOrQuery 
-          ? (memoizedTargetRefOrQuery as CollectionReference).path 
-          : 'unknown_query_path';
+        // Safe path extraction for both CollectionReference and Query
+        let path = 'unknown_query';
+        if ('path' in memoizedTargetRefOrQuery) {
+          path = (memoizedTargetRefOrQuery as CollectionReference).path;
+        }
 
         const contextualError = new FirestorePermissionError({
           operation: 'list',
@@ -81,7 +69,7 @@ export function useCollection<T = any>(
         });
 
         setError(contextualError);
-        setData(null);
+        setData([]); // Return empty list instead of null on error to avoid iterability issues
         setIsLoading(false);
 
         errorEmitter.emit('permission-error', contextualError);

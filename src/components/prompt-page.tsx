@@ -100,7 +100,8 @@ export default function PromptPage() {
       const docRef = doc(firestore, 'users', user.uid, 'prompts', id);
       updateDocumentNonBlocking(docRef, { 
         ...promptData, 
-        updatedAt: now 
+        updatedAt: now,
+        projectId: promptData.projectId || null
       });
     } else {
       const colRef = collection(firestore, 'users', user.uid, 'prompts');
@@ -170,7 +171,7 @@ export default function PromptPage() {
   const handleMoveToProject = useCallback((promptId: string, projectId: string | null) => {
     if (!user?.uid || !firestore) return;
     const promptRef = doc(firestore, 'users', user.uid, 'prompts', promptId);
-    updateDocumentNonBlocking(promptRef, { projectId });
+    updateDocumentNonBlocking(promptRef, { projectId: projectId || null });
     
     toast({
       title: "Prompt movido",
@@ -212,11 +213,14 @@ export default function PromptPage() {
     setSelectedPrompt(null);
   }, []);
 
-  if (isUserLoading || (user && (projectsLoading || promptsLoading))) {
+  // CARGA CRÍTICA: No mostrar nada hasta que tengamos usuario Y hayamos intentado cargar datos
+  const isActuallyLoading = isUserLoading || !user || (user && (projectsLoading || promptsLoading));
+
+  if (isActuallyLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="text-muted-foreground animate-pulse">Sincronizando con la nube...</p>
+        <p className="text-muted-foreground animate-pulse">Conectando con tu biblioteca...</p>
       </div>
     );
   }
@@ -253,7 +257,7 @@ export default function PromptPage() {
               </h2>
               <Dialog open={isNewProjectDialogOpen} onOpenChange={setNewProjectDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-6 w-6" disabled={!user}>
+                  <Button variant="ghost" size="icon" className="h-6 w-6">
                     <Plus className="h-4 w-4" />
                   </Button>
                 </DialogTrigger>
@@ -349,7 +353,7 @@ export default function PromptPage() {
               setSelectedPrompt(prompt);
               setEditDialogOpen(true);
             }}
-            onReorder={() => toast({ title: "Reordenar", description: "Orden actualizado visualmente." })}
+            onReorder={() => {}}
             onMoveToProject={handleMoveToProject}
           />
         </div>
@@ -358,7 +362,6 @@ export default function PromptPage() {
       <Dialog open={isCreateDialogOpen} onOpenChange={setCreateDialogOpen}>
         <DialogTrigger asChild>
           <Button 
-            disabled={!user}
             className="fixed bottom-8 right-8 h-16 w-16 rounded-full shadow-2xl z-50 transition-transform hover:scale-110 active:scale-95"
             size="icon"
           >
