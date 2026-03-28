@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -59,26 +60,13 @@ export default function PromptCard({
   );
 
   const handleDragStart = (e: React.DragEvent) => {
-    // El polyfill mobile-drag-drop lanzará este evento
     e.dataTransfer.setData('itemId', prompt.id);
     e.dataTransfer.setData('itemType', 'prompt');
     e.dataTransfer.effectAllowed = 'move';
-    
-    // Añadimos una clase para feedback visual
-    if (cardRef.current) {
-      cardRef.current.classList.add('dnd-poly-dragging');
-    }
-  };
-
-  const handleDragEnd = () => {
-    if (cardRef.current) {
-      cardRef.current.classList.remove('dnd-poly-dragging');
-    }
   };
 
   const handleCardClick = useCallback((event: React.MouseEvent) => {
     const target = event.target as HTMLElement;
-    // No copiamos si se hace clic en botones o en el mango de arrastre
     if (
       target.closest('button') || 
       target.closest('.drag-handle') || 
@@ -100,16 +88,15 @@ export default function PromptCard({
       ref={cardRef}
       draggable={true}
       onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
       onClick={handleCardClick}
       className="group flex h-full flex-col rounded-xl border-border/20 bg-card text-card-foreground shadow-md transition-all duration-300 hover:shadow-lg relative overflow-hidden"
     >
-      {/* El manejador de arrastre (zona de control exclusiva para el Polyfill en móviles) */}
-      <div className="drag-handle absolute top-0 right-0">
+      {/* Mango de arrastre visible solo en escritorio para evitar conflictos en móvil */}
+      <div className="drag-handle absolute top-0 right-0 hidden md:flex">
         <GripVertical className="h-5 w-5 text-muted-foreground" />
       </div>
 
-      <CardHeader className="pt-12 md:pt-10 space-y-4">
+      <CardHeader className="pt-6 md:pt-10 space-y-4">
         <div className="flex flex-wrap items-center gap-2 pr-10">
           {project && (
             <Badge variant="secondary" className="text-[11px] h-6 bg-muted text-muted-foreground font-normal border-none flex items-center gap-1.5 px-2.5">

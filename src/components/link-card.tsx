@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -51,16 +52,6 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
     e.dataTransfer.setData('itemId', link.id);
     e.dataTransfer.setData('itemType', 'link');
     e.dataTransfer.effectAllowed = 'move';
-    
-    if (cardRef.current) {
-      cardRef.current.classList.add('dnd-poly-dragging');
-    }
-  };
-
-  const handleDragEnd = () => {
-    if (cardRef.current) {
-      cardRef.current.classList.remove('dnd-poly-dragging');
-    }
   };
 
   const handleCardClick = useCallback((event: React.MouseEvent) => {
@@ -86,15 +77,15 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
       ref={cardRef}
       draggable={true}
       onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
       onClick={handleCardClick}
       className="group flex flex-col h-full rounded-xl border-border/20 bg-card shadow-md transition-all duration-300 hover:shadow-lg relative overflow-hidden"
     >
-      <div className="drag-handle absolute top-0 right-0">
+      {/* Mango de arrastre visible solo en escritorio */}
+      <div className="drag-handle absolute top-0 right-0 hidden md:flex">
         <GripVertical className="h-5 w-5 text-muted-foreground" />
       </div>
 
-      <CardHeader className="pt-12 md:pt-10 space-y-4">
+      <CardHeader className="pt-6 md:pt-10 space-y-4">
         <div className="flex flex-wrap items-center gap-2 pr-10">
           {project && (
             <Badge variant="secondary" className="text-[11px] h-6 bg-muted text-muted-foreground font-normal border-none flex items-center gap-1.5 px-2.5">

@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -66,24 +67,12 @@
   body {
     @apply bg-background text-foreground;
   }
-  
-  /* Bloqueo total de scroll durante el arrastre activo */
-  body.dragging-active {
-    overflow: hidden !important;
-    touch-action: none !important;
-    position: fixed;
-    width: 100%;
-    height: 100%;
-  }
 }
 
 .drag-handle {
   cursor: grab;
-  touch-action: none !important; /* Desactiva gestos nativos en el mango */
   -webkit-user-select: none;
   user-select: none;
-  -webkit-touch-callout: none;
-  z-index: 50;
   width: 44px;
   height: 44px;
   display: flex;
@@ -103,26 +92,6 @@
   background-color: hsl(var(--primary) / 0.1);
 }
 
-/* Estilos para el elemento que se está arrastrando */
 [draggable="true"] {
   -webkit-user-drag: element;
-  user-select: none;
-  touch-action: pan-y; /* Permite scroll vertical normal si no se usa el mango */
-}
-
-/* Estilo del fantasma de arrastre (Polyfill) */
-.dnd-poly-drag-image {
-  opacity: 0.7 !important;
-  transform: scale(1.05) !important;
-  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.3) !important;
-  z-index: 9999 !important;
-  pointer-events: none;
-  background-color: hsl(var(--card)) !important;
-  border-radius: var(--radius) !important;
-  border: 1px solid hsl(var(--border)) !important;
-}
-
-/* Ocultar el fantasma nativo cuando usamos el polyfill */
-.dnd-poly-dragging {
-  opacity: 0.4 !important;
 }
