@@ -68,38 +68,41 @@
   }
 }
 
-/* SOPORTE CRÍTICO PARA DRAG AND DROP */
+/* SOPORTE CRÍTICO PARA DRAG AND DROP EN MÓVILES */
 [draggable="true"] {
   -webkit-user-select: none;
   user-select: none;
   -webkit-touch-callout: none;
-  touch-action: pan-y; /* Permite scroll vertical en el cuerpo de la tarjeta */
+  touch-action: pan-y; /* Permite scroll vertical general */
 }
 
 .drag-handle {
   cursor: grab;
-  touch-action: none !important; /* BLOQUEA el scroll cuando se toca el icono */
+  touch-action: none !important; /* BLOQUEO ABSOLUTO DE SCROLL EN EL MANEJADOR */
   -webkit-touch-callout: none !important;
   z-index: 50;
   -webkit-user-select: none;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
+  width: 44px; /* Tamaño mínimo ergonómico para touch */
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .drag-handle:active {
   cursor: grabbing;
 }
 
-/* Estilo para el elemento que se está arrastrando */
+/* Estilos de feedback visual durante el arrastre */
 .dnd-poly-dragging {
-  opacity: 0.5 !important;
-  transform: scale(1.05) !important;
-  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25) !important;
+  opacity: 0.4 !important;
+  transform: scale(0.95) !important;
+  box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.1) !important;
   z-index: 9999 !important;
-  pointer-events: none;
 }
 
-/* Estilos de drop target */
 .drop-target-active {
   @apply ring-2 ring-primary ring-offset-2 scale-[1.02] duration-200;
 }
