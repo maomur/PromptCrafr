@@ -25,7 +25,7 @@ export type Prompt = {
 export type Link = {
   id: string;
   url: string;
-  projectId: string;
+  projectId: string | null;
   title?: string;
   description?: string;
   category?: PromptCategory;

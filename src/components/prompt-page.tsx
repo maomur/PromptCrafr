@@ -102,21 +102,22 @@ export default function PromptPage({ user }: PromptPageProps) {
   const prompts = useMemo(() => rawPrompts || [], [rawPrompts]);
   const links = useMemo(() => rawLinks || [], [rawLinks]);
 
-  // UNBLOCKER MAESTRO: Esta es la solución definitiva al congelamiento.
-  // Cuando todos los diálogos se cierran, forzamos la liberación del body.
+  // UNBLOCKER MAESTRO: Solución definitiva al congelamiento tras eliminar o cerrar modales.
   useEffect(() => {
     const isAnyDialogOpen = isCreateDialogOpen || isCreateLinkDialogOpen || isEditDialogOpen || isEditLinkDialogOpen || isNewProjectDialogOpen || isDeleteDialogOpen;
     
     if (!isAnyDialogOpen) {
-      // Usamos un pequeño delay para asegurar que Radix UI haya intentado su limpieza fallida antes
-      const timer = setTimeout(() => {
+      const cleanup = () => {
         document.body.style.pointerEvents = '';
         document.body.style.overflow = '';
         document.documentElement.style.pointerEvents = '';
         document.documentElement.style.overflow = '';
-        // Eliminar posibles clases de bloqueo inyectadas
         document.body.classList.remove('pointer-events-none');
-      }, 50);
+      };
+      
+      cleanup();
+      // Ejecutamos una segunda limpieza con retraso para capturar el final de las animaciones de Radix
+      const timer = setTimeout(cleanup, 100);
       return () => clearTimeout(timer);
     }
   }, [isCreateDialogOpen, isCreateLinkDialogOpen, isEditDialogOpen, isEditLinkDialogOpen, isNewProjectDialogOpen, isDeleteDialogOpen]);
@@ -173,7 +174,7 @@ export default function PromptPage({ user }: PromptPageProps) {
 
   const handleSaveLink = useCallback((linkData: {
     url: string;
-    projectId: string;
+    projectId: string | null;
     title?: string;
     description?: string;
     category?: PromptCategory;
@@ -186,7 +187,7 @@ export default function PromptPage({ user }: PromptPageProps) {
       const docRef = doc(firestore, 'users', userId, 'links', id);
       updateDocumentNonBlocking(docRef, {
         url: linkData.url,
-        projectId: linkData.projectId,
+        projectId: linkData.projectId || null,
         title: linkData.title || null,
         description: linkData.description || null,
         category: linkData.category || null,
@@ -204,7 +205,7 @@ export default function PromptPage({ user }: PromptPageProps) {
         ownerId: userId,
         createdAt: new Date().toISOString(),
         url: linkData.url,
-        projectId: linkData.projectId,
+        projectId: linkData.projectId || null,
         title: linkData.title || null,
         description: linkData.description || null,
         category: linkData.category || null,
@@ -313,7 +314,7 @@ export default function PromptPage({ user }: PromptPageProps) {
     const itemType = e.dataTransfer.getData('itemType');
     
     if (itemId && itemType) {
-      handleMoveToProject(itemId, itemType, projectId);
+      handleMoveToProject(itemId, itemType, projectId === 'all' || projectId === 'none' ? null : projectId);
     }
   };
 
@@ -405,7 +406,7 @@ export default function PromptPage({ user }: PromptPageProps) {
               <button
                 onClick={() => setActiveProjectId('all')}
                 onDragOver={e => handleDragOverProject(e, 'all')}
-                onDrop={e => handleDropOnProject(null, e)}
+                onDrop={e => handleDropOnProject('all', e)}
                 onDragLeave={() => setDragOverProject(null)}
                 className={cn(
                   "w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-all",
@@ -420,7 +421,7 @@ export default function PromptPage({ user }: PromptPageProps) {
               <button
                 onClick={() => setActiveProjectId('none')}
                 onDragOver={e => handleDragOverProject(e, 'none')}
-                onDrop={e => handleDropOnProject(null, e)}
+                onDrop={e => handleDropOnProject('none', e)}
                 onDragLeave={() => setDragOverProject(null)}
                 className={cn(
                   "w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-all",
@@ -526,7 +527,8 @@ export default function PromptPage({ user }: PromptPageProps) {
               className="bg-destructive text-destructive-foreground"
               onClick={() => {
                 if (promptToDelete) {
-                  deleteDocumentNonBlocking(doc(firestore, 'users', user.uid, 'prompts', promptToDelete.id));
+                  const docRef = doc(firestore, 'users', user.uid, 'prompts', promptToDelete.id);
+                  deleteDocumentNonBlocking(docRef);
                   setPromptToDelete(null);
                   setDeleteDialogOpen(false);
                   toast({ title: "Prompt eliminado" });

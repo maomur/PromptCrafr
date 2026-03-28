@@ -135,7 +135,7 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
             </a>
           </Button>
 
-          {/* Editar Link (Ojo) - Igual que en Prompts */}
+          {/* Editar Link (Ojo) */}
           <Button 
             variant="ghost" 
             size="icon" 
@@ -149,7 +149,7 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
             <span className="sr-only">Ver detalles</span>
           </Button>
 
-          {/* Menú de Opciones - Igual que en Prompts */}
+          {/* Menú de Opciones */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
