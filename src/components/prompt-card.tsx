@@ -28,10 +28,10 @@ interface PromptCardProps {
 }
 
 const categoryIcons = {
-  Video: <Video className="mr-1.5 h-3.5 w-3.5" />,
-  Imagen: <Image className="mr-1.5 h-3.5 w-3.5" />,
-  Textos: <FileText className="mr-1.5 h-3.5 w-3.5" />,
-  Otros: <Sparkles className="mr-1.5 h-3.5 w-3.5" />,
+  Video: <Video className="mr-1.5 h-4 w-4" />,
+  Imagen: <Image className="mr-1.5 h-4 w-4" />,
+  Textos: <FileText className="mr-1.5 h-4 w-4" />,
+  Otros: <Sparkles className="mr-1.5 h-4 w-4" />,
 };
 
 const categoryColors = {
@@ -79,7 +79,6 @@ export default function PromptCard({
   }, [prompt.content, toast]);
 
   const handlePointerDown = (e: React.PointerEvent) => {
-    // Si el toque o click es en el manejador, preparamos el arrastre
     if ((e.target as HTMLElement).closest('.drag-handle')) {
       isReadyToDrag.current = true;
     } else {
@@ -88,7 +87,6 @@ export default function PromptCard({
   };
 
   const handleDragStart = (e: React.DragEvent) => {
-    // Solo permitimos el arrastre si se inició desde el manejador (validado en PointerDown)
     if (!isReadyToDrag.current) {
       e.preventDefault();
       return;
@@ -98,6 +96,7 @@ export default function PromptCard({
     e.dataTransfer.setData('itemType', 'prompt');
     e.dataTransfer.effectAllowed = 'move';
     
+    // El setTimeout previene un parpadeo visual en algunos navegadores
     setTimeout(() => setIsDragging(true), 0);
   };
 

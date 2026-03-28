@@ -121,7 +121,7 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
           )}
           <div className="flex items-center gap-1.5">
             <div className="p-1 bg-orange-100 rounded-md">
-              <LinkIcon className="h-3.5 w-3.5 text-orange-600" />
+              <LinkIcon className="h-4 w-4 text-orange-600" />
             </div>
             {link.category && (
               <Badge variant="secondary" className="text-[11px] py-0 h-6 px-2.5 font-medium bg-orange-50 text-orange-700 border-orange-100">
