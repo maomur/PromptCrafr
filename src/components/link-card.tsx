@@ -57,6 +57,7 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
   };
 
   const handleDragStart = (e: React.DragEvent) => {
+    // Si no se inició en el manejador, cancelamos el arrastre
     if (!isReadyToDrag.current) {
       e.preventDefault();
       return;
@@ -104,6 +105,7 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
         isDragging && "opacity-40 grayscale-[0.5] scale-95",
       )}
     >
+      {/* Manejador de arrastre con hitbox ergonómica */}
       <div 
         className="drag-handle absolute top-0 right-0 bg-background/90 backdrop-blur-sm rounded-bl-xl border-l border-b border-border/40 shadow-sm z-50 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
         title="Arrastrar para organizar"
