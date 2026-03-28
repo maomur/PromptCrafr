@@ -13,22 +13,22 @@ export default function MobileDndPolyfill() {
         
         polyfill({
           dragImageTranslateOverride: scrollBehaviourDragImageTranslateOverride,
-          holdToDrag: 0, // Respuesta instantánea ya que bloqueamos el scroll manualmente
+          holdToDrag: 0, // Respuesta inmediata
           tryEnterPassive: false
         });
 
-        // BLOQUEO CRÍTICO DE BAJO NIVEL: Interceptamos el toque antes que el navegador inicie el scroll
+        // INTERCEPTOR CRÍTICO: Bloqueamos el scroll del navegador solo cuando se toca el manejador
         const handleTouchStart = (e: TouchEvent) => {
           const target = e.target as HTMLElement;
-          // Si el toque ocurre en el mango de arrastre, bloqueamos el scroll nativo de inmediato
           if (target.closest('.drag-handle')) {
+            // Si el toque es en el manejador, cancelamos el scroll nativo
             if (e.cancelable) {
-              e.preventDefault(); // Detiene el scroll del sistema
+              e.preventDefault();
             }
           }
         };
 
-        // El listener DEBE ser passive: false para poder llamar a preventDefault()
+        // El listener DEBE ser { passive: false } para poder ejecutar preventDefault()
         window.addEventListener('touchstart', handleTouchStart, { passive: false });
 
         return () => {

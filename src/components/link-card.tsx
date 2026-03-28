@@ -41,7 +41,6 @@ interface LinkCardProps {
 export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToProject, onMoveUp, onMoveDown }: LinkCardProps) {
   const { toast } = useToast();
   const cardRef = useRef<HTMLDivElement>(null);
-  const canDragRef = useRef(false);
 
   const project = useMemo(() => 
     projects.find(p => p.id === link.projectId),
@@ -49,26 +48,18 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
   );
 
   const handleDragStart = (e: React.DragEvent) => {
-    if (!canDragRef.current) {
-      e.preventDefault();
-      return;
-    }
-    
     e.dataTransfer.setData('itemId', link.id);
     e.dataTransfer.setData('itemType', 'link');
     e.dataTransfer.effectAllowed = 'move';
     
     if (cardRef.current) {
-      requestAnimationFrame(() => {
-        cardRef.current?.classList.add('opacity-40', 'scale-95');
-      });
+      cardRef.current.classList.add('opacity-40');
     }
   };
 
-  const handleDragEnd = (e: React.DragEvent) => {
-    canDragRef.current = false;
+  const handleDragEnd = () => {
     if (cardRef.current) {
-      cardRef.current.classList.remove('opacity-40', 'scale-95');
+      cardRef.current.classList.remove('opacity-40');
     }
   };
 
@@ -78,8 +69,7 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
       target.closest('button') || 
       target.closest('.drag-handle') || 
       target.closest('[role="menuitem"]') ||
-      target.closest('[role="menu"]') ||
-      target.closest('.no-copy')
+      target.closest('[role="menu"]')
     ) {
       return;
     }
@@ -98,15 +88,10 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onClick={handleCardClick}
-      className="group flex flex-col h-full rounded-xl border-border/20 bg-card shadow-md transition-all duration-300 hover:shadow-lg relative overflow-hidden select-none"
+      className="group flex flex-col h-full rounded-xl border-border/20 bg-card shadow-md transition-all duration-300 hover:shadow-lg relative overflow-hidden"
     >
-      {/* MANEJO DE ARRASTRE - Activamos la bandera en el instante del contacto físico */}
-      <div 
-        className="drag-handle absolute top-0 right-0 bg-background/90 backdrop-blur-sm rounded-bl-xl border-l border-b border-border/40 shadow-sm z-50"
-        onPointerDown={() => { canDragRef.current = true; }}
-        onPointerUp={() => { canDragRef.current = false; }}
-        onPointerCancel={() => { canDragRef.current = false; }}
-      >
+      {/* MANEJO DE ARRASTRE - El bloqueo de scroll se gestiona en MobileDndPolyfill */}
+      <div className="drag-handle absolute top-0 right-0">
         <GripVertical className="h-5 w-5 text-muted-foreground" />
       </div>
 

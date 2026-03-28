@@ -52,7 +52,6 @@ export default function PromptCard({
 }: PromptCardProps) {
   const { toast } = useToast();
   const cardRef = useRef<HTMLDivElement>(null);
-  const canDragRef = useRef(false);
 
   const project = useMemo(() => 
     projects.find(p => p.id === prompt.projectId),
@@ -60,27 +59,20 @@ export default function PromptCard({
   );
 
   const handleDragStart = (e: React.DragEvent) => {
-    // Solo permitimos el arrastre si la intención se marcó en el manejador
-    if (!canDragRef.current) {
-      e.preventDefault();
-      return;
-    }
-    
+    // El polyfill de móvil ya asegura que esto solo pase si el contacto fue en el handle
+    // debido al preventDefault en touchstart
     e.dataTransfer.setData('itemId', prompt.id);
     e.dataTransfer.setData('itemType', 'prompt');
     e.dataTransfer.effectAllowed = 'move';
     
     if (cardRef.current) {
-      requestAnimationFrame(() => {
-        cardRef.current?.classList.add('opacity-40', 'scale-95');
-      });
+      cardRef.current.classList.add('opacity-40');
     }
   };
 
-  const handleDragEnd = (e: React.DragEvent) => {
-    canDragRef.current = false;
+  const handleDragEnd = () => {
     if (cardRef.current) {
-      cardRef.current.classList.remove('opacity-40', 'scale-95');
+      cardRef.current.classList.remove('opacity-40');
     }
   };
 
@@ -90,8 +82,7 @@ export default function PromptCard({
       target.closest('button') || 
       target.closest('.drag-handle') || 
       target.closest('[role="menuitem"]') ||
-      target.closest('[role="menu"]') ||
-      target.closest('.no-copy')
+      target.closest('[role="menu"]')
     ) {
       return;
     }
@@ -110,18 +101,10 @@ export default function PromptCard({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onClick={handleCardClick}
-      className="group flex h-full flex-col rounded-xl border-border/20 bg-card text-card-foreground shadow-md transition-all duration-300 hover:shadow-lg relative overflow-hidden select-none"
+      className="group flex h-full flex-col rounded-xl border-border/20 bg-card text-card-foreground shadow-md transition-all duration-300 hover:shadow-lg relative overflow-hidden"
     >
-      {/* MANEJO DE ARRASTRE - Activamos la bandera en el instante del contacto físico */}
-      <div 
-        className="drag-handle absolute top-0 right-0 bg-background/90 backdrop-blur-sm rounded-bl-xl border-l border-b border-border/40 shadow-sm z-50"
-        onPointerDown={(e) => { 
-          // Marcamos la intención de arrastrar solo si se toca este elemento
-          canDragRef.current = true; 
-        }}
-        onPointerUp={() => { canDragRef.current = false; }}
-        onPointerCancel={() => { canDragRef.current = false; }}
-      >
+      {/* MANEJO DE ARRASTRE - El bloqueo de scroll se gestiona en MobileDndPolyfill */}
+      <div className="drag-handle absolute top-0 right-0">
         <GripVertical className="h-5 w-5 text-muted-foreground" />
       </div>
 
