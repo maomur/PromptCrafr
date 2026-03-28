@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Link as LinkIcon, ExternalLink, Trash2, GripVertical, Eye, MoreVertical, FolderInput, ChevronUp, ChevronDown, Folder } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import {
   DropdownMenu,
@@ -40,8 +40,8 @@ interface LinkCardProps {
 
 export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToProject, onMoveUp, onMoveDown }: LinkCardProps) {
   const { toast } = useToast();
-  const [isDraggable, setIsDraggable] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const isReadyToDrag = useRef(false);
 
   const project = useMemo(() => 
     projects.find(p => p.id === link.projectId),
@@ -49,19 +49,22 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
   );
 
   const handleDragStart = (e: React.DragEvent) => {
-    if (!isDraggable) {
+    // Solo permitimos el drag si se inició en el mango
+    if (!isReadyToDrag.current) {
       e.preventDefault();
       return;
     }
+    
     e.dataTransfer.setData('itemId', link.id);
     e.dataTransfer.setData('itemType', 'link');
     e.dataTransfer.effectAllowed = 'move';
+    
     setTimeout(() => setIsDragging(true), 0);
   };
 
   const handleDragEnd = () => {
     setIsDragging(false);
-    setIsDraggable(false);
+    isReadyToDrag.current = false;
   };
 
   const handleCardClick = useCallback((event: React.MouseEvent) => {
@@ -85,7 +88,7 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
 
   return (
     <Card 
-      draggable={isDraggable}
+      draggable={true}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onClick={handleCardClick}
@@ -94,12 +97,16 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
         isDragging && "opacity-40 grayscale-[0.5] scale-95",
       )}
     >
-      {/* Mango de arrastre: Activa draggable dinámicamente al tocar/hacer click */}
+      {/* Mango de arrastre: La única zona que permite iniciar el drag */}
       <div 
         className="drag-handle absolute top-0 right-0 bg-background/90 backdrop-blur-sm rounded-bl-xl border-l border-b border-border/40 shadow-sm z-50 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
-        onPointerDown={(e) => {
-          e.stopPropagation();
-          setIsDraggable(true);
+        onPointerDown={() => {
+          isReadyToDrag.current = true;
+        }}
+        onPointerUp={() => {
+          setTimeout(() => {
+            if (!isDragging) isReadyToDrag.current = false;
+          }, 100);
         }}
         title="Arrastrar para organizar"
       >

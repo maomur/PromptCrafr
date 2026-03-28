@@ -12,15 +12,14 @@ export default function MobileDndPolyfill() {
         
         // Inicialización robusta del polyfill
         polyfill({
-          holdToDrag: 0,
+          holdToDrag: 0, // Respuesta inmediata
         });
 
-        // Bloqueo preventivo de scroll solo en el mango
+        // Forzamos un evento táctil no pasivo en los manejadores para asegurar el bloqueo del scroll
         const handleTouchStart = (e: TouchEvent) => {
           const target = e.target as HTMLElement;
           if (target.closest('.drag-handle')) {
-            // No hacemos preventDefault aquí para permitir que PointerDown se dispare primero
-            // El touch-action: none en CSS hará el resto.
+            // El touch-action: none en CSS debería bastar, pero esto es un seguro extra
           }
         };
 

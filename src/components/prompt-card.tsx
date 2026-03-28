@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Video, Image, FileText, Sparkles, GripVertical, Folder } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 
 interface PromptCardProps {
   prompt: Prompt;
@@ -51,8 +51,8 @@ export default function PromptCard({
   onMoveDown
 }: PromptCardProps) {
   const { toast } = useToast();
-  const [isDraggable, setIsDraggable] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const isReadyToDrag = useRef(false);
 
   const project = useMemo(() => 
     projects.find(p => p.id === prompt.projectId),
@@ -79,24 +79,28 @@ export default function PromptCard({
   }, [prompt.content, toast]);
 
   const handleDragStart = (e: React.DragEvent) => {
-    if (!isDraggable) {
+    // Si no se inició desde el mango, cancelamos el arrastre para permitir el scroll
+    if (!isReadyToDrag.current) {
       e.preventDefault();
       return;
     }
+    
     e.dataTransfer.setData('itemId', prompt.id);
     e.dataTransfer.setData('itemType', 'prompt');
     e.dataTransfer.effectAllowed = 'move';
+    
+    // Pequeño timeout para feedback visual sin romper el inicio del arrastre
     setTimeout(() => setIsDragging(true), 0);
   };
 
   const handleDragEnd = () => {
     setIsDragging(false);
-    setIsDraggable(false);
+    isReadyToDrag.current = false;
   };
 
   return (
     <Card 
-      draggable={isDraggable}
+      draggable={true}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onClick={handleCardClick}
@@ -105,12 +109,17 @@ export default function PromptCard({
         isDragging && "opacity-40 grayscale-[0.5] scale-95",
       )}
     >
-      {/* Mango de arrastre: Activa draggable dinámicamente al tocar/hacer click */}
+      {/* Mango de arrastre: La única zona que permite iniciar el drag */}
       <div 
         className="drag-handle absolute top-0 right-0 bg-background/90 backdrop-blur-sm rounded-bl-xl border-l border-b border-border/40 shadow-sm z-50 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
-        onPointerDown={(e) => {
-          e.stopPropagation();
-          setIsDraggable(true);
+        onPointerDown={() => {
+          isReadyToDrag.current = true;
+        }}
+        onPointerUp={() => {
+          // Si el usuario solo hizo click sin arrastrar, reseteamos
+          setTimeout(() => {
+            if (!isDragging) isReadyToDrag.current = false;
+          }, 100);
         }}
         title="Arrastrar para organizar"
       >
