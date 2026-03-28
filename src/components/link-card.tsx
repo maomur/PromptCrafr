@@ -99,8 +99,8 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
         {/* Superior: Etiquetas */}
         <div className="flex flex-wrap items-center gap-2 pr-6">
           {project && (
-            <Badge variant="secondary" className="text-[9px] h-4 bg-muted text-muted-foreground font-normal border-none flex items-center gap-1">
-              <Folder className="h-2.5 w-2.5" />
+            <Badge variant="secondary" className="text-[11px] h-6 bg-muted text-muted-foreground font-normal border-none flex items-center gap-1.5 px-2.5">
+              <Folder className="h-3 w-3" />
               {project.name}
             </Badge>
           )}
@@ -109,7 +109,7 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
               <LinkIcon className="h-3 w-3 text-orange-600" />
             </div>
             {link.category && (
-              <Badge variant="secondary" className="text-[9px] py-0 h-4 font-medium bg-orange-50 text-orange-700 border-orange-100">
+              <Badge variant="secondary" className="text-[11px] py-0 h-6 px-2.5 font-medium bg-orange-50 text-orange-700 border-orange-100">
                 {link.category}
               </Badge>
             )}

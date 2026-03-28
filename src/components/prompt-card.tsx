@@ -28,10 +28,10 @@ interface PromptCardProps {
 }
 
 const categoryIcons = {
-  Video: <Video className="mr-1.5 h-3.5 w-3.5" />,
-  Imagen: <Image className="mr-1.5 h-3.5 w-3.5" />,
-  Textos: <FileText className="mr-1.5 h-3.5 w-3.5" />,
-  Otros: <Sparkles className="mr-1.5 h-3.5 w-3.5" />,
+  Video: <Video className="mr-1.5 h-4 w-4" />,
+  Imagen: <Image className="mr-1.5 h-4 w-4" />,
+  Textos: <FileText className="mr-1.5 h-4 w-4" />,
+  Otros: <Sparkles className="mr-1.5 h-4 w-4" />,
 };
 
 const categoryColors = {
@@ -111,14 +111,14 @@ export default function PromptCard({
         {/* Superior: Etiquetas */}
         <div className="flex flex-wrap items-center gap-2 pr-6">
           {project && (
-            <Badge variant="secondary" className="text-[9px] h-4 bg-muted text-muted-foreground font-normal border-none flex items-center gap-1">
-              <Folder className="h-2.5 w-2.5" />
+            <Badge variant="secondary" className="text-[11px] h-6 bg-muted text-muted-foreground font-normal border-none flex items-center gap-1.5 px-2.5">
+              <Folder className="h-3 w-3" />
               {project.name}
             </Badge>
           )}
           <Badge 
             variant="outline"
-            className={cn("flex items-center border-0 text-[10px] px-2 py-0 h-4 font-medium shrink-0", categoryColors[prompt.category])}
+            className={cn("flex items-center border-0 text-[11px] px-2.5 py-0 h-6 font-medium shrink-0", categoryColors[prompt.category])}
           >
             {categoryIcons[prompt.category]}
             {prompt.category}
@@ -136,7 +136,7 @@ export default function PromptCard({
         </div>
       </CardHeader>
       
-      <div className="flex-grow" /> {/* Espaciador para empujar el footer hacia abajo */}
+      <div className="flex-grow" />
       
       <CardFooter className="flex items-center justify-between text-[10px] text-muted-foreground pb-4 pt-0">
         <span className="opacity-70">
