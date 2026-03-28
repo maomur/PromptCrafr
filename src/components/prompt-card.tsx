@@ -59,8 +59,7 @@ export default function PromptCard({
   );
 
   const handleDragStart = (e: React.DragEvent) => {
-    // El polyfill de móvil ya asegura que esto solo pase si el contacto fue en el handle
-    // debido al preventDefault en touchstart
+    // El polyfill ya ha bloqueado el scroll si llegamos aquí
     e.dataTransfer.setData('itemId', prompt.id);
     e.dataTransfer.setData('itemType', 'prompt');
     e.dataTransfer.effectAllowed = 'move';
@@ -74,6 +73,7 @@ export default function PromptCard({
     if (cardRef.current) {
       cardRef.current.classList.remove('opacity-40');
     }
+    document.body.classList.remove('dragging-active');
   };
 
   const handleCardClick = useCallback((event: React.MouseEvent) => {
@@ -103,7 +103,6 @@ export default function PromptCard({
       onClick={handleCardClick}
       className="group flex h-full flex-col rounded-xl border-border/20 bg-card text-card-foreground shadow-md transition-all duration-300 hover:shadow-lg relative overflow-hidden"
     >
-      {/* MANEJO DE ARRASTRE - El bloqueo de scroll se gestiona en MobileDndPolyfill */}
       <div className="drag-handle absolute top-0 right-0">
         <GripVertical className="h-5 w-5 text-muted-foreground" />
       </div>

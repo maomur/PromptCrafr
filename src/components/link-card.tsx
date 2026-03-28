@@ -61,6 +61,7 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
     if (cardRef.current) {
       cardRef.current.classList.remove('opacity-40');
     }
+    document.body.classList.remove('dragging-active');
   };
 
   const handleCardClick = useCallback((event: React.MouseEvent) => {
@@ -90,7 +91,6 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
       onClick={handleCardClick}
       className="group flex flex-col h-full rounded-xl border-border/20 bg-card shadow-md transition-all duration-300 hover:shadow-lg relative overflow-hidden"
     >
-      {/* MANEJO DE ARRASTRE - El bloqueo de scroll se gestiona en MobileDndPolyfill */}
       <div className="drag-handle absolute top-0 right-0">
         <GripVertical className="h-5 w-5 text-muted-foreground" />
       </div>

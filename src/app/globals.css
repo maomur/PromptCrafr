@@ -66,12 +66,15 @@
   body {
     @apply bg-background text-foreground;
   }
+  body.dragging-active {
+    overflow: hidden !important;
+    touch-action: none !important;
+  }
 }
 
-/* DRAG AND DROP - CONFIGURACIÓN MÓVIL DEFINITIVA */
 .drag-handle {
   cursor: grab;
-  touch-action: none !important; /* Bloqueo de gestos a nivel de motor de renderizado */
+  touch-action: none !important;
   -webkit-user-select: none;
   user-select: none;
   z-index: 50;
@@ -91,14 +94,11 @@
   cursor: grabbing;
 }
 
-/* Permitir scroll en la tarjeta pero NO en el manejador */
 [draggable="true"] {
-  touch-action: pan-y; /* Permite scroll vertical normal */
   -webkit-user-drag: element;
   user-select: none;
 }
 
-/* Estilo visual durante el arrastre (Polyfill) */
 .dnd-poly-dragging {
   opacity: 0.5 !important;
   transform: scale(1.05) !important;
