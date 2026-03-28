@@ -276,7 +276,6 @@ export default function PromptPage({ user }: PromptPageProps) {
     const targetId = promptToDelete.id;
     setDeleteDialogOpen(false);
     
-    // Pequeño delay para dejar que Radix UI limpie el foco antes de borrar el elemento del DOM
     setTimeout(() => {
       deleteDocumentNonBlocking(doc(firestore, 'users', user.uid, 'prompts', targetId));
       setPromptToDelete(null);
@@ -526,7 +525,6 @@ export default function PromptPage({ user }: PromptPageProps) {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Botones Flotantes */}
       <div className="fixed bottom-8 right-8 flex items-center gap-3 z-50">
         <Dialog open={isCreateLinkDialogOpen} onOpenChange={setCreateLinkDialogOpen}>
           <DialogTrigger asChild>
