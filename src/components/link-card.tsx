@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Link as LinkIcon, ExternalLink, Trash2, GripVertical, Eye, MoreVertical, FolderInput, ChevronUp, ChevronDown, Folder } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import {
   DropdownMenu,
@@ -40,7 +40,8 @@ interface LinkCardProps {
 
 export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToProject, onMoveUp, onMoveDown }: LinkCardProps) {
   const { toast } = useToast();
-  const isReadyToDrag = useRef(false);
+  const [isDraggable, setIsDraggable] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   const project = useMemo(() => 
     projects.find(p => p.id === link.projectId),
@@ -48,7 +49,7 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
   );
 
   const handleDragStart = (e: React.DragEvent) => {
-    if (!isReadyToDrag.current) {
+    if (!isDraggable) {
       e.preventDefault();
       return;
     }
@@ -57,17 +58,15 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
     e.dataTransfer.setData('itemType', 'link');
     e.dataTransfer.effectAllowed = 'move';
     
-    const card = (e.target as HTMLElement).closest('.group') as HTMLElement;
-    if (card) {
-      setTimeout(() => card.classList.add('opacity-40', 'scale-95'), 0);
+    if (cardRef.current) {
+      setTimeout(() => cardRef.current?.classList.add('opacity-40', 'scale-95'), 0);
     }
   };
 
   const handleDragEnd = (e: React.DragEvent) => {
-    isReadyToDrag.current = false;
-    const card = (e.target as HTMLElement).closest('.group') as HTMLElement;
-    if (card) {
-      card.classList.remove('opacity-40', 'scale-95');
+    setIsDraggable(false);
+    if (cardRef.current) {
+      cardRef.current.classList.remove('opacity-40', 'scale-95');
     }
   };
 
@@ -92,16 +91,20 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
 
   return (
     <Card 
-      draggable={true}
+      ref={cardRef}
+      draggable={isDraggable}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onClick={handleCardClick}
       className="group flex flex-col h-full rounded-xl border-border/20 bg-card shadow-md transition-all duration-300 hover:shadow-lg relative overflow-hidden select-none"
     >
-      {/* Mango de arrastre - Zona de control exclusiva */}
+      {/* Mango de arrastre - Zona de activación dinámica */}
       <div 
         className="drag-handle absolute top-0 right-0 bg-background/90 backdrop-blur-sm rounded-bl-xl border-l border-b border-border/40 shadow-sm z-50 transition-opacity"
-        onPointerDown={() => { isReadyToDrag.current = true; }}
+        onPointerDown={() => setIsDraggable(true)}
+        onPointerUp={() => {
+          setTimeout(() => setIsDraggable(false), 100);
+        }}
         title="Arrastrar para organizar"
       >
         <GripVertical className="h-5 w-5 text-muted-foreground" />

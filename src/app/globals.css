@@ -68,16 +68,16 @@
   }
 }
 
-/* DRAG AND DROP - CONFIGURACIÓN CRÍTICA PARA MÓVILES */
+/* DRAG AND DROP - CONFIGURACIÓN PARA MÓVILES */
 .drag-handle {
   cursor: grab;
-  touch-action: none !important; /* BLOQUEO DE GESTOS NATIVOS */
+  touch-action: none !important; /* CRÍTICO: Bloquea scroll nativo para permitir DND */
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
   z-index: 50;
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -91,12 +91,13 @@
 /* Soporte para el polyfill de móvil */
 .dnd-poly-dragging {
   opacity: 0.5 !important;
-  transform: scale(0.95) !important;
-  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1) !important;
+  transform: scale(0.98) !important;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1) !important;
   z-index: 9999 !important;
 }
 
 [draggable="true"] {
   user-select: none;
   -webkit-user-select: none;
+  touch-action: none !important;
 }

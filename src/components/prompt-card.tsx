@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Video, Image, FileText, Sparkles, GripVertical, Folder } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 
 interface PromptCardProps {
   prompt: Prompt;
@@ -51,7 +51,8 @@ export default function PromptCard({
   onMoveDown
 }: PromptCardProps) {
   const { toast } = useToast();
-  const isReadyToDrag = useRef(false);
+  const [isDraggable, setIsDraggable] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   const project = useMemo(() => 
     projects.find(p => p.id === prompt.projectId),
@@ -78,8 +79,7 @@ export default function PromptCard({
   }, [prompt.content, toast]);
 
   const handleDragStart = (e: React.DragEvent) => {
-    // Si no se inició desde el manejador, cancelamos
-    if (!isReadyToDrag.current) {
+    if (!isDraggable) {
       e.preventDefault();
       return;
     }
@@ -88,32 +88,35 @@ export default function PromptCard({
     e.dataTransfer.setData('itemType', 'prompt');
     e.dataTransfer.effectAllowed = 'move';
     
-    const card = (e.target as HTMLElement).closest('.group') as HTMLElement;
-    if (card) {
-      setTimeout(() => card.classList.add('opacity-40', 'scale-95'), 0);
+    if (cardRef.current) {
+      setTimeout(() => cardRef.current?.classList.add('opacity-40', 'scale-95'), 0);
     }
   };
 
   const handleDragEnd = (e: React.DragEvent) => {
-    isReadyToDrag.current = false;
-    const card = (e.target as HTMLElement).closest('.group') as HTMLElement;
-    if (card) {
-      card.classList.remove('opacity-40', 'scale-95');
+    setIsDraggable(false);
+    if (cardRef.current) {
+      cardRef.current.classList.remove('opacity-40', 'scale-95');
     }
   };
 
   return (
     <Card 
-      draggable={true}
+      ref={cardRef}
+      draggable={isDraggable}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onClick={handleCardClick}
       className="group flex h-full flex-col rounded-xl border-border/20 bg-card text-card-foreground shadow-md transition-all duration-300 hover:shadow-lg relative overflow-hidden select-none"
     >
-      {/* Mango de arrastre - Zona de control exclusiva */}
+      {/* Mango de arrastre - Zona de activación dinámica */}
       <div 
         className="drag-handle absolute top-0 right-0 bg-background/90 backdrop-blur-sm rounded-bl-xl border-l border-b border-border/40 shadow-sm z-50 transition-opacity"
-        onPointerDown={() => { isReadyToDrag.current = true; }}
+        onPointerDown={() => setIsDraggable(true)}
+        onPointerUp={() => {
+          // Si el usuario suelta sin haber iniciado el drag, desactivamos
+          setTimeout(() => setIsDraggable(false), 100);
+        }}
         title="Arrastrar para organizar"
       >
         <GripVertical className="h-5 w-5 text-muted-foreground" />

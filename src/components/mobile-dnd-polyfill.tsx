@@ -13,27 +13,22 @@ export default function MobileDndPolyfill() {
         
         polyfill({
           dragImageTranslateOverride: scrollBehaviourDragImageTranslateOverride,
-          holdToDrag: 0,
+          holdToDrag: 100, // Pequeño delay para diferenciar de un tap accidental
         });
 
-        // Bloqueo estricto de scroll para el manejador de arrastre
-        const blockNativeScroll = (e: TouchEvent) => {
+        // Aseguramos que los eventos táctiles en el mango bloqueen el scroll nativo
+        const handleTouchStart = (e: TouchEvent) => {
           const target = e.target as HTMLElement;
-          // Si el toque ocurre en el manejador, cancelamos el scroll nativo
           if (target.closest('.drag-handle')) {
-            if (e.cancelable) {
-              e.preventDefault();
-            }
+            // No prevenimos default aquí para no romper el inicio del drag del polyfill
+            // Pero touch-action: none en CSS hará el trabajo pesado
           }
         };
 
-        // Añadimos listeners globales no pasivos
-        window.addEventListener('touchstart', blockNativeScroll, { passive: false });
-        window.addEventListener('touchmove', blockNativeScroll, { passive: false });
+        window.addEventListener('touchstart', handleTouchStart, { passive: true });
 
         return () => {
-          window.removeEventListener('touchstart', blockNativeScroll);
-          window.removeEventListener('touchmove', blockNativeScroll);
+          window.removeEventListener('touchstart', handleTouchStart);
         };
       } catch (error) {
         console.error('Error initializing DND polyfill:', error);
