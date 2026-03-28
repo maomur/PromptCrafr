@@ -3,8 +3,9 @@
 import { useEffect } from 'react';
 
 /**
- * Polyfill definitivo para Drag and Drop en móviles.
- * Utiliza el método 'Hold-to-Drag' (300ms) para distinguir entre scroll y arrastre.
+ * Polyfill robusto para Drag and Drop en móviles.
+ * Utiliza interceptación de eventos no pasivos para garantizar que el arrastre
+ * tenga prioridad sobre el scroll cuando se usa el mango de agarre.
  */
 export default function MobileDndPolyfill() {
   useEffect(() => {
@@ -15,68 +16,58 @@ export default function MobileDndPolyfill() {
         const { polyfill } = await import('mobile-drag-drop');
         const { scrollBehaviourDragImageTranslateOverride } = await import('mobile-drag-drop/scroll-behaviour');
         
+        // Inicializamos el polyfill
         polyfill({
           dragImageTranslateOverride: scrollBehaviourDragImageTranslateOverride,
-          // 300ms es el estándar para 'Hold-to-Drag' en móviles
-          holdToDrag: 300, 
-          // Centra la imagen de arrastre bajo el dedo para mejor feedback
+          // Con touch-action: none en el mango, holdToDrag: 0 da respuesta inmediata
+          holdToDrag: 0,
           dragImageCenterOnPointer: true,
         });
 
-        // Interceptamos el inicio del toque de forma NO PASIVA
+        // Interceptación crítica: Detener el scroll si el toque es en el mango
+        // Debe ser un listener NO PASIVO para poder llamar a preventDefault()
         const handleTouchStart = (e: TouchEvent) => {
           const target = e.target as HTMLElement;
-          const handle = target.closest('.drag-handle');
-          
-          if (handle) {
-            // Marcamos el inicio de una posible operación de arrastre
-            // No prevenimos el default aquí para permitir que el temporizador de 'holdToDrag' corra
-            document.body.setAttribute('data-dnd-pending', 'true');
+          if (target.closest('.drag-handle')) {
+            // Detenemos el inicio del scroll para que el polyfill pueda actuar
+            // Sin esto, el navegador suele ganar la carrera y empieza a hacer scroll
+            if (e.cancelable) {
+              // No llamamos preventDefault aquí siempre para dejar que el polyfill haga su magia,
+              // pero marcamos el body para el listener de touchmove
+              document.body.setAttribute('data-dnd-active', 'true');
+            }
           }
         };
 
         const handleTouchMove = (e: TouchEvent) => {
-          // Si el arrastre ya es activo, bloqueamos el scroll del navegador agresivamente
-          if (document.body.classList.contains('dragging-active')) {
+          if (document.body.getAttribute('data-dnd-active') === 'true' || document.body.classList.contains('dragging-active')) {
             if (e.cancelable) {
               e.preventDefault();
             }
           }
         };
 
-        const handleDragStart = () => {
-          document.body.classList.add('dragging-active');
-          document.body.removeAttribute('data-dnd-pending');
-        };
-
         const handleDragEnd = () => {
           document.body.classList.remove('dragging-active');
-          document.body.removeAttribute('data-dnd-pending');
+          document.body.removeAttribute('data-dnd-active');
         };
 
-        // Listeners globales para coordinar el estado
+        const handleDragStart = () => {
+          document.body.classList.add('dragging-active');
+        };
+
+        // Eventos globales con configuración específica para móviles
         window.addEventListener('touchstart', handleTouchStart, { passive: true });
         window.addEventListener('touchmove', handleTouchMove, { passive: false });
         window.addEventListener('dragstart', handleDragStart);
         window.addEventListener('dragend', handleDragEnd);
-        window.addEventListener('touchend', () => document.body.removeAttribute('data-dnd-pending'));
-
-        // Evitamos menús contextuales en el manejador que rompen el gesto en iOS
-        const handleContextMenu = (e: MouseEvent) => {
-          const target = e.target as HTMLElement;
-          if (target.closest('.drag-handle')) {
-            e.preventDefault();
-            e.stopPropagation();
-          }
-        };
-        window.addEventListener('contextmenu', handleContextMenu, true);
+        window.addEventListener('touchend', () => document.body.removeAttribute('data-dnd-active'));
 
         return () => {
           window.removeEventListener('touchstart', handleTouchStart);
           window.removeEventListener('touchmove', handleTouchMove);
           window.removeEventListener('dragstart', handleDragStart);
           window.removeEventListener('dragend', handleDragEnd);
-          window.removeEventListener('contextmenu', handleContextMenu, true);
         };
       } catch (error) {
         console.error('Error initializing DND polyfill:', error);

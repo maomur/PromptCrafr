@@ -97,13 +97,13 @@
   transition: transform 0.2s ease, background-color 0.2s ease;
 }
 
-/* Feedback visual al presionar (antes del arrastre) */
 .drag-handle:active {
   cursor: grabbing;
   transform: scale(1.1);
   background-color: hsl(var(--primary) / 0.1);
 }
 
+/* Estilos para el elemento que se está arrastrando */
 [draggable="true"] {
   -webkit-user-drag: element;
   user-select: none;
@@ -111,7 +111,7 @@
 }
 
 /* Estilo del fantasma de arrastre (Polyfill) */
-.dnd-poly-dragging {
+.dnd-poly-drag-image {
   opacity: 0.7 !important;
   transform: scale(1.05) !important;
   box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.3) !important;
@@ -119,4 +119,10 @@
   pointer-events: none;
   background-color: hsl(var(--card)) !important;
   border-radius: var(--radius) !important;
+  border: 1px solid hsl(var(--border)) !important;
+}
+
+/* Ocultar el fantasma nativo cuando usamos el polyfill */
+.dnd-poly-dragging {
+  opacity: 0.4 !important;
 }

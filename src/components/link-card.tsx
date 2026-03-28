@@ -53,13 +53,13 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
     e.dataTransfer.effectAllowed = 'move';
     
     if (cardRef.current) {
-      cardRef.current.classList.add('opacity-40');
+      cardRef.current.classList.add('dnd-poly-dragging');
     }
   };
 
   const handleDragEnd = () => {
     if (cardRef.current) {
-      cardRef.current.classList.remove('opacity-40');
+      cardRef.current.classList.remove('dnd-poly-dragging');
     }
   };
 

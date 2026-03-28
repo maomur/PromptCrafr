@@ -59,19 +59,20 @@ export default function PromptCard({
   );
 
   const handleDragStart = (e: React.DragEvent) => {
-    // El polyfill mobile-drag-drop lanzará este evento tras el 'holdToDrag'
+    // El polyfill mobile-drag-drop lanzará este evento
     e.dataTransfer.setData('itemId', prompt.id);
     e.dataTransfer.setData('itemType', 'prompt');
     e.dataTransfer.effectAllowed = 'move';
     
+    // Añadimos una clase para feedback visual
     if (cardRef.current) {
-      cardRef.current.classList.add('opacity-40');
+      cardRef.current.classList.add('dnd-poly-dragging');
     }
   };
 
   const handleDragEnd = () => {
     if (cardRef.current) {
-      cardRef.current.classList.remove('opacity-40');
+      cardRef.current.classList.remove('dnd-poly-dragging');
     }
   };
 
