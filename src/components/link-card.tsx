@@ -72,7 +72,7 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
       onDragEnd={handleDragEnd}
       onClick={handleCardClick}
       className={cn(
-        "group flex flex-col h-full cursor-grab active:cursor-grabbing rounded-xl border-orange-200/50 bg-card shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden select-none touch-pan-y",
+        "group flex flex-col h-full cursor-grab active:cursor-grabbing rounded-xl border-border/20 bg-card shadow-md transition-all duration-300 hover:shadow-lg relative overflow-hidden select-none touch-pan-y",
         isDragging && "opacity-40 grayscale-[0.5] scale-95"
       )}
     >
@@ -83,72 +83,20 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
         <GripVertical className="h-4 w-4 text-muted-foreground" />
       </div>
 
-      <div className="absolute top-2 right-10 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="h-8 w-8"
-          onClick={(e) => {
-            e.stopPropagation();
-            onEdit(link);
-          }}
-        >
-          <Eye className="h-4 w-4" />
-        </Button>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>Organizar</DropdownMenuLabel>
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger>
-                <FolderInput className="mr-2 h-4 w-4" />
-                Mover a Proyecto
-              </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent>
-                <DropdownMenuItem onSelect={() => onMoveToProject(link.id, null)}>
-                  Sin Proyecto
-                </DropdownMenuItem>
-                {projects.length > 0 && <DropdownMenuSeparator />}
-                {projects.map((project) => (
-                  <DropdownMenuItem 
-                    key={project.id} 
-                    onSelect={() => onMoveToProject(link.id, project.id)}
-                    disabled={link.projectId === project.id}
-                  >
-                    {project.name}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem 
-              className="text-destructive focus:bg-destructive focus:text-destructive-foreground"
-              onSelect={() => onDelete(link.id)}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Eliminar Enlace
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
-      <CardHeader className="pb-2 pt-8 md:pt-6">
-        <div className="flex items-center gap-2 mb-1">
-          <div className="p-1.5 bg-orange-100 rounded-lg">
-            <LinkIcon className="h-4 w-4 text-orange-600" />
+      <CardHeader className="pt-8 md:pt-6">
+        <div className="flex justify-between items-start pr-6">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="p-1.5 bg-orange-100 rounded-lg">
+              <LinkIcon className="h-4 w-4 text-orange-600" />
+            </div>
+            {link.category && (
+              <Badge variant="secondary" className="text-[10px] py-0 h-4 font-medium bg-orange-50 text-orange-700 border-orange-100">
+                {link.category}
+              </Badge>
+            )}
           </div>
-          {link.category && (
-            <Badge variant="secondary" className="text-[10px] py-0 h-4 font-medium bg-orange-50 text-orange-700 border-orange-100">
-              {link.category}
-            </Badge>
-          )}
         </div>
-        <CardTitle className="text-sm font-semibold truncate pr-12">
+        <CardTitle className="text-sm font-semibold truncate pr-2 mt-1">
           {link.title || 'Enlace guardado'}
         </CardTitle>
         {link.description && (
@@ -167,21 +115,80 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
         </div>
       </CardContent>
 
-      <CardFooter className="pt-2 flex items-center justify-between border-t border-border/40 bg-muted/10">
-        <span className="text-[10px] text-muted-foreground opacity-70">
+      <CardFooter className="flex items-center justify-between text-[10px] text-muted-foreground pt-0">
+        <span className="opacity-70">
           {formatDistanceToNow(new Date(link.createdAt), { addSuffix: true, locale: es })}
         </span>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="h-7 text-[10px] font-medium text-orange-600 hover:text-orange-700 hover:bg-orange-50 gap-1.5"
-          asChild
-        >
-          <a href={link.url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
-            Abrir
-            <ExternalLink className="h-3 w-3" />
-          </a>
-        </Button>
+        <div className="flex items-center gap-0.5">
+          {/* Abrir Link */}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-8 w-8 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+            asChild
+          >
+            <a href={link.url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+              <ExternalLink className="h-4 w-4" />
+              <span className="sr-only">Abrir enlace</span>
+            </a>
+          </Button>
+
+          {/* Ver/Editar (Igual que en Prompts) */}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-8 w-8"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit(link);
+            }}
+          >
+            <Eye className="h-4 w-4" />
+            <span className="sr-only">Editar enlace</span>
+          </Button>
+
+          {/* Opciones (Igual que en Prompts) */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
+                <MoreVertical className="h-4 w-4" />
+                <span className="sr-only">Más opciones</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>Organizar</DropdownMenuLabel>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <FolderInput className="mr-2 h-4 w-4" />
+                  Mover a Proyecto
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  <DropdownMenuItem onSelect={() => onMoveToProject(link.id, null)}>
+                    Sin Proyecto
+                  </DropdownMenuItem>
+                  {projects.length > 0 && <DropdownMenuSeparator />}
+                  {projects.map((project) => (
+                    <DropdownMenuItem 
+                      key={project.id} 
+                      onSelect={() => onMoveToProject(link.id, project.id)}
+                      disabled={link.projectId === project.id}
+                    >
+                      {project.name}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                className="text-destructive focus:bg-destructive focus:text-destructive-foreground"
+                onSelect={() => onDelete(link.id)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Eliminar Enlace
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </CardFooter>
     </Card>
   );
