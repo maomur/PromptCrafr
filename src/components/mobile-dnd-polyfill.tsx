@@ -15,7 +15,6 @@ export default function MobileDndPolyfill() {
         const { polyfill } = await import('mobile-drag-drop');
         
         polyfill({
-          // holdToDrag: 0 asegura respuesta inmediata al toque
           holdToDrag: 0,
           dragImageTranslateOverride: (event, element, offset) => {
             return {
@@ -25,9 +24,20 @@ export default function MobileDndPolyfill() {
           }
         });
 
-        // Este listener global es CRÍTICO: bloquea el scroll de la página 
-        // únicamente cuando el usuario interactúa con un .drag-handle.
-        // Debe ser { passive: false } para poder ejecutar preventDefault().
+        // Este listener captura el inicio del toque de forma NO PASIVA.
+        // Es la única forma garantizada de bloquear el scroll antes de que empiece.
+        const handleGlobalTouchStart = (e: TouchEvent) => {
+          const target = e.target as HTMLElement;
+          if (target.closest('.drag-handle')) {
+            // Detenemos cualquier comportamiento del sistema (scroll, zoom, etc)
+            // para que el polyfill pueda tomar el control total del gesto.
+            if (e.cancelable) {
+              e.preventDefault();
+            }
+          }
+        };
+
+        // Bloqueo preventivo de scroll durante el movimiento
         const handleGlobalTouchMove = (e: TouchEvent) => {
           const target = e.target as HTMLElement;
           if (target.closest('.drag-handle')) {
@@ -37,9 +47,9 @@ export default function MobileDndPolyfill() {
           }
         };
 
+        window.addEventListener('touchstart', handleGlobalTouchStart, { passive: false });
         window.addEventListener('touchmove', handleGlobalTouchMove, { passive: false });
         
-        // También bloqueamos el menú contextual en el manejador para evitar interrupciones
         const handleContextMenu = (e: MouseEvent | TouchEvent) => {
           if ((e.target as HTMLElement).closest('.drag-handle')) {
             e.preventDefault();
@@ -48,6 +58,7 @@ export default function MobileDndPolyfill() {
         window.addEventListener('contextmenu', handleContextMenu as any);
 
         return () => {
+          window.removeEventListener('touchstart', handleGlobalTouchStart);
           window.removeEventListener('touchmove', handleGlobalTouchMove);
           window.removeEventListener('contextmenu', handleContextMenu as any);
         };

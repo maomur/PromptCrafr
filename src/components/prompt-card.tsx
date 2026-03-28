@@ -52,7 +52,6 @@ export default function PromptCard({
 }: PromptCardProps) {
   const { toast } = useToast();
   const [isDragging, setIsDragging] = useState(false);
-  const isReadyToDrag = useRef(false);
 
   const project = useMemo(() => 
     projects.find(p => p.id === prompt.projectId),
@@ -78,17 +77,12 @@ export default function PromptCard({
     });
   }, [prompt.content, toast]);
 
-  const handlePointerDown = (e: React.PointerEvent) => {
-    if ((e.target as HTMLElement).closest('.drag-handle')) {
-      isReadyToDrag.current = true;
-    } else {
-      isReadyToDrag.current = false;
-    }
-  };
-
   const handleDragStart = (e: React.DragEvent) => {
-    // Si no se inició en el manejador, cancelamos el arrastre
-    if (!isReadyToDrag.current) {
+    // Si el evento no proviene del manejador de arrastre, cancelamos para permitir el scroll
+    const target = e.target as HTMLElement;
+    const isFromHandle = target.closest('.drag-handle');
+
+    if (!isFromHandle) {
       e.preventDefault();
       return;
     }
@@ -97,28 +91,26 @@ export default function PromptCard({
     e.dataTransfer.setData('itemType', 'prompt');
     e.dataTransfer.effectAllowed = 'move';
     
-    // El setTimeout previene un parpadeo visual en algunos navegadores
+    // Feedback visual inmediato
     setTimeout(() => setIsDragging(true), 0);
   };
 
   const handleDragEnd = () => {
     setIsDragging(false);
-    isReadyToDrag.current = false;
   };
 
   return (
     <Card 
       draggable={true}
-      onPointerDown={handlePointerDown}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onClick={handleCardClick}
       className={cn(
-        "group flex h-full flex-col rounded-xl border-border/20 bg-card text-card-foreground shadow-md transition-all duration-300 hover:shadow-lg relative overflow-hidden select-none touch-pan-y",
+        "group flex h-full flex-col rounded-xl border-border/20 bg-card text-card-foreground shadow-md transition-all duration-300 hover:shadow-lg relative overflow-hidden select-none",
         isDragging && "opacity-40 grayscale-[0.5] scale-95",
       )}
     >
-      {/* Manejador de arrastre con hitbox ergonómica */}
+      {/* Manejador de arrastre (REJILLA) - Hitbox optimizada para touch */}
       <div 
         className="drag-handle absolute top-0 right-0 bg-background/90 backdrop-blur-sm rounded-bl-xl border-l border-b border-border/40 shadow-sm z-50 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
         title="Arrastrar para organizar"
