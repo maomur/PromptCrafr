@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import type { Link, Project } from '@/lib/definitions';
+import type { Link } from '@/lib/definitions';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +16,7 @@ import { Link as LinkIcon, ExternalLink, Trash2, GripVertical } from 'lucide-rea
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 interface LinkCardProps {
   link: Link;
@@ -23,6 +24,7 @@ interface LinkCardProps {
 }
 
 export default function LinkCard({ link, onDelete }: LinkCardProps) {
+  const { toast } = useToast();
   const [isDragging, setIsDragging] = useState(false);
 
   const handleDragStart = (e: React.DragEvent) => {
@@ -36,13 +38,27 @@ export default function LinkCard({ link, onDelete }: LinkCardProps) {
     setIsDragging(false);
   };
 
+  const handleCardClick = (event: React.MouseEvent) => {
+    // Evitar copiar si se hace clic en un botón o en el control de arrastre
+    if ((event.target as HTMLElement).closest('button') || (event.target as HTMLElement).closest('.drag-handle')) {
+      return;
+    }
+
+    navigator.clipboard.writeText(link.url);
+    toast({
+      title: 'Enlace Copiado',
+      description: 'La URL se ha copiado a tu portapapeles.',
+    });
+  };
+
   return (
     <Card 
       draggable
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
+      onClick={handleCardClick}
       className={cn(
-        "group flex flex-col h-full rounded-xl border-orange-200/50 bg-card shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden select-none touch-pan-y",
+        "group flex flex-col h-full cursor-grab active:cursor-grabbing rounded-xl border-orange-200/50 bg-card shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden select-none touch-pan-y",
         isDragging && "opacity-40 grayscale-[0.5] scale-95"
       )}
     >
@@ -107,7 +123,7 @@ export default function LinkCard({ link, onDelete }: LinkCardProps) {
           className="h-7 text-[10px] font-medium text-orange-600 hover:text-orange-700 hover:bg-orange-50 gap-1.5"
           asChild
         >
-          <a href={link.url} target="_blank" rel="noopener noreferrer">
+          <a href={link.url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
             Abrir
             <ExternalLink className="h-3 w-3" />
           </a>
