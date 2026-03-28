@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Video, Image, FileText, Sparkles, GripVertical, Folder } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { useState, useCallback, useMemo, useRef } from 'react';
+import { useCallback, useMemo } from 'react';
 
 interface PromptCardProps {
   prompt: Prompt;
@@ -51,8 +51,6 @@ export default function PromptCard({
   onMoveDown
 }: PromptCardProps) {
   const { toast } = useToast();
-  const [isDragging, setIsDragging] = useState(false);
-  const isReadyToDrag = useRef(false);
 
   const project = useMemo(() => 
     projects.find(p => p.id === prompt.projectId),
@@ -79,8 +77,11 @@ export default function PromptCard({
   }, [prompt.content, toast]);
 
   const handleDragStart = (e: React.DragEvent) => {
-    // FILTRADO ESTRICTO: Solo permitimos arrastrar si el contacto empezó en el mango
-    if (!isReadyToDrag.current) {
+    const target = e.target as HTMLElement;
+    // Validamos si el arrastre se inició efectivamente en el manejador
+    const isHandle = target.closest('.drag-handle');
+    
+    if (!isHandle) {
       e.preventDefault();
       return;
     }
@@ -89,13 +90,18 @@ export default function PromptCard({
     e.dataTransfer.setData('itemType', 'prompt');
     e.dataTransfer.effectAllowed = 'move';
     
-    // El feedback visual se retrasa un milisegundo para no interrumpir el inicio del drag
-    setTimeout(() => setIsDragging(true), 0);
+    // Aplicamos feedback visual manual para evitar latencias de React
+    const card = target.closest('.group') as HTMLElement;
+    if (card) {
+      setTimeout(() => card.classList.add('opacity-40', 'scale-95'), 0);
+    }
   };
 
-  const handleDragEnd = () => {
-    setIsDragging(false);
-    isReadyToDrag.current = false;
+  const handleDragEnd = (e: React.DragEvent) => {
+    const card = (e.target as HTMLElement).closest('.group') as HTMLElement;
+    if (card) {
+      card.classList.remove('opacity-40', 'scale-95');
+    }
   };
 
   return (
@@ -104,27 +110,11 @@ export default function PromptCard({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onClick={handleCardClick}
-      className={cn(
-        "group flex h-full flex-col rounded-xl border-border/20 bg-card text-card-foreground shadow-md transition-all duration-300 hover:shadow-lg relative overflow-hidden select-none",
-        isDragging && "opacity-40 grayscale-[0.5] scale-95",
-      )}
+      className="group flex h-full flex-col rounded-xl border-border/20 bg-card text-card-foreground shadow-md transition-all duration-300 hover:shadow-lg relative overflow-hidden select-none"
     >
-      {/* Mango de arrastre: Zona de control exclusiva para móviles y escritorio */}
+      {/* Mango de arrastre - Zona de control exclusiva para móviles y escritorio */}
       <div 
-        className="drag-handle absolute top-0 right-0 bg-background/90 backdrop-blur-sm rounded-bl-xl border-l border-b border-border/40 shadow-sm z-50 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
-        onPointerDown={(e) => {
-          isReadyToDrag.current = true;
-          // Evitamos que el scroll se active en el mango inmediatamente
-          if (e.pointerType === 'touch') {
-            // El touch-action: none en CSS y el listener global en MobileDndPolyfill hacen el resto
-          }
-        }}
-        onPointerUp={() => {
-          // No reseteamos inmediatamente para dar tiempo al evento 'dragstart' a dispararse
-          setTimeout(() => {
-            if (!isDragging) isReadyToDrag.current = false;
-          }, 200);
-        }}
+        className="drag-handle absolute top-0 right-0 bg-background/90 backdrop-blur-sm rounded-bl-xl border-l border-b border-border/40 shadow-sm z-50 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
         title="Arrastrar para organizar"
       >
         <GripVertical className="h-5 w-5 text-muted-foreground" />

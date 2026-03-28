@@ -9,26 +9,31 @@ export default function MobileDndPolyfill() {
     const initPolyfill = async () => {
       try {
         const { polyfill } = await import('mobile-drag-drop');
+        const { scrollBehaviourDragImageTranslateOverride } = await import('mobile-drag-drop/scroll-behaviour');
         
-        // Inicialización robusta para respuesta instantánea
         polyfill({
-          holdToDrag: 0, 
+          dragImageTranslateOverride: scrollBehaviourDragImageTranslateOverride,
+          holdToDrag: 0, // Inicia el arrastre instantáneamente
         });
 
-        // Este listener no pasivo es CRÍTICO para permitir que e.preventDefault() funcione en móviles
-        // y bloquee el scroll cuando el usuario toca el manejador de arrastre.
-        const handleTouchMove = (e: TouchEvent) => {
+        // Interceptación de gestos táctiles para bloquear el scroll solo en los manejadores
+        const blockNativeScroll = (e: TouchEvent) => {
           const target = e.target as HTMLElement;
           if (target.closest('.drag-handle')) {
-            // El scroll se bloquea solo si estamos en el mango
-            if (e.cancelable) e.preventDefault();
+            // Si el toque se inicia en un manejador, bloqueamos el comportamiento por defecto (scroll)
+            if (e.cancelable) {
+              e.preventDefault();
+            }
           }
         };
 
-        window.addEventListener('touchmove', handleTouchMove, { passive: false });
+        // Añadimos listeners de bajo nivel con { passive: false } para permitir preventDefault
+        window.addEventListener('touchstart', blockNativeScroll, { passive: false });
+        window.addEventListener('touchmove', blockNativeScroll, { passive: false });
 
         return () => {
-          window.removeEventListener('touchmove', handleTouchMove);
+          window.removeEventListener('touchstart', blockNativeScroll);
+          window.removeEventListener('touchmove', blockNativeScroll);
         };
       } catch (error) {
         console.error('Error initializing DND polyfill:', error);
