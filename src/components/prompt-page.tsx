@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import type { Prompt, PromptCategory, Project, Link } from '@/lib/definitions';
 import { promptCategories } from '@/lib/definitions';
 import Header from '@/components/header';
@@ -101,6 +101,17 @@ export default function PromptPage({ user }: PromptPageProps) {
   const projects = useMemo(() => rawProjects || [], [rawProjects]);
   const prompts = useMemo(() => rawPrompts || [], [rawPrompts]);
   const links = useMemo(() => rawLinks || [], [rawLinks]);
+
+  // EFECTO MAESTRO: Garantiza que el body recupere siempre su interactividad cuando no hay diálogos abiertos.
+  // Esto previene de forma definitiva el "congelamiento" causado por Radix UI al eliminar items.
+  useEffect(() => {
+    const isAnyDialogOpen = isCreateDialogOpen || isCreateLinkDialogOpen || isEditDialogOpen || isEditLinkDialogOpen || isNewProjectDialogOpen || isDeleteDialogOpen;
+    
+    if (!isAnyDialogOpen) {
+      document.body.style.pointerEvents = 'auto';
+      document.body.style.overflow = 'auto';
+    }
+  }, [isCreateDialogOpen, isCreateLinkDialogOpen, isEditDialogOpen, isEditLinkDialogOpen, isNewProjectDialogOpen, isDeleteDialogOpen]);
 
   const handleSave = useCallback((promptData: {
     title: string;
@@ -508,8 +519,8 @@ export default function PromptPage({ user }: PromptPageProps) {
               onClick={() => {
                 if (promptToDelete) {
                   deleteDocumentNonBlocking(doc(firestore, 'users', user.uid, 'prompts', promptToDelete.id));
-                  setDeleteDialogOpen(false);
                   setPromptToDelete(null);
+                  setDeleteDialogOpen(false);
                   toast({ title: "Prompt eliminado" });
                 }
               }}

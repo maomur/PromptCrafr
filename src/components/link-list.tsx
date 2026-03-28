@@ -45,6 +45,20 @@ export default function LinkList({
     }
   };
 
+  const moveUp = (id: string) => {
+    const index = links.findIndex(l => l.id === id);
+    if (index > 0) {
+      onReorder(id, links[index - 1].id);
+    }
+  };
+
+  const moveDown = (id: string) => {
+    const index = links.findIndex(l => l.id === id);
+    if (index < links.length - 1) {
+      onReorder(id, links[index + 1].id);
+    }
+  };
+
   return (
     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {links.map((link) => (
@@ -64,6 +78,8 @@ export default function LinkList({
             onDelete={onDeleteLink}
             onEdit={onEditLink}
             onMoveToProject={onMoveToProject}
+            onMoveUp={moveUp}
+            onMoveDown={moveDown}
           />
         </div>
       ))}

@@ -72,9 +72,8 @@ const SelectContent = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
 >(({ className, children, position = "popper", ...props }, ref) => (
   /* 
-     NOTA IMPORTANTE: Hemos eliminado SelectPrimitive.Portal para que el contenido
-     del selector se renderice dentro del mismo contexto de foco que el Diálogo.
-     Esto soluciona definitivamente el problema de las flechas de dirección (Arriba/Abajo).
+     ELIMINAMOS EL PORTAL: Al renderizar sin Portal, el selector hereda el contexto de foco del Diálogo,
+     permitiendo que las flechas del teclado (Arriba/Abajo) funcionen de forma nativa sin bloqueos.
   */
   <SelectPrimitive.Content
     ref={ref}
@@ -86,11 +85,10 @@ const SelectContent = React.forwardRef<
     )}
     position={position}
     onKeyDown={(e) => {
+      // SOPORTE TAB: Si el usuario pulsa Tab, seleccionamos automáticamente el ítem resaltado
       if (e.key === 'Tab') {
-        // Buscamos el elemento que está resaltado por la navegación del teclado
         const highlightedItem = e.currentTarget.querySelector('[data-highlighted]');
         if (highlightedItem instanceof HTMLElement) {
-          // Simulamos un click para seleccionar la opción resaltada antes de que el tabulador mueva el foco
           highlightedItem.click();
         }
       }

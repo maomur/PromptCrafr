@@ -12,7 +12,7 @@ import type { Link, Project } from '@/lib/definitions';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
-import { Link as LinkIcon, ExternalLink, Trash2, GripVertical, Eye, MoreVertical, FolderInput } from 'lucide-react';
+import { Link as LinkIcon, ExternalLink, Trash2, GripVertical, Eye, MoreVertical, FolderInput, ChevronUp, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
@@ -35,9 +35,11 @@ interface LinkCardProps {
   onDelete: (id: string) => void;
   onEdit: (link: Link) => void;
   onMoveToProject: (linkId: string, projectId: string | null) => void;
+  onMoveUp?: (id: string) => void;
+  onMoveDown?: (id: string) => void;
 }
 
-export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToProject }: LinkCardProps) {
+export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToProject, onMoveUp, onMoveDown }: LinkCardProps) {
   const { toast } = useToast();
   const [isDragging, setIsDragging] = useState(false);
 
@@ -53,8 +55,8 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
   };
 
   const handleCardClick = (event: React.MouseEvent) => {
-    // Evitar copiar si se hace clic en un botón o en el control de arrastre
-    if ((event.target as HTMLElement).closest('button') || (event.target as HTMLElement).closest('.drag-handle')) {
+    // Evitar copiar si se hace clic en botones, menús o en el control de arrastre
+    if ((event.target as HTMLElement).closest('button') || (event.target as HTMLElement).closest('.drag-handle') || (event.target as HTMLElement).closest('[role="menuitem"]')) {
       return;
     }
 
@@ -120,7 +122,7 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
           {formatDistanceToNow(new Date(link.createdAt), { addSuffix: true, locale: es })}
         </span>
         <div className="flex items-center gap-0.5">
-          {/* Abrir Link */}
+          {/* Abrir Link Externo */}
           <Button 
             variant="ghost" 
             size="icon" 
@@ -133,7 +135,7 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
             </a>
           </Button>
 
-          {/* Ver/Editar (Igual que en Prompts) */}
+          {/* Editar Link (Ojo) - Igual que en Prompts */}
           <Button 
             variant="ghost" 
             size="icon" 
@@ -144,10 +146,10 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
             }}
           >
             <Eye className="h-4 w-4" />
-            <span className="sr-only">Editar enlace</span>
+            <span className="sr-only">Ver detalles</span>
           </Button>
 
-          {/* Opciones (Igual que en Prompts) */}
+          {/* Menú de Opciones - Igual que en Prompts */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
@@ -157,6 +159,23 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>Organizar</DropdownMenuLabel>
+              
+              {onMoveUp && (
+                <DropdownMenuItem onSelect={() => onMoveUp(link.id)}>
+                  <ChevronUp className="mr-2 h-4 w-4" />
+                  Subir posición
+                </DropdownMenuItem>
+              )}
+              
+              {onMoveDown && (
+                <DropdownMenuItem onSelect={() => onMoveDown(link.id)}>
+                  <ChevronDown className="mr-2 h-4 w-4" />
+                  Bajar posición
+                </DropdownMenuItem>
+              )}
+
+              <DropdownMenuSeparator />
+              
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger>
                   <FolderInput className="mr-2 h-4 w-4" />
@@ -178,7 +197,9 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
                   ))}
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
+
               <DropdownMenuSeparator />
+              
               <DropdownMenuItem 
                 className="text-destructive focus:bg-destructive focus:text-destructive-foreground"
                 onSelect={() => onDelete(link.id)}
