@@ -106,21 +106,6 @@ export default function PromptPage({ user }: PromptPageProps) {
   const prompts = useMemo(() => rawPrompts || [], [rawPrompts]);
   const links = useMemo(() => rawLinks || [], [rawLinks]);
 
-  // FIX CRÍTICO: Limpieza forzada de pointer-events para evitar bloqueos de Radix UI al eliminar elementos
-  useEffect(() => {
-    const cleanup = () => {
-      const anyOpen = isDeleteDialogOpen || isCreateDialogOpen || isEditDialogOpen || isNewProjectDialogOpen || isCreateLinkDialogOpen;
-      if (!anyOpen) {
-        document.body.style.pointerEvents = 'auto';
-        document.body.style.overflow = 'auto';
-      }
-    };
-
-    cleanup();
-    const timer = setTimeout(cleanup, 350);
-    return () => clearTimeout(timer);
-  }, [isDeleteDialogOpen, isCreateDialogOpen, isEditDialogOpen, isNewProjectDialogOpen, isCreateLinkDialogOpen]);
-
   const handleSave = useCallback((promptData: {
     title: string;
     description: string;
@@ -291,7 +276,6 @@ export default function PromptPage({ user }: PromptPageProps) {
     const targetId = promptToDelete.id;
     setDeleteDialogOpen(false);
     
-    // Pequeño retardo para permitir que el diálogo se cierre antes de eliminar el componente del DOM
     setTimeout(() => {
       deleteDocumentNonBlocking(doc(firestore, 'users', user.uid, 'prompts', targetId));
       setPromptToDelete(null);
@@ -309,7 +293,6 @@ export default function PromptPage({ user }: PromptPageProps) {
     if (categoryFilter !== 'Todos') {
       result = result.filter(p => p.category === categoryFilter);
     }
-    // Ordenamos por el campo 'order' de mayor a menor
     return result.sort((a, b) => (b.order || 0) - (a.order || 0));
   }, [prompts, activeProjectId, categoryFilter]);
 
@@ -506,14 +489,12 @@ export default function PromptPage({ user }: PromptPageProps) {
                     const prompt = prompts.find(p => p.id === id);
                     if (prompt) {
                       setPromptToDelete(prompt);
-                      // Usamos un pequeño delay para asegurar que el dropdown se cierre antes de abrir el diálogo
-                      setTimeout(() => setDeleteDialogOpen(true), 10);
+                      setDeleteDialogOpen(true);
                     }
                   }}
                   onEditPrompt={(prompt) => {
                     setSelectedPrompt(prompt);
-                    // Usamos un pequeño delay para asegurar que el dropdown se cierre antes de abrir el diálogo
-                    setTimeout(() => setEditDialogOpen(true), 10);
+                    setEditDialogOpen(true);
                   }}
                   onReorder={handleReorder}
                   onMoveToProject={handleMoveToProject}
