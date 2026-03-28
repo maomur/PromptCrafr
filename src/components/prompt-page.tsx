@@ -47,16 +47,16 @@ import { collection, doc } from 'firebase/firestore';
 
 export default function PromptPage() {
   const { toast } = useToast();
-  const { user, isUserLoading } = useUser();
+  const { user, isUserLoading, userError } = useUser();
   const { firestore } = useFirestore();
   const auth = useAuth();
 
-  // Iniciar sesión anónima si no hay usuario
+  // Iniciar sesión anónima si no hay usuario y no estamos cargando
   useEffect(() => {
-    if (!isUserLoading && !user) {
+    if (!isUserLoading && !user && !userError) {
       initiateAnonymousSignIn(auth);
     }
-  }, [user, isUserLoading, auth]);
+  }, [user, isUserLoading, userError, auth]);
 
   // Consultas de Firestore memoizadas
   const projectsQuery = useMemoFirebase(() => {
@@ -85,6 +85,12 @@ export default function PromptPage() {
   const projects = useMemo(() => rawProjects || [], [rawProjects]);
   const prompts = useMemo(() => rawPrompts || [], [rawPrompts]);
 
+  const closeAllDialogs = useCallback(() => {
+    setCreateDialogOpen(false);
+    setEditDialogOpen(false);
+    setSelectedPrompt(null);
+  }, []);
+
   const handleSave = useCallback((promptData: {
     title: string;
     description: string;
@@ -92,7 +98,10 @@ export default function PromptPage() {
     category: PromptCategory;
     projectId: string | null;
   }, id?: string) => {
-    if (!user?.uid || !firestore) return;
+    if (!user?.uid || !firestore) {
+      toast({ variant: 'destructive', title: 'Error', description: 'No se pudo conectar con el servidor.' });
+      return;
+    }
     
     const now = new Date().toISOString();
     
@@ -121,7 +130,9 @@ export default function PromptPage() {
 
       setDocumentNonBlocking(newDocRef, newPrompt, { merge: true });
     }
-  }, [user?.uid, firestore]);
+    
+    closeAllDialogs();
+  }, [user?.uid, firestore, toast, closeAllDialogs]);
 
   const handleCreateProject = useCallback(() => {
     if (!newProjectName.trim() || !user?.uid || !firestore) return;
@@ -207,20 +218,14 @@ export default function PromptPage() {
     });
   }, [prompts, activeProjectId, categoryFilter]);
 
-  const closeAllDialogs = useCallback(() => {
-    setCreateDialogOpen(false);
-    setEditDialogOpen(false);
-    setSelectedPrompt(null);
-  }, []);
-
-  // CARGA CRÍTICA: No mostrar nada hasta que tengamos usuario Y hayamos intentado cargar datos
+  // CARGA CRÍTICA: Esperar a que el usuario esté listo
   const isActuallyLoading = isUserLoading || !user || (user && (projectsLoading || promptsLoading));
 
   if (isActuallyLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="text-muted-foreground animate-pulse">Conectando con tu biblioteca...</p>
+        <p className="text-muted-foreground animate-pulse">Sincronizando biblioteca...</p>
       </div>
     );
   }
