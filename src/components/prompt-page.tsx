@@ -14,6 +14,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { 
   Plus, 
   Folder, 
@@ -72,9 +82,11 @@ export default function PromptPage({ user }: PromptPageProps) {
   const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setEditDialogOpen] = useState(false);
   const [isNewProjectDialogOpen, setNewProjectDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
+  const [promptToDelete, setPromptToDelete] = useState<Prompt | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<PromptCategory | 'Todos'>('Todos');
   const [activeProjectId, setActiveProjectId] = useState<string | 'all' | 'none'>('all');
   const [dragOverProject, setDragOverProject] = useState<string | null>(null);
@@ -108,7 +120,6 @@ export default function PromptPage({ user }: PromptPageProps) {
       const colRef = collection(firestore, 'users', userId, 'prompts');
       const newDocRef = doc(colRef);
       
-      // Calculate order (highest order + 1)
       const maxOrder = prompts.length > 0 ? Math.max(...prompts.map(p => p.order || 0)) : 0;
       
       const newPrompt: Prompt = {
@@ -189,12 +200,10 @@ export default function PromptPage({ user }: PromptPageProps) {
     let draggedOrder = draggedPrompt.order ?? 0;
     let targetOrder = targetPrompt.order ?? 0;
 
-    // Si los órdenes son iguales, forzamos una diferencia para que el intercambio sea real
     if (draggedOrder === targetOrder) {
       targetOrder = draggedOrder + 1;
     }
 
-    // Intercambio de valores de orden
     updateDocumentNonBlocking(draggedRef, { order: targetOrder, updatedAt: new Date().toISOString() });
     updateDocumentNonBlocking(targetRef, { order: draggedOrder, updatedAt: new Date().toISOString() });
   }, [prompts, firestore, user?.uid]);
@@ -214,6 +223,14 @@ export default function PromptPage({ user }: PromptPageProps) {
     }
   };
 
+  const confirmDeletePrompt = useCallback(() => {
+    if (!promptToDelete || !firestore || !user?.uid) return;
+    deleteDocumentNonBlocking(doc(firestore, 'users', user.uid, 'prompts', promptToDelete.id));
+    setPromptToDelete(null);
+    setDeleteDialogOpen(false);
+    toast({ title: "Prompt eliminado", description: "El prompt ha sido borrado." });
+  }, [promptToDelete, firestore, user?.uid, toast]);
+
   const filteredPrompts = useMemo(() => {
     let result = [...prompts];
     
@@ -227,7 +244,6 @@ export default function PromptPage({ user }: PromptPageProps) {
       result = result.filter(p => p.category === categoryFilter);
     }
 
-    // Ordenar por el campo 'order' (más alto primero)
     return result.sort((a, b) => (b.order || 0) - (a.order || 0));
   }, [prompts, activeProjectId, categoryFilter]);
 
@@ -387,8 +403,11 @@ export default function PromptPage({ user }: PromptPageProps) {
               prompts={filteredPrompts}
               projects={projects}
               onDeletePrompt={(id) => {
-                if (!firestore || !user?.uid) return;
-                deleteDocumentNonBlocking(doc(firestore, 'users', user.uid, 'prompts', id));
+                const prompt = prompts.find(p => p.id === id);
+                if (prompt) {
+                  setPromptToDelete(prompt);
+                  setDeleteDialogOpen(true);
+                }
               }}
               onEditPrompt={(prompt) => {
                 setSelectedPrompt(prompt);
@@ -400,6 +419,27 @@ export default function PromptPage({ user }: PromptPageProps) {
           )}
         </main>
       </div>
+
+      {/* Diálogo Global de Eliminación para evitar bloqueos del DOM */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás seguro de eliminar este prompt?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Se eliminará el prompt "{promptToDelete?.title}".
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPromptToDelete(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={confirmDeletePrompt}
+            >
+              Eliminar Definitivamente
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={isCreateDialogOpen} onOpenChange={setCreateDialogOpen}>
         <DialogTrigger asChild>

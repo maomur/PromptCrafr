@@ -1,16 +1,6 @@
+
 'use client';
 
-import { useState } from 'react';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { 
   Eye, 
@@ -52,108 +42,75 @@ export default function PromptCardActions({
   onMoveUp,
   onMoveDown
 }: PromptCardActionsProps) {
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-
-  const handleDeleteConfirm = () => {
-    onDelete(prompt.id);
-    setIsDeleteDialogOpen(false);
-  };
-
+  
   return (
-    <>
-      <div className="flex items-center gap-0.5">
-        {/* Ver/Editar rápido */}
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onEdit}>
-          <Eye className="h-4 w-4" />
-          <span className="sr-only">Ver detalles</span>
-        </Button>
+    <div className="flex items-center gap-0.5">
+      {/* Ver/Editar rápido */}
+      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onEdit}>
+        <Eye className="h-4 w-4" />
+        <span className="sr-only">Ver detalles</span>
+      </Button>
 
-        {/* Menú de opciones extra */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <MoreVertical className="h-4 w-4" />
-              <span className="sr-only">Más opciones</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>Organizar</DropdownMenuLabel>
-            
-            {onMoveUp && (
-              <DropdownMenuItem onClick={() => onMoveUp(prompt.id)}>
-                <ChevronUp className="mr-2 h-4 w-4" />
-                Subir posición
-              </DropdownMenuItem>
-            )}
-            
-            {onMoveDown && (
-              <DropdownMenuItem onClick={() => onMoveDown(prompt.id)}>
-                <ChevronDown className="mr-2 h-4 w-4" />
-                Bajar posición
-              </DropdownMenuItem>
-            )}
-
-            <DropdownMenuSeparator />
-            
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger>
-                <FolderInput className="mr-2 h-4 w-4" />
-                Mover a Proyecto
-              </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent>
-                <DropdownMenuItem onClick={() => onMoveToProject(prompt.id, null)}>
-                  Sin Proyecto (General)
-                </DropdownMenuItem>
-                {projects.length > 0 && <DropdownMenuSeparator />}
-                {projects.map((project) => (
-                  <DropdownMenuItem 
-                    key={project.id} 
-                    onClick={() => onMoveToProject(prompt.id, project.id)}
-                    disabled={prompt.projectId === project.id}
-                  >
-                    {project.name}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
-
-            <DropdownMenuSeparator />
-
-            {/* Opción de eliminar: Abrimos el diálogo manualmente */}
-            <DropdownMenuItem 
-              className="text-destructive focus:bg-destructive focus:text-destructive-foreground"
-              onSelect={(e) => {
-                e.preventDefault(); // Evitamos que el dropdown interfiera con el foco del diálogo
-                setIsDeleteDialogOpen(true);
-              }}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Eliminar Prompt
+      {/* Menú de opciones extra */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <MoreVertical className="h-4 w-4" />
+            <span className="sr-only">Más opciones</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuLabel>Organizar</DropdownMenuLabel>
+          
+          {onMoveUp && (
+            <DropdownMenuItem onClick={() => onMoveUp(prompt.id)}>
+              <ChevronUp className="mr-2 h-4 w-4" />
+              Subir posición
             </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+          )}
+          
+          {onMoveDown && (
+            <DropdownMenuItem onClick={() => onMoveDown(prompt.id)}>
+              <ChevronDown className="mr-2 h-4 w-4" />
+              Bajar posición
+            </DropdownMenuItem>
+          )}
 
-      {/* Diálogo de alerta fuera del dropdown para evitar conflictos de portal */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción no se puede deshacer. Se eliminará el prompt "{prompt.title}".
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={handleDeleteConfirm}
-            >
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+          <DropdownMenuSeparator />
+          
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <FolderInput className="mr-2 h-4 w-4" />
+              Mover a Proyecto
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              <DropdownMenuItem onClick={() => onMoveToProject(prompt.id, null)}>
+                Sin Proyecto (General)
+              </DropdownMenuItem>
+              {projects.length > 0 && <DropdownMenuSeparator />}
+              {projects.map((project) => (
+                <DropdownMenuItem 
+                  key={project.id} 
+                  onClick={() => onMoveToProject(prompt.id, project.id)}
+                  disabled={prompt.projectId === project.id}
+                >
+                  {project.name}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+
+          <DropdownMenuSeparator />
+
+          <DropdownMenuItem 
+            className="text-destructive focus:bg-destructive focus:text-destructive-foreground"
+            onClick={() => onDelete(prompt.id)}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Eliminar Prompt
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
   );
 }
