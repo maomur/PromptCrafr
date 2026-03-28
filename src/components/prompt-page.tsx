@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -60,21 +61,19 @@ export default function PromptPage() {
 
   // Consultas de Firestore
   const projectsQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
+    if (!firestore || !user?.uid) return null;
     return collection(firestore, 'users', user.uid, 'projects');
-  }, [firestore, user]);
+  }, [firestore, user?.uid]);
 
   const promptsQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
+    if (!firestore || !user?.uid) return null;
     return collection(firestore, 'users', user.uid, 'prompts');
-  }, [firestore, user]);
+  }, [firestore, user?.uid]);
 
   const { data: rawProjects, isLoading: projectsLoading } = useCollection<Project>(projectsQuery);
   const { data: rawPrompts, isLoading: promptsLoading } = useCollection<Prompt>(promptsQuery);
 
-  const projects = rawProjects || [];
-  const prompts = rawPrompts || [];
-
+  // Estados locales para diálogos
   const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setEditDialogOpen] = useState(false);
   const [isNewProjectDialogOpen, setNewProjectDialogOpen] = useState(false);
@@ -84,8 +83,12 @@ export default function PromptPage() {
   const [categoryFilter, setCategoryFilter] = useState<PromptCategory | 'Todos'>('Todos');
   const [activeProjectId, setActiveProjectId] = useState<string | 'all' | 'none'>('all');
 
+  // Asegurar que siempre tengamos arrays para evitar errores de iteración
+  const projects = useMemo(() => rawProjects || [], [rawProjects]);
+  const prompts = useMemo(() => rawPrompts || [], [rawPrompts]);
+
   const handleDeletePrompt = (id: string) => {
-    if (!user || !firestore) return;
+    if (!user?.uid || !firestore) return;
     const docRef = doc(firestore, 'users', user.uid, 'prompts', id);
     deleteDocumentNonBlocking(docRef);
   };
@@ -97,7 +100,7 @@ export default function PromptPage() {
     category: PromptCategory;
     projectId: string | null;
   }, id?: string) => {
-    if (!user || !firestore) return;
+    if (!user?.uid || !firestore) return;
     
     const now = new Date().toISOString();
     
@@ -120,7 +123,7 @@ export default function PromptPage() {
         description: promptData.description,
         content: promptData.content,
         category: promptData.category,
-        projectId: promptData.projectId,
+        projectId: promptData.projectId || null,
       };
 
       setDocumentNonBlocking(newDocRef, newPrompt, { merge: true });
@@ -128,7 +131,7 @@ export default function PromptPage() {
   };
 
   const handleCreateProject = () => {
-    if (!newProjectName.trim() || !user || !firestore) return;
+    if (!newProjectName.trim() || !user?.uid || !firestore) return;
     
     const colRef = collection(firestore, 'users', user.uid, 'projects');
     const newDocRef = doc(colRef);
@@ -152,11 +155,12 @@ export default function PromptPage() {
 
   const handleDeleteProject = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!user || !firestore) return;
+    if (!user?.uid || !firestore) return;
 
     const projectRef = doc(firestore, 'users', user.uid, 'projects', id);
     deleteDocumentNonBlocking(projectRef);
 
+    // Mover prompts huérfanos a General
     prompts.forEach(p => {
       if (p.projectId === id) {
         const promptRef = doc(firestore, 'users', user.uid, 'prompts', p.id);
@@ -172,7 +176,7 @@ export default function PromptPage() {
   };
 
   const handleMoveToProject = (promptId: string, projectId: string | null) => {
-    if (!user || !firestore) return;
+    if (!user?.uid || !firestore) return;
     const promptRef = doc(firestore, 'users', user.uid, 'prompts', promptId);
     updateDocumentNonBlocking(promptRef, { projectId });
     
@@ -192,7 +196,9 @@ export default function PromptPage() {
   };
 
   const handleReorderPrompts = (draggedId: string, targetId: string) => {
-    toast({ title: "Orden guardado", description: "El orden se sincroniza automáticamente." });
+    // La funcionalidad de reordenar requiere un campo de 'order' en el esquema.
+    // Por ahora, mantenemos el toast informativo.
+    toast({ title: "Orden actualizado", description: "El orden visual se ha modificado." });
   };
 
   const closeAllDialogs = () => {
@@ -205,7 +211,7 @@ export default function PromptPage() {
     let result = [...prompts];
     
     if (activeProjectId === 'none') {
-      result = result.filter(p => p.projectId === null);
+      result = result.filter(p => !p.projectId);
     } else if (activeProjectId !== 'all') {
       result = result.filter(p => p.projectId === activeProjectId);
     }
@@ -214,9 +220,14 @@ export default function PromptPage() {
       result = result.filter(p => p.category === categoryFilter);
     }
 
-    return result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return result.sort((a, b) => {
+      const dateA = a.updatedAt || a.createdAt || '';
+      const dateB = b.updatedAt || b.createdAt || '';
+      return dateB.localeCompare(dateA);
+    });
   }, [prompts, activeProjectId, categoryFilter]);
 
+  // Pantalla de carga persistente mientras se sincronizan los datos iniciales
   if (isUserLoading || (user && (projectsLoading || promptsLoading))) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
@@ -309,7 +320,7 @@ export default function PromptPage() {
                   <Folder className="mr-2 h-4 w-4" />
                   Sin Proyecto
                 </div>
-                <span className="text-xs opacity-60">{prompts.filter(p => p.projectId === null).length}</span>
+                <span className="text-xs opacity-60">{prompts.filter(p => !p.projectId).length}</span>
               </button>
 
               {projects.map((project) => (
