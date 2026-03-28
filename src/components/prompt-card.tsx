@@ -52,6 +52,7 @@ export default function PromptCard({
 }: PromptCardProps) {
   const { toast } = useToast();
   const cardRef = useRef<HTMLDivElement>(null);
+  const canDragRef = useRef(false);
 
   const project = useMemo(() => 
     projects.find(p => p.id === prompt.projectId),
@@ -59,10 +60,8 @@ export default function PromptCard({
   );
 
   const handleDragStart = (e: React.DragEvent) => {
-    const target = e.target as HTMLElement;
-    
-    // VALIDACIÓN DEFINITIVA: Solo permitir arrastre si se originó en el mango
-    if (!target.closest('.drag-handle')) {
+    // Si el puntero no estaba sobre el manejador, cancelamos el arrastre
+    if (!canDragRef.current) {
       e.preventDefault();
       return;
     }
@@ -72,11 +71,15 @@ export default function PromptCard({
     e.dataTransfer.effectAllowed = 'move';
     
     if (cardRef.current) {
-      setTimeout(() => cardRef.current?.classList.add('opacity-40', 'scale-95'), 0);
+      // Usamos requestAnimationFrame para evitar parpadeos en móviles
+      requestAnimationFrame(() => {
+        cardRef.current?.classList.add('opacity-40', 'scale-95');
+      });
     }
   };
 
   const handleDragEnd = (e: React.DragEvent) => {
+    canDragRef.current = false;
     if (cardRef.current) {
       cardRef.current.classList.remove('opacity-40', 'scale-95');
     }
@@ -110,10 +113,13 @@ export default function PromptCard({
       onClick={handleCardClick}
       className="group flex h-full flex-col rounded-xl border-border/20 bg-card text-card-foreground shadow-md transition-all duration-300 hover:shadow-lg relative overflow-hidden select-none"
     >
-      {/* Mango de arrastre - Siempre activo con touch-action bloqueado */}
+      {/* Mango de arrastre - Solo permitimos arrastrar si se toca aquí */}
       <div 
         className="drag-handle absolute top-0 right-0 bg-background/90 backdrop-blur-sm rounded-bl-xl border-l border-b border-border/40 shadow-sm z-50"
         title="Arrastrar para organizar"
+        onPointerDown={() => { canDragRef.current = true; }}
+        onPointerUp={() => { canDragRef.current = false; }}
+        onPointerLeave={() => { canDragRef.current = false; }}
       >
         <GripVertical className="h-5 w-5 text-muted-foreground" />
       </div>
