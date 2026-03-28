@@ -9,20 +9,26 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
+    // Regla general para el documento de usuario y todas sus subcolecciones
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+      
+      match /{allSubcollections=**} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // Reglas específicas para mayor claridad (opcional pero recomendado)
     match /users/{userId}/projects/{projectId} {
-      allow get, list, write: if isOwner(userId);
+      allow read, write: if isOwner(userId);
     }
 
     match /users/{userId}/prompts/{promptId} {
-      allow get, list, write: if isOwner(userId);
+      allow read, write: if isOwner(userId);
     }
 
     match /users/{userId}/links/{linkId} {
-      allow get, list, write: if isOwner(userId);
-    }
-    
-    match /users/{userId} {
-      allow get, list, write: if isOwner(userId);
+      allow read, write: if isOwner(userId);
     }
   }
 }
