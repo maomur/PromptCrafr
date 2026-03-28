@@ -1,89 +1,24 @@
-/**
- * FIRESTORE SECURITY RULES
- *
- * CORE PHILOSOPHY:
- * This ruleset implements a strict Path-Based Ownership model. Security is enforced by ensuring 
- * that data is logically nested under the owner's unique identifier and that the user's 
- * authenticated identity matches both the path and internal ownership metadata.
- *
- * DATA STRUCTURE:
- * The primary data hierarchy is organized as: /users/{userId}/prompts/{promptId}. 
- * This nesting ensures that data is naturally partitioned by user, facilitating both 
- * privacy and efficient querying (Query-As-Permissions).
- *
- * KEY SECURITY DECISIONS:
- * 1. Authorization Independence: We use a denormalized 'ownerId' field within documents. 
- *    This allows rules to verify ownership without performing expensive cross-document lookups (get() calls).
- * 2. Immutable Ownership: Once a document is created, the 'ownerId' and its association 
- *    with a specific user path are immutable.
- * 3. Default Deny: All access is denied by default unless explicitly granted by a match 
- *    statement, ensuring no accidental data exposure.
- * 4. Prototyping Flexibility: While ownership and identity are strictly enforced, 
- *    data types and secondary field structures are not validated to allow for rapid 
- *    frontend iteration.
- *
- * DENORMALIZATION FOR AUTHORIZATION:
- * To optimize performance and reduce costs, the 'ownerId' is stored directly on the 
- * 'Prompt' entity. This allows for immediate verification: 
- * `request.auth.uid == resource.data.ownerId`.
- */
 
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // --- GLOBAL HELPER FUNCTIONS ---
-
-    /** Checks if the request is from an authenticated user. */
     function isSignedIn() {
       return request.auth != null;
     }
-
-    /** Checks if the authenticated user matches the provided userId from the path. */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    /** Checks if the document exists and the authenticated user is the owner. */
-    function isExistingOwner(userId) {
-      return resource != null && isOwner(userId);
+    match /users/{userId}/projects/{projectId} {
+      allow read, write: if isOwner(userId);
     }
 
-    // --- COLLECTION RULES ---
-
-    /**
-     * @description Rules for individual AI prompts. Access is restricted to the user who owns the parent path.
-     * @path /users/{userId}/prompts/{promptId}
-     * @allow (get) If authenticated user matches {userId}.
-     * @allow (list) If authenticated user matches {userId}, enabling safe list queries.
-     * @allow (create) If authenticated user matches {userId} and provides a matching 'ownerId' in the data.
-     * @deny (write) If the authenticated user attempts to write to another user's prompt collection.
-     * @principle Path-based authorization combined with internal ownership field validation.
-     */
     match /users/{userId}/prompts/{promptId} {
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId) && request.resource.data.ownerId == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.ownerId == resource.data.ownerId;
-      allow delete: if isExistingOwner(userId);
+      allow read, write: if isOwner(userId);
     }
-
-    /**
-     * @description Optional: Rules for the user profile document itself.
-     * @path /users/{userId}
-     * @allow (read/write) If the authenticated user is the owner of the document ID.
-     */
+    
     match /users/{userId} {
-      allow get: if isOwner(userId);
-      allow list: if false; // Users should not be listable by other users.
-      allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
-    }
-
-    // Default deny rule for any unmatched paths.
-    match /{document=**} {
-      allow read, write: if false;
+      allow read, write: if isOwner(userId);
     }
   }
 }

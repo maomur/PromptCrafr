@@ -1,3 +1,4 @@
+
 import type { Metadata, Viewport } from 'next';
 import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
@@ -6,6 +7,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
 import Script from 'next/script';
 import InstallPWABanner from '@/components/install-pwa-banner';
+import { FirebaseClientProvider } from '@/firebase/client-provider';
 
 export const metadata: Metadata = {
   title: 'PromptCraft',
@@ -39,20 +41,22 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="https://www.pulseai.ws/logo192.png" />
       </head>
       <body className="font-sans antialiased flex flex-col min-h-screen">
-        <div className="flex-grow">{children}</div>
-        <InstallPWABanner />
-        <Toaster />
-        <footer className="py-6 text-center text-sm text-muted-foreground">
-          Creado por:{' '}
-          <a
-            href="https://www.linkedin.com/in/maomur"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-medium underline underline-offset-4 hover:text-primary"
-          >
-            Maomur
-          </a>
-        </footer>
+        <FirebaseClientProvider>
+          <div className="flex-grow">{children}</div>
+          <InstallPWABanner />
+          <Toaster />
+          <footer className="py-6 text-center text-sm text-muted-foreground">
+            Creado por:{' '}
+            <a
+              href="https://www.linkedin.com/in/maomur"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium underline underline-offset-4 hover:text-primary"
+            >
+              Maomur
+            </a>
+          </footer>
+        </FirebaseClientProvider>
         <Script id="register-sw" strategy="afterInteractive">
           {`
             if ('serviceWorker' in navigator) {

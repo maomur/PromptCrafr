@@ -1,76 +1,47 @@
+
 {
   "entities": {
-    "Prompt": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Prompt",
+    "Project": {
+      "title": "Project",
+      "description": "Represents a folder or project for organizing prompts.",
       "type": "object",
-      "description": "Represents a single AI prompt managed by the user.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Prompt entity."
-        },
-        "title": {
-          "type": "string",
-          "description": "The title or name of the prompt."
-        },
-        "description": {
-          "type": "string",
-          "description": "A detailed description explaining the purpose or context of the prompt."
-        },
-        "content": {
-          "type": "string",
-          "description": "The actual text content of the prompt."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the prompt was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the prompt was last updated.",
-          "format": "date-time"
-        }
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "ownerId": { "type": "string" }
       },
-      "required": [
-        "id",
-        "title",
-        "content",
-        "createdAt",
-        "updatedAt"
-      ]
+      "required": ["id", "name", "createdAt", "ownerId"]
+    },
+    "Prompt": {
+      "title": "Prompt",
+      "description": "Represents a single AI prompt owned by a user.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "content": { "type": "string" },
+        "category": { "type": "string", "enum": ["Video", "Imagen", "Textos", "Otros"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "projectId": { "type": "string" },
+        "ownerId": { "type": "string" }
+      },
+      "required": ["id", "title", "content", "category", "createdAt", "updatedAt", "ownerId"]
     }
   },
   "auth": {
-    "providers": [
-      "password",
-      "anonymous"
-    ]
+    "providers": ["anonymous"]
   },
   "firestore": {
-    "structure": [
-      {
-        "path": "/users/{userId}/prompts/{promptId}",
-        "definition": {
-          "entityName": "Prompt",
-          "schema": {
-            "$ref": "#/backend/entities/Prompt"
-          },
-          "description": "Stores individual AI prompts created and owned by a specific user. This collection is private to each user. Includes denormalized 'ownerId' field for authorization independence, which matches the '{userId}' path parameter.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user who owns this prompt."
-            },
-            {
-              "name": "promptId",
-              "description": "The unique identifier of the prompt."
-            }
-          ]
-        }
-      }
-    ],
-    "reasoning": "The recommended Firestore structure for managing user prompts follows a strict path-based ownership model to ensure robust security, scalability, and debuggability. Each user's prompts will be stored in a subcollection under their unique user ID:\n\n`/users/{userId}/prompts/{promptId}`\n\n**Authorization Independence via Denormalization:**\nThis structure inherently provides strong authorization independence. Each `Prompt` document will explicitly include an `ownerId` field. This `ownerId` will match the `userId` segment in the document's path. By denormalizing the `ownerId` directly into the `Prompt` document, security rules can evaluate access requests without needing to perform `get()` operations on a parent 'user' document. This eliminates hierarchical authorization dependencies, making security rules atomic, simpler, and less prone to issues during batched writes or transactions. For instance, a rule can simply check `request.auth.uid == resource.data.ownerId` and `request.auth.uid == userId` (from the path wildcard) without external lookups.\n\n**QAPs (Secure List Operations):**\nThe structural segregation of prompts under `/users/{userId}/prompts` directly supports Query-As-Permissions (QAPs). When a user requests their list of prompts, the query will be implicitly scoped to their specific `userId` path (e.g., `/users/ABCDEF/prompts`). Firestore security rules will then enforce that `request.auth.uid` must match the `{userId}` wildcard in the path for any `list` or `read` operation. This design ensures that users can only query and retrieve *their own* prompts, preventing unauthorized access to other users' data without requiring complex, potentially insecure, filtering logic within the security rules themselves. The data is pre-filtered by its location.\n\n**Other Principles:**\n*   **Clarity of Intent:** The path `/users/{userId}/prompts/{promptId}` clearly indicates that each prompt belongs to a specific user. The `ownerId` field within the document further solidifies this intent.\n*   **DBAC:** Authorization relies solely on `request.auth.uid` matching the `userId` path parameter and the `ownerId` field within the document. No custom claims or separate role documents are needed for this private user data.\n*   **Structural Segregation:** All documents within the `/users/{userId}/prompts` collection have the same security posture (owner-only access), simplifying rule sets.\n*   **Invariants:** Ownership (`ownerId`) and timestamps (`createdAt`, `updatedAt`) are maintained within each `Prompt` document."
+    "/users/{userId}/projects/{projectId}": {
+      "schema": { "$ref": "#/backend/entities/Project" },
+      "description": "User-specific projects for prompt organization."
+    },
+    "/users/{userId}/prompts/{promptId}": {
+      "schema": { "$ref": "#/backend/entities/Prompt" },
+      "description": "User-specific AI prompts."
+    }
   }
 }

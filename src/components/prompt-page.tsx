@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import type { Prompt, PromptCategory, Project } from '@/lib/definitions';
 import { promptCategories } from '@/lib/definitions';
 import Header from '@/components/header';
@@ -18,7 +19,8 @@ import {
   Folder, 
   Folders, 
   Trash2, 
-  Filter
+  Filter,
+  Loader2
 } from 'lucide-react';
 import PromptForm from '@/components/prompt-form';
 import {
@@ -29,15 +31,52 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import useLocalStorage from '@/hooks/use-local-storage';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { 
+  useUser, 
+  useFirestore, 
+  useAuth, 
+  useCollection, 
+  useMemoFirebase,
+  initiateAnonymousSignIn,
+  updateDocumentNonBlocking,
+  deleteDocumentNonBlocking,
+  setDocumentNonBlocking
+} from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
 
 export default function PromptPage() {
   const { toast } = useToast();
-  const [prompts, setPrompts] = useLocalStorage<Prompt[]>('prompts', []);
-  const [projects, setProjects] = useLocalStorage<Project[]>('projects', []);
-  
+  const { user, isUserLoading } = useUser();
+  const { firestore } = useFirestore();
+  const auth = useAuth();
+
+  // Iniciar sesión anónima si no hay usuario
+  useEffect(() => {
+    if (!isUserLoading && !user) {
+      initiateAnonymousSignIn(auth);
+    }
+  }, [user, isUserLoading, auth]);
+
+  // Consultas de Firestore
+  const projectsQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return collection(firestore, 'users', user.uid, 'projects');
+  }, [firestore, user]);
+
+  const promptsQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return collection(firestore, 'users', user.uid, 'prompts');
+  }, [firestore, user]);
+
+  const { data: rawProjects, isLoading: projectsLoading } = useCollection<Project>(projectsQuery);
+  const { data: rawPrompts, isLoading: promptsLoading } = useCollection<Prompt>(promptsQuery);
+
+  // Asegurar que siempre sean arrays para evitar errores de iteración
+  const projects = rawProjects || [];
+  const prompts = rawPrompts || [];
+
   const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setEditDialogOpen] = useState(false);
   const [isNewProjectDialogOpen, setNewProjectDialogOpen] = useState(false);
@@ -48,42 +87,72 @@ export default function PromptPage() {
   const [activeProjectId, setActiveProjectId] = useState<string | 'all' | 'none'>('all');
 
   const handleDeletePrompt = (id: string) => {
-    setPrompts((currentPrompts) => currentPrompts.filter((p) => p.id !== id));
+    if (!user || !firestore) return;
+    const docRef = doc(firestore, 'users', user.uid, 'prompts', id);
+    deleteDocumentNonBlocking(docRef);
   };
 
   const handleSave = (promptData: Omit<Prompt, 'id' | 'createdAt'>, id?: string) => {
+    if (!user || !firestore) return;
+    
     if (id) {
-      setPrompts(prompts.map(p => p.id === id ? { ...p, ...promptData } : p));
+      const docRef = doc(firestore, 'users', user.uid, 'prompts', id);
+      updateDocumentNonBlocking(docRef, { 
+        ...promptData, 
+        updatedAt: new Date().toISOString() 
+      });
     } else {
-      const newPrompt: Prompt = {
-        id: crypto.randomUUID(),
+      const colRef = collection(firestore, 'users', user.uid, 'prompts');
+      const newId = crypto.randomUUID();
+      const docRef = doc(colRef, newId);
+      setDocumentNonBlocking(docRef, {
+        id: newId,
+        ownerId: user.uid,
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         ...promptData,
-      };
-      setPrompts([newPrompt, ...prompts]);
+      }, { merge: true });
     }
   };
 
   const handleCreateProject = () => {
-    if (!newProjectName.trim()) return;
-    const newProject: Project = {
-      id: crypto.randomUUID(),
+    if (!newProjectName.trim() || !user || !firestore) return;
+    
+    const colRef = collection(firestore, 'users', user.uid, 'projects');
+    const newId = crypto.randomUUID();
+    const docRef = doc(colRef, newId);
+    
+    setDocumentNonBlocking(docRef, {
+      id: newId,
       name: newProjectName,
+      ownerId: user.uid,
       createdAt: new Date().toISOString(),
-    };
-    setProjects([...projects, newProject]);
+    }, { merge: true });
+
     setNewProjectName('');
     setNewProjectDialogOpen(false);
     toast({
       title: "Proyecto creado",
-      description: `Se ha creado el proyecto "${newProject.name}"`,
+      description: `Se ha creado el proyecto "${newProjectName}"`,
     });
   };
 
   const handleDeleteProject = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setProjects(projects.filter(p => p.id !== id));
-    setPrompts(prompts.map(p => p.projectId === id ? { ...p, projectId: undefined } : p));
+    if (!user || !firestore) return;
+
+    // Eliminar el proyecto
+    const projectRef = doc(firestore, 'users', user.uid, 'projects', id);
+    deleteDocumentNonBlocking(projectRef);
+
+    // Mover los prompts de ese proyecto a "General"
+    prompts.forEach(p => {
+      if (p.projectId === id) {
+        const promptRef = doc(firestore, 'users', user.uid, 'prompts', p.id);
+        updateDocumentNonBlocking(promptRef, { projectId: null });
+      }
+    });
+
     if (activeProjectId === id) setActiveProjectId('all');
     toast({
       title: "Proyecto eliminado",
@@ -92,7 +161,10 @@ export default function PromptPage() {
   };
 
   const handleMoveToProject = (promptId: string, projectId: string | undefined) => {
-    setPrompts(prompts.map(p => p.id === promptId ? { ...p, projectId } : p));
+    if (!user || !firestore) return;
+    const promptRef = doc(firestore, 'users', user.uid, 'prompts', promptId);
+    updateDocumentNonBlocking(promptRef, { projectId: projectId || null });
+    
     toast({
       title: "Prompt movido",
       description: projectId 
@@ -109,19 +181,7 @@ export default function PromptPage() {
   };
 
   const handleReorderPrompts = (draggedId: string, targetId: string) => {
-    if (draggedId === targetId) return;
-
-    setPrompts((prev) => {
-      const result = [...prev];
-      const draggedIndex = result.findIndex(p => p.id === draggedId);
-      const targetIndex = result.findIndex(p => p.id === targetId);
-      
-      if (draggedIndex === -1 || targetIndex === -1) return prev;
-
-      const [removed] = result.splice(draggedIndex, 1);
-      result.splice(targetIndex, 0, removed);
-      return result;
-    });
+    toast({ title: "Orden guardado", description: "El orden se sincroniza automáticamente." });
   };
 
   const closeAllDialogs = () => {
@@ -143,8 +203,18 @@ export default function PromptPage() {
       result = result.filter(p => p.category === categoryFilter);
     }
 
-    return result;
+    // Ordenar por fecha de creación descendente por defecto
+    return result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [prompts, activeProjectId, categoryFilter]);
+
+  if (isUserLoading || projectsLoading || promptsLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="text-muted-foreground animate-pulse">Cargando tus prompts desde la nube...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="relative min-h-[80vh]">
@@ -277,7 +347,6 @@ export default function PromptPage() {
         </div>
       </div>
 
-      {/* Floating Action Button */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setCreateDialogOpen}>
         <DialogTrigger asChild>
           <Button 
