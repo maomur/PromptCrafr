@@ -2,7 +2,6 @@
 
 import {
   Card,
-  CardContent,
   CardDescription,
   CardFooter,
   CardHeader,
@@ -65,7 +64,8 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
       target.closest('button') || 
       target.closest('.drag-handle') || 
       target.closest('[role="menuitem"]') ||
-      target.closest('[role="menu"]')
+      target.closest('[role="menu"]') ||
+      target.closest('.no-copy')
     ) {
       return;
     }
@@ -90,54 +90,55 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
     >
       <div 
         className="drag-handle absolute top-2 right-2 p-2 bg-background/80 backdrop-blur-sm rounded-md shadow-sm touch-none z-10 md:opacity-0 md:group-hover:opacity-100 transition-opacity cursor-move"
-        title="Arrastrar para reordenar o mover a proyecto"
+        title="Arrastrar para organizar"
       >
         <GripVertical className="h-4 w-4 text-muted-foreground" />
       </div>
 
-      <CardHeader className="pt-8 md:pt-6">
-        <div className="flex justify-between items-start pr-6 mb-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="p-1.5 bg-orange-100 rounded-lg">
-              <LinkIcon className="h-4 w-4 text-orange-600" />
+      <CardHeader className="pt-8 md:pt-6 space-y-3">
+        {/* Superior: Etiquetas */}
+        <div className="flex flex-wrap items-center gap-2 pr-6">
+          {project && (
+            <Badge variant="secondary" className="text-[9px] h-4 bg-muted text-muted-foreground font-normal border-none flex items-center gap-1">
+              <Folder className="h-2.5 w-2.5" />
+              {project.name}
+            </Badge>
+          )}
+          <div className="flex items-center gap-1.5">
+            <div className="p-1 bg-orange-100 rounded-md">
+              <LinkIcon className="h-3 w-3 text-orange-600" />
             </div>
             {link.category && (
-              <Badge variant="secondary" className="text-[10px] py-0 h-4 font-medium bg-orange-50 text-orange-700 border-orange-100">
+              <Badge variant="secondary" className="text-[9px] py-0 h-4 font-medium bg-orange-50 text-orange-700 border-orange-100">
                 {link.category}
-              </Badge>
-            )}
-            {project && (
-              <Badge variant="secondary" className="text-[9px] h-4 bg-muted text-muted-foreground font-normal border-none flex items-center gap-1">
-                <Folder className="h-2.5 w-2.5" />
-                {project.name}
               </Badge>
             )}
           </div>
         </div>
-        <CardTitle className="text-sm font-semibold truncate pr-2 mt-1">
-          {link.title || 'Enlace guardado'}
-        </CardTitle>
-        {link.description && (
-          <CardDescription className="text-xs line-clamp-2 mt-1">
-            {link.description}
-          </CardDescription>
-        )}
-      </CardHeader>
-      
-      <CardContent className="flex-grow pt-0">
-        <div className="bg-muted/30 p-2 rounded-md border border-border/40 overflow-hidden">
-          <p className="text-xs font-mono text-muted-foreground truncate flex items-center gap-1.5">
-            <span className="shrink-0 opacity-50 italic">URL:</span>
+
+        {/* Cuerpo: Título y Descripción */}
+        <div className="space-y-1">
+          <CardTitle className="text-sm font-bold truncate">
+            {link.title || 'Enlace sin título'}
+          </CardTitle>
+          {link.description && (
+            <CardDescription className="text-[11px] line-clamp-2 leading-relaxed">
+              {link.description}
+            </CardDescription>
+          )}
+          <p className="text-[10px] font-mono text-muted-foreground truncate opacity-60 pt-1">
             {link.url}
           </p>
         </div>
-      </CardContent>
-
-      <CardFooter className="flex items-center justify-between text-[10px] text-muted-foreground pt-0">
+      </CardHeader>
+      
+      <div className="flex-grow" />
+      
+      <CardFooter className="flex items-center justify-between text-[10px] text-muted-foreground pb-4 pt-0">
         <span className="opacity-70">
           {formatDistanceToNow(new Date(link.createdAt), { addSuffix: true, locale: es })}
         </span>
-        <div className="flex items-center gap-0.5">
+        <div className="flex items-center gap-0.5 no-copy">
           <Button 
             variant="ghost" 
             size="icon" 
@@ -146,7 +147,7 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
           >
             <a href={link.url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
               <ExternalLink className="h-4 w-4" />
-              <span className="sr-only">Abrir enlace</span>
+              <span className="sr-only">Abrir</span>
             </a>
           </Button>
 
@@ -167,7 +168,7 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
                 <MoreVertical className="h-4 w-4" />
-                <span className="sr-only">Más opciones</span>
+                <span className="sr-only">Opciones</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56" onClick={(e) => e.stopPropagation()}>
@@ -199,13 +200,13 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
                     Sin Proyecto
                   </DropdownMenuItem>
                   {projects.length > 0 && <DropdownMenuSeparator />}
-                  {projects.map((project) => (
+                  {projects.map((p) => (
                     <DropdownMenuItem 
-                      key={project.id} 
-                      onSelect={() => onMoveToProject(link.id, project.id)}
-                      disabled={link.projectId === project.id}
+                      key={p.id} 
+                      onSelect={() => onMoveToProject(link.id, p.id)}
+                      disabled={link.projectId === p.id}
                     >
-                      {project.name}
+                      {p.name}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuSubContent>
@@ -218,7 +219,7 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
                 onSelect={() => onDelete(link.id)}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
-                Eliminar Enlace
+                Eliminar
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

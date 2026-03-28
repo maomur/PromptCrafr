@@ -2,7 +2,6 @@
 
 import {
   Card,
-  CardContent,
   CardDescription,
   CardFooter,
   CardHeader,
@@ -61,11 +60,13 @@ export default function PromptCard({
 
   const handleCardClick = useCallback((event: React.MouseEvent) => {
     const target = event.target as HTMLElement;
+    // Evitar copiar si se hace click en botones o controles
     if (
       target.closest('button') || 
       target.closest('.drag-handle') || 
       target.closest('[role="menuitem"]') ||
-      target.closest('[role="menu"]')
+      target.closest('[role="menu"]') ||
+      target.closest('.no-copy')
     ) {
       return;
     }
@@ -101,54 +102,57 @@ export default function PromptCard({
     >
       <div 
         className="drag-handle absolute top-2 right-2 p-2 bg-background/80 backdrop-blur-sm rounded-md shadow-sm touch-none z-10 md:opacity-0 md:group-hover:opacity-100 transition-opacity cursor-move"
-        title="Arrastrar para reordenar o mover a proyecto"
+        title="Arrastrar para organizar"
       >
         <GripVertical className="h-4 w-4 text-muted-foreground" />
       </div>
 
-      <CardHeader className="pt-8 md:pt-6">
-        <div className="flex justify-between items-start gap-2 pr-6 mb-2">
-          <CardTitle className="font-semibold tracking-tight text-base truncate pr-2 flex-grow">{prompt.title}</CardTitle>
+      <CardHeader className="pt-8 md:pt-6 space-y-3">
+        {/* Superior: Etiquetas */}
+        <div className="flex flex-wrap items-center gap-2 pr-6">
+          {project && (
+            <Badge variant="secondary" className="text-[9px] h-4 bg-muted text-muted-foreground font-normal border-none flex items-center gap-1">
+              <Folder className="h-2.5 w-2.5" />
+              {project.name}
+            </Badge>
+          )}
           <Badge 
             variant="outline"
-            className={cn("flex items-center border-0 text-[10px] px-2 py-0 h-5 font-medium shrink-0", categoryColors[prompt.category])}
+            className={cn("flex items-center border-0 text-[10px] px-2 py-0 h-4 font-medium shrink-0", categoryColors[prompt.category])}
           >
             {categoryIcons[prompt.category]}
             {prompt.category}
           </Badge>
         </div>
         
-        {project && (
-          <div className="flex mb-2">
-            <Badge variant="secondary" className="text-[9px] h-4 bg-muted text-muted-foreground font-normal border-none flex items-center gap-1">
-              <Folder className="h-2.5 w-2.5" />
-              {project.name}
-            </Badge>
-          </div>
-        )}
-        
-        <CardDescription className="line-clamp-2 text-sm">{prompt.description}</CardDescription>
+        {/* Cuerpo: Título y Descripción */}
+        <div className="space-y-1">
+          <CardTitle className="font-bold tracking-tight text-base truncate">
+            {prompt.title}
+          </CardTitle>
+          <CardDescription className="line-clamp-2 text-xs leading-relaxed">
+            {prompt.description}
+          </CardDescription>
+        </div>
       </CardHeader>
       
-      <CardContent className="flex-grow">
-        <p className="font-mono text-sm text-muted-foreground line-clamp-3 bg-muted/30 p-2 rounded-md">
-          {prompt.content}
-        </p>
-      </CardContent>
+      <div className="flex-grow" /> {/* Espaciador para empujar el footer hacia abajo */}
       
-      <CardFooter className="flex items-center justify-between text-[10px] text-muted-foreground pt-0">
+      <CardFooter className="flex items-center justify-between text-[10px] text-muted-foreground pb-4 pt-0">
         <span className="opacity-70">
           {formatDistanceToNow(new Date(prompt.createdAt), { addSuffix: true, locale: es })}
         </span>
-        <PromptCardActions 
-          prompt={prompt} 
-          projects={projects}
-          onDelete={onDelete} 
-          onEdit={() => onEdit(prompt)}
-          onMoveToProject={onMoveToProject}
-          onMoveUp={onMoveUp}
-          onMoveDown={onMoveDown}
-        />
+        <div className="no-copy">
+          <PromptCardActions 
+            prompt={prompt} 
+            projects={projects}
+            onDelete={onDelete} 
+            onEdit={() => onEdit(prompt)}
+            onMoveToProject={onMoveToProject}
+            onMoveUp={onMoveUp}
+            onMoveDown={onMoveDown}
+          />
+        </div>
       </CardFooter>
     </Card>
   );
