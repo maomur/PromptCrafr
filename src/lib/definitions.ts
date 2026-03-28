@@ -19,5 +19,6 @@ export type Prompt = {
   createdAt: string;
   updatedAt: string;
   ownerId: string;
-  projectId: string | null; // Cambiado a explícitamente nullable para Firestore
+  projectId: string | null;
+  order: number;
 };

@@ -26,7 +26,8 @@
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" },
         "projectId": { "type": "string" },
-        "ownerId": { "type": "string" }
+        "ownerId": { "type": "string" },
+        "order": { "type": "integer", "description": "The position of the prompt in the list." }
       },
       "required": ["id", "title", "content", "category", "createdAt", "updatedAt", "ownerId"]
     }

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useCallback } from 'react';
@@ -52,10 +53,9 @@ interface PromptPageProps {
 
 export default function PromptPage({ user }: PromptPageProps) {
   const { toast } = useToast();
-  const firestore = useFirestore(); // Corregido: useFirestore() devuelve la instancia directamente
+  const firestore = useFirestore();
   const auth = useAuth();
 
-  // Consultas memoizadas para Firebase
   const projectsQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
     return collection(firestore, 'users', user.uid, 'projects');
@@ -107,6 +107,9 @@ export default function PromptPage({ user }: PromptPageProps) {
       const colRef = collection(firestore, 'users', userId, 'prompts');
       const newDocRef = doc(colRef);
       
+      // Calculate order (highest order + 1)
+      const maxOrder = prompts.length > 0 ? Math.max(...prompts.map(p => p.order || 0)) : 0;
+      
       const newPrompt: Prompt = {
         id: newDocRef.id,
         ownerId: userId,
@@ -117,6 +120,7 @@ export default function PromptPage({ user }: PromptPageProps) {
         content: promptData.content,
         category: promptData.category,
         projectId: promptData.projectId || null,
+        order: maxOrder + 1
       };
 
       setDocumentNonBlocking(newDocRef, newPrompt);
@@ -125,7 +129,7 @@ export default function PromptPage({ user }: PromptPageProps) {
     setCreateDialogOpen(false);
     setEditDialogOpen(false);
     setSelectedPrompt(null);
-  }, [user?.uid, firestore]);
+  }, [user?.uid, firestore, prompts]);
 
   const handleCreateProject = useCallback(() => {
     const name = newProjectName.trim();
@@ -167,12 +171,34 @@ export default function PromptPage({ user }: PromptPageProps) {
       projectId: projectId || null, 
       updatedAt: new Date().toISOString() 
     });
-  }, [user?.uid, firestore]);
+    toast({ title: "Prompt organizado", description: "El prompt ha sido movido correctamente." });
+  }, [user?.uid, firestore, toast]);
+
+  const handleReorder = useCallback((draggedId: string, targetId: string) => {
+    if (!firestore || !user?.uid) return;
+    
+    const draggedPrompt = prompts.find(p => p.id === draggedId);
+    const targetPrompt = prompts.find(p => p.id === targetId);
+    
+    if (!draggedPrompt || !targetPrompt) return;
+
+    const draggedRef = doc(firestore, 'users', user.uid, 'prompts', draggedId);
+    const targetRef = doc(firestore, 'users', user.uid, 'prompts', targetId);
+    
+    const draggedOrder = draggedPrompt.order || 0;
+    const targetOrder = targetPrompt.order || 0;
+
+    // Swap order values
+    updateDocumentNonBlocking(draggedRef, { order: targetOrder, updatedAt: new Date().toISOString() });
+    updateDocumentNonBlocking(targetRef, { order: draggedOrder, updatedAt: new Date().toISOString() });
+  }, [prompts, firestore, user?.uid]);
 
   const handleDropOnProject = (projectId: string | null, e: React.DragEvent) => {
     e.preventDefault();
     const promptId = e.dataTransfer.getData('promptId');
-    if (promptId) handleMoveToProject(promptId, projectId);
+    if (promptId) {
+      handleMoveToProject(promptId, projectId);
+    }
   };
 
   const filteredPrompts = useMemo(() => {
@@ -188,11 +214,8 @@ export default function PromptPage({ user }: PromptPageProps) {
       result = result.filter(p => p.category === categoryFilter);
     }
 
-    return result.sort((a, b) => {
-      const dateA = a.updatedAt || a.createdAt || '';
-      const dateB = b.updatedAt || b.createdAt || '';
-      return dateB.localeCompare(dateA);
-    });
+    // Sort by order (highest first)
+    return result.sort((a, b) => (b.order || 0) - (a.order || 0));
   }, [prompts, activeProjectId, categoryFilter]);
 
   return (
@@ -352,7 +375,7 @@ export default function PromptPage({ user }: PromptPageProps) {
                 setSelectedPrompt(prompt);
                 setEditDialogOpen(true);
               }}
-              onReorder={() => {}}
+              onReorder={handleReorder}
               onMoveToProject={handleMoveToProject}
             />
           )}

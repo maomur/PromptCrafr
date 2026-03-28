@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -64,14 +65,13 @@ export default function PromptCard({
     toast({
       title: 'Prompt Copiado',
       description: 'El contenido se ha copiado a tu portapapeles.',
-      className: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300',
     });
   };
 
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.setData('promptId', prompt.id);
     e.dataTransfer.effectAllowed = 'move';
-    // Crear una pequeña demora para que la clase se aplique correctamente
+    // Small delay to ensure the visual state updates correctly
     setTimeout(() => setIsDragging(true), 0);
   };
 
@@ -90,7 +90,6 @@ export default function PromptCard({
         isDragging && "opacity-40 grayscale-[0.5] scale-95"
       )}
     >
-      {/* Drag Handle: Visible siempre en móvil, hover en desktop */}
       <div 
         className="drag-handle absolute top-2 right-2 p-2 bg-background/80 backdrop-blur-sm rounded-md shadow-sm touch-none z-10 md:opacity-0 md:group-hover:opacity-100 transition-opacity cursor-move"
         title="Arrastrar para reordenar o mover a proyecto"
