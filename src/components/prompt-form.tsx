@@ -88,7 +88,7 @@ export default function PromptForm({ prompt, projects = [], onSave, onClose }: P
 
         <div className="space-y-2">
           <Label htmlFor="project-select">Proyecto</Label>
-          <Select value={projectId} onValueChange={setProjectId}>
+          <Select value={projectId} onValueChange={setProjectId} modal={false}>
             <SelectTrigger id="project-select">
               <SelectValue placeholder="Selecciona un proyecto" />
             </SelectTrigger>
@@ -116,7 +116,7 @@ export default function PromptForm({ prompt, projects = [], onSave, onClose }: P
       
       <div className="space-y-2">
           <Label htmlFor="category-select">Categoría</Label>
-          <Select value={category} onValueChange={(value) => setCategory(value as PromptCategory)}>
+          <Select value={category} onValueChange={(value) => setCategory(value as PromptCategory)} modal={false}>
             <SelectTrigger id="category-select">
               <SelectValue placeholder="Selecciona una categoría" />
             </SelectTrigger>
