@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -73,7 +72,6 @@ export default function PromptPage() {
   const { data: rawProjects, isLoading: projectsLoading } = useCollection<Project>(projectsQuery);
   const { data: rawPrompts, isLoading: promptsLoading } = useCollection<Prompt>(promptsQuery);
 
-  // Asegurar que siempre sean arrays para evitar errores de iteración
   const projects = rawProjects || [];
   const prompts = rawPrompts || [];
 
@@ -111,7 +109,6 @@ export default function PromptPage() {
       });
     } else {
       const colRef = collection(firestore, 'users', user.uid, 'prompts');
-      // Usar el generador de IDs de Firestore en lugar de crypto.randomUUID()
       const newDocRef = doc(colRef);
       
       const newPrompt: Prompt = {
@@ -119,7 +116,11 @@ export default function PromptPage() {
         ownerId: user.uid,
         createdAt: now,
         updatedAt: now,
-        ...promptData,
+        title: promptData.title,
+        description: promptData.description,
+        content: promptData.content,
+        category: promptData.category,
+        projectId: promptData.projectId,
       };
 
       setDocumentNonBlocking(newDocRef, newPrompt, { merge: true });
@@ -134,7 +135,7 @@ export default function PromptPage() {
     
     const newProject: Project = {
       id: newDocRef.id,
-      name: newProjectName,
+      name: newProjectName.trim(),
       ownerId: user.uid,
       createdAt: new Date().toISOString(),
     };
@@ -153,11 +154,9 @@ export default function PromptPage() {
     e.stopPropagation();
     if (!user || !firestore) return;
 
-    // Eliminar el proyecto
     const projectRef = doc(firestore, 'users', user.uid, 'projects', id);
     deleteDocumentNonBlocking(projectRef);
 
-    // Mover los prompts de ese proyecto a "General"
     prompts.forEach(p => {
       if (p.projectId === id) {
         const promptRef = doc(firestore, 'users', user.uid, 'prompts', p.id);
@@ -206,7 +205,7 @@ export default function PromptPage() {
     let result = [...prompts];
     
     if (activeProjectId === 'none') {
-      result = result.filter(p => !p.projectId);
+      result = result.filter(p => p.projectId === null);
     } else if (activeProjectId !== 'all') {
       result = result.filter(p => p.projectId === activeProjectId);
     }
@@ -215,15 +214,14 @@ export default function PromptPage() {
       result = result.filter(p => p.category === categoryFilter);
     }
 
-    // Ordenar por fecha de creación descendente por defecto
     return result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [prompts, activeProjectId, categoryFilter]);
 
-  if (isUserLoading || projectsLoading || promptsLoading) {
+  if (isUserLoading || (user && (projectsLoading || promptsLoading))) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="text-muted-foreground animate-pulse">Cargando tus prompts desde la nube...</p>
+        <p className="text-muted-foreground animate-pulse">Sincronizando con la nube...</p>
       </div>
     );
   }
@@ -260,7 +258,7 @@ export default function PromptPage() {
               </h2>
               <Dialog open={isNewProjectDialogOpen} onOpenChange={setNewProjectDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-6 w-6">
+                  <Button variant="ghost" size="icon" className="h-6 w-6" disabled={!user}>
                     <Plus className="h-4 w-4" />
                   </Button>
                 </DialogTrigger>
@@ -275,7 +273,7 @@ export default function PromptPage() {
                       onChange={e => setNewProjectName(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && handleCreateProject()}
                     />
-                    <Button className="w-full" onClick={handleCreateProject}>Crear Proyecto</Button>
+                    <Button className="w-full" onClick={handleCreateProject} disabled={!newProjectName.trim()}>Crear Proyecto</Button>
                   </div>
                 </DialogContent>
               </Dialog>
@@ -311,7 +309,7 @@ export default function PromptPage() {
                   <Folder className="mr-2 h-4 w-4" />
                   Sin Proyecto
                 </div>
-                <span className="text-xs opacity-60">{prompts.filter(p => !p.projectId).length}</span>
+                <span className="text-xs opacity-60">{prompts.filter(p => p.projectId === null).length}</span>
               </button>
 
               {projects.map((project) => (
@@ -362,6 +360,7 @@ export default function PromptPage() {
       <Dialog open={isCreateDialogOpen} onOpenChange={setCreateDialogOpen}>
         <DialogTrigger asChild>
           <Button 
+            disabled={!user}
             className="fixed bottom-8 right-8 h-16 w-16 rounded-full shadow-2xl z-50 transition-transform hover:scale-110 active:scale-95"
             size="icon"
           >

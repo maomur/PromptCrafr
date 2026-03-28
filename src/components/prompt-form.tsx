@@ -41,10 +41,10 @@ export default function PromptForm({ prompt, projects = [], onSave, onClose }: P
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
-    if (!title) newErrors.title = 'El título es obligatorio.';
-    if (!description) newErrors.description = 'La descripción es obligatoria.';
+    if (!title.trim()) newErrors.title = 'El título es obligatorio.';
+    if (!description.trim()) newErrors.description = 'La descripción es obligatoria.';
     if (!category) newErrors.category = 'Por favor, selecciona una categoría válida.';
-    if (!content) newErrors.content = 'El contenido es obligatorio.';
+    if (!content.trim()) newErrors.content = 'El contenido es obligatorio.';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -53,9 +53,9 @@ export default function PromptForm({ prompt, projects = [], onSave, onClose }: P
     e.preventDefault();
     if (validate()) {
       onSave({ 
-        title, 
-        description, 
-        content, 
+        title: title.trim(), 
+        description: description.trim(), 
+        content: content.trim(), 
         category: category as PromptCategory,
         projectId: projectId === 'none' ? null : projectId
       }, prompt?.id);
