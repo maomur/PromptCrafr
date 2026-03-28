@@ -41,7 +41,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -96,11 +95,21 @@ export default function PromptPage({ user }: PromptPageProps) {
   const projects = useMemo(() => rawProjects || [], [rawProjects]);
   const prompts = useMemo(() => rawPrompts || [], [rawPrompts]);
 
-  // FIX: Forzar la limpieza del puntero si Radix se queda bloqueado tras eliminar un elemento del DOM
+  // FIX CRÍTICO: Limpieza forzada de pointer-events para evitar bloqueos de Radix UI
   useEffect(() => {
-    if (!isDeleteDialogOpen && !isCreateDialogOpen && !isEditDialogOpen && !isNewProjectDialogOpen) {
-      document.body.style.pointerEvents = 'auto';
-    }
+    const cleanup = () => {
+      const anyOpen = isDeleteDialogOpen || isCreateDialogOpen || isEditDialogOpen || isNewProjectDialogOpen;
+      if (!anyOpen) {
+        // Forzamos la interactividad en el body por si Radix no la restauró
+        document.body.style.pointerEvents = 'auto';
+        document.body.style.overflow = 'auto';
+      }
+    };
+
+    cleanup();
+    // Ejecutamos de nuevo tras un pequeño delay para cubrir el final de las animaciones
+    const timer = setTimeout(cleanup, 350);
+    return () => clearTimeout(timer);
   }, [isDeleteDialogOpen, isCreateDialogOpen, isEditDialogOpen, isNewProjectDialogOpen]);
 
   const handleSave = useCallback((promptData: {
@@ -237,15 +246,15 @@ export default function PromptPage({ user }: PromptPageProps) {
     
     const targetId = promptToDelete.id;
     
-    // Primero cerramos el diálogo y limpiamos estados para liberar el DOM
+    // PRIMERO cerramos el diálogo y limpiamos estados para permitir que Radix limpie el DOM
     setDeleteDialogOpen(false);
     
-    // Un pequeño retardo asegura que la transición de cierre se inicie antes de borrar el doc
+    // Un retardo de seguridad asegura que el diálogo se cierre visualmente antes de que desaparezca el componente de la lista
     setTimeout(() => {
       deleteDocumentNonBlocking(doc(firestore, 'users', user.uid, 'prompts', targetId));
       setPromptToDelete(null);
       toast({ title: "Prompt eliminado", description: "El prompt ha sido borrado." });
-    }, 50);
+    }, 200);
   }, [promptToDelete, firestore, user?.uid, toast]);
 
   const filteredPrompts = useMemo(() => {
@@ -312,7 +321,7 @@ export default function PromptPage({ user }: PromptPageProps) {
                     <Plus className="h-4 w-4" />
                   </Button>
                 </DialogTrigger>
-                <DialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
+                <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} onCloseAutoFocus={(e) => e.preventDefault()}>
                   <DialogHeader>
                     <DialogTitle>Nuevo Proyecto</DialogTitle>
                   </DialogHeader>
@@ -423,7 +432,6 @@ export default function PromptPage({ user }: PromptPageProps) {
                 const prompt = prompts.find(p => p.id === id);
                 if (prompt) {
                   setPromptToDelete(prompt);
-                  // Usamos un pequeño delay para asegurar que el dropdown se haya cerrado antes de abrir el modal
                   setTimeout(() => setDeleteDialogOpen(true), 10);
                 }
               }}
@@ -438,9 +446,8 @@ export default function PromptPage({ user }: PromptPageProps) {
         </main>
       </div>
 
-      {/* Diálogo Global de Eliminación */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent onOpenAutoFocus={(e) => e.preventDefault()} onCloseAutoFocus={(e) => e.preventDefault()}>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Estás seguro de eliminar este prompt?</AlertDialogTitle>
             <AlertDialogDescription>
@@ -469,7 +476,7 @@ export default function PromptPage({ user }: PromptPageProps) {
             <span className="sr-only">Nuevo Prompt</span>
           </Button>
         </DialogTrigger>
-        <DialogContent className="sm:max-w-[625px]">
+        <DialogContent className="sm:max-w-[625px]" onOpenAutoFocus={(e) => e.preventDefault()} onCloseAutoFocus={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>Crear Nuevo Prompt</DialogTitle>
           </DialogHeader>
@@ -480,6 +487,7 @@ export default function PromptPage({ user }: PromptPageProps) {
       <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent
           onOpenAutoFocus={(e) => e.preventDefault()}
+          onCloseAutoFocus={(e) => e.preventDefault()}
           className="sm:max-w-[625px] shadow-3xl"
         >
           <DialogHeader>

@@ -59,7 +59,11 @@ export default function PromptCardActions({
             <span className="sr-only">Más opciones</span>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56" onCloseAutoFocus={(e) => e.preventDefault()}>
+        <DropdownMenuContent 
+          align="end" 
+          className="w-56" 
+          onCloseAutoFocus={(e) => e.preventDefault()}
+        >
           <DropdownMenuLabel>Organizar</DropdownMenuLabel>
           
           {onMoveUp && (
@@ -104,9 +108,10 @@ export default function PromptCardActions({
 
           <DropdownMenuItem 
             className="text-destructive focus:bg-destructive focus:text-destructive-foreground"
-            onSelect={(e) => {
-              e.preventDefault(); // Evitamos que el dropdown se cierre bruscamente antes de que el modal se prepare
-              onDelete(prompt.id);
+            onSelect={() => {
+              // Dejamos que el menú se cierre de forma natural antes de disparar la eliminación
+              // para evitar que Radix bloquee la interfaz al borrar el elemento del DOM.
+              setTimeout(() => onDelete(prompt.id), 10);
             }}
           >
             <Trash2 className="mr-2 h-4 w-4" />
