@@ -89,11 +89,13 @@ export default function PromptPage({ user }: PromptPageProps) {
   const [isEditLinkDialogOpen, setEditLinkDialogOpen] = useState(false);
   const [isNewProjectDialogOpen, setNewProjectDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isLinkDeleteDialogOpen, setLinkDeleteDialogOpen] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
   const [selectedLink, setSelectedLink] = useState<Link | null>(null);
   const [promptToDelete, setPromptToDelete] = useState<Prompt | null>(null);
+  const [linkToDelete, setLinkToDelete] = useState<Link | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<PromptCategory | 'Todos'>('Todos');
   const [activeProjectId, setActiveProjectId] = useState<string | 'all' | 'none'>('all');
   const [dragOverProject, setDragOverProject] = useState<string | null>(null);
@@ -102,29 +104,27 @@ export default function PromptPage({ user }: PromptPageProps) {
   const prompts = useMemo(() => rawPrompts || [], [rawPrompts]);
   const links = useMemo(() => rawLinks || [], [rawLinks]);
 
-  // UNBLOCKER MAESTRO: Limpiador de seguridad ultra-robusto para evitar congelamientos de Radix UI.
+  // UNBLOCKER MAESTRO: Limpiador de seguridad ultra-robusto
   const unblockInterface = useCallback(() => {
+    if (typeof document === 'undefined') return;
     const cleanup = () => {
-      if (typeof document !== 'undefined') {
-        document.body.style.pointerEvents = 'auto';
-        document.body.style.overflow = 'auto';
-        document.documentElement.style.pointerEvents = 'auto';
-        document.documentElement.style.overflow = 'auto';
-        document.body.classList.remove('pointer-events-none');
-      }
+      document.body.style.pointerEvents = 'auto';
+      document.body.style.overflow = 'auto';
+      document.documentElement.style.pointerEvents = 'auto';
+      document.documentElement.style.overflow = 'auto';
+      document.body.classList.remove('pointer-events-none');
     };
     cleanup();
-    setTimeout(cleanup, 50);
-    setTimeout(cleanup, 150);
+    setTimeout(cleanup, 100);
     setTimeout(cleanup, 300);
   }, []);
 
   useEffect(() => {
-    const isAnyDialogOpen = isCreateDialogOpen || isCreateLinkDialogOpen || isEditDialogOpen || isEditLinkDialogOpen || isNewProjectDialogOpen || isDeleteDialogOpen;
+    const isAnyDialogOpen = isCreateDialogOpen || isCreateLinkDialogOpen || isEditDialogOpen || isEditLinkDialogOpen || isNewProjectDialogOpen || isDeleteDialogOpen || isLinkDeleteDialogOpen;
     if (!isAnyDialogOpen) {
       unblockInterface();
     }
-  }, [isCreateDialogOpen, isCreateLinkDialogOpen, isEditDialogOpen, isEditLinkDialogOpen, isNewProjectDialogOpen, isDeleteDialogOpen, unblockInterface]);
+  }, [isCreateDialogOpen, isCreateLinkDialogOpen, isEditDialogOpen, isEditLinkDialogOpen, isNewProjectDialogOpen, isDeleteDialogOpen, isLinkDeleteDialogOpen, unblockInterface]);
 
   const handleSave = useCallback((promptData: {
     title: string;
@@ -251,13 +251,6 @@ export default function PromptPage({ user }: PromptPageProps) {
     if (activeProjectId === id) setActiveProjectId('all');
     toast({ title: "Proyecto eliminado" });
   }, [user?.uid, firestore, activeProjectId, toast]);
-
-  const handleDeleteLink = useCallback((id: string) => {
-    if (!firestore || !user?.uid) return;
-    const linkRef = doc(firestore, 'users', user.uid, 'links', id);
-    deleteDocumentNonBlocking(linkRef);
-    toast({ title: "Enlace eliminado" });
-  }, [user?.uid, firestore, toast]);
 
   const handleMoveToProject = useCallback((itemId: string, itemType: string, projectId: string | null) => {
     if (!firestore || !user?.uid) return;
@@ -479,7 +472,13 @@ export default function PromptPage({ user }: PromptPageProps) {
                   <LinkList 
                     links={filteredLinks} 
                     projects={projects}
-                    onDeleteLink={handleDeleteLink} 
+                    onDeleteLink={(id) => {
+                      const l = links.find(li => li.id === id);
+                      if (l) {
+                        setLinkToDelete(l);
+                        setLinkDeleteDialogOpen(true);
+                      }
+                    }} 
                     onEditLink={(link) => {
                       setSelectedLink(link);
                       setEditLinkDialogOpen(true);
@@ -530,21 +529,45 @@ export default function PromptPage({ user }: PromptPageProps) {
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground"
               onClick={(e) => {
-                e.preventDefault(); // Evitamos el cierre inmediato para gestionar la limpieza
+                e.preventDefault();
                 if (promptToDelete && firestore) {
-                  const docId = promptToDelete.id;
-                  const docRef = doc(firestore, 'users', user.uid, 'prompts', docId);
-                  
-                  // Iniciamos la eliminación
+                  const docRef = doc(firestore, 'users', user.uid, 'prompts', promptToDelete.id);
                   deleteDocumentNonBlocking(docRef);
-                  
-                  // Ejecutamos el cierre con un ligero retraso para permitir que Radix limpie y React actualice
                   setTimeout(() => {
                     setPromptToDelete(null);
                     setDeleteDialogOpen(false);
                     toast({ title: "Prompt eliminado" });
-                    // Forzamos el desbloqueo final
-                    setTimeout(unblockInterface, 100);
+                    unblockInterface();
+                  }, 50);
+                }
+              }}
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={isLinkDeleteDialogOpen} onOpenChange={setLinkDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar enlace?</AlertDialogTitle>
+            <AlertDialogDescription>Se eliminará definitivamente "{linkToDelete?.title || linkToDelete?.url}".</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground"
+              onClick={(e) => {
+                e.preventDefault();
+                if (linkToDelete && firestore) {
+                  const docRef = doc(firestore, 'users', user.uid, 'links', linkToDelete.id);
+                  deleteDocumentNonBlocking(docRef);
+                  setTimeout(() => {
+                    setLinkToDelete(null);
+                    setLinkDeleteDialogOpen(false);
+                    toast({ title: "Enlace eliminado" });
+                    unblockInterface();
                   }, 50);
                 }
               }}

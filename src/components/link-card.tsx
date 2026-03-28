@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Link as LinkIcon, ExternalLink, Trash2, GripVertical, Eye, MoreVertical, FolderInput, ChevronUp, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import {
   DropdownMenu,
@@ -54,9 +54,15 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
     setIsDragging(false);
   };
 
-  const handleCardClick = (event: React.MouseEvent) => {
-    // Evitar copiar si se hace clic en botones, menús o en el control de arrastre
-    if ((event.target as HTMLElement).closest('button') || (event.target as HTMLElement).closest('.drag-handle') || (event.target as HTMLElement).closest('[role="menuitem"]')) {
+  const handleCardClick = useCallback((event: React.MouseEvent) => {
+    const target = event.target as HTMLElement;
+    // Evitar copiar si el clic es en botones, menús, el icono de arrastre o cualquier componente de interacción
+    if (
+      target.closest('button') || 
+      target.closest('.drag-handle') || 
+      target.closest('[role="menuitem"]') ||
+      target.closest('[role="menu"]')
+    ) {
       return;
     }
 
@@ -65,7 +71,7 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
       title: 'Enlace Copiado',
       description: 'La URL se ha copiado a tu portapapeles.',
     });
-  };
+  }, [link.url, toast]);
 
   return (
     <Card 
@@ -122,7 +128,6 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
           {formatDistanceToNow(new Date(link.createdAt), { addSuffix: true, locale: es })}
         </span>
         <div className="flex items-center gap-0.5">
-          {/* Abrir Link Externo */}
           <Button 
             variant="ghost" 
             size="icon" 
@@ -135,7 +140,6 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
             </a>
           </Button>
 
-          {/* Editar Link (Ojo) */}
           <Button 
             variant="ghost" 
             size="icon" 
@@ -149,7 +153,6 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
             <span className="sr-only">Ver detalles</span>
           </Button>
 
-          {/* Menú de Opciones */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
@@ -157,7 +160,7 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
                 <span className="sr-only">Más opciones</span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuContent align="end" className="w-56" onClick={(e) => e.stopPropagation()}>
               <DropdownMenuLabel>Organizar</DropdownMenuLabel>
               
               {onMoveUp && (

@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { Video, Image, FileText, Sparkles, GripVertical } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 
 interface PromptCardProps {
   prompt: Prompt;
@@ -54,8 +54,15 @@ export default function PromptCard({
   const { toast } = useToast();
   const [isDragging, setIsDragging] = useState(false);
 
-  const handleCardClick = (event: React.MouseEvent) => {
-    if ((event.target as HTMLElement).closest('button') || (event.target as HTMLElement).closest('.drag-handle')) {
+  const handleCardClick = useCallback((event: React.MouseEvent) => {
+    const target = event.target as HTMLElement;
+    // Evitar copiar si el clic es en botones, menús, el icono de arrastre o cualquier componente de interacción
+    if (
+      target.closest('button') || 
+      target.closest('.drag-handle') || 
+      target.closest('[role="menuitem"]') ||
+      target.closest('[role="menu"]')
+    ) {
       return;
     }
 
@@ -64,7 +71,7 @@ export default function PromptCard({
       title: 'Prompt Copiado',
       description: 'El contenido se ha copiado a tu portapapeles.',
     });
-  };
+  }, [prompt.content, toast]);
 
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.setData('itemId', prompt.id);
