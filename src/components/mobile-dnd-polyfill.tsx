@@ -17,11 +17,11 @@ export default function MobileDndPolyfill() {
               y: offset.y
             };
           },
-          // Trigger dragging immediately on touch for elements with draggable="true"
+          // Asegura respuesta inmediata al toque
           holdToDrag: 0 
         });
 
-        // Este manejador global ayuda a prevenir el scroll nativo cuando se arrastra
+        // Este manejador global ayuda a prevenir el scroll nativo cuando se arrastra por el manejador
         const handleGlobalTouchMove = (e: TouchEvent) => {
           if ((e.target as HTMLElement).closest('.drag-handle')) {
             if (e.cancelable) e.preventDefault();
