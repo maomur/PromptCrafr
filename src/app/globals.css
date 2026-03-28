@@ -68,7 +68,7 @@
   }
 }
 
-/* DRAG AND DROP - CONFIGURACIÓN PARA MÓVILES */
+/* DRAG AND DROP - CONFIGURACIÓN CRÍTICA PARA MÓVILES */
 .drag-handle {
   cursor: grab;
   touch-action: none !important; /* BLOQUEO DE GESTOS NATIVOS */
@@ -88,6 +88,7 @@
   cursor: grabbing;
 }
 
+/* Soporte para el polyfill de móvil */
 .dnd-poly-dragging {
   opacity: 0.5 !important;
   transform: scale(0.95) !important;

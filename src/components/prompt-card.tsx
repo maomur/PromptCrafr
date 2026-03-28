@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Video, Image, FileText, Sparkles, GripVertical, Folder } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 
 interface PromptCardProps {
   prompt: Prompt;
@@ -51,6 +51,7 @@ export default function PromptCard({
   onMoveDown
 }: PromptCardProps) {
   const { toast } = useToast();
+  const isReadyToDrag = useRef(false);
 
   const project = useMemo(() => 
     projects.find(p => p.id === prompt.projectId),
@@ -77,11 +78,8 @@ export default function PromptCard({
   }, [prompt.content, toast]);
 
   const handleDragStart = (e: React.DragEvent) => {
-    const target = e.target as HTMLElement;
-    // Validamos si el arrastre se inició efectivamente en el manejador
-    const isHandle = target.closest('.drag-handle');
-    
-    if (!isHandle) {
+    // Si no se inició desde el manejador, cancelamos
+    if (!isReadyToDrag.current) {
       e.preventDefault();
       return;
     }
@@ -90,14 +88,14 @@ export default function PromptCard({
     e.dataTransfer.setData('itemType', 'prompt');
     e.dataTransfer.effectAllowed = 'move';
     
-    // Aplicamos feedback visual manual para evitar latencias de React
-    const card = target.closest('.group') as HTMLElement;
+    const card = (e.target as HTMLElement).closest('.group') as HTMLElement;
     if (card) {
       setTimeout(() => card.classList.add('opacity-40', 'scale-95'), 0);
     }
   };
 
   const handleDragEnd = (e: React.DragEvent) => {
+    isReadyToDrag.current = false;
     const card = (e.target as HTMLElement).closest('.group') as HTMLElement;
     if (card) {
       card.classList.remove('opacity-40', 'scale-95');
@@ -112,9 +110,10 @@ export default function PromptCard({
       onClick={handleCardClick}
       className="group flex h-full flex-col rounded-xl border-border/20 bg-card text-card-foreground shadow-md transition-all duration-300 hover:shadow-lg relative overflow-hidden select-none"
     >
-      {/* Mango de arrastre - Zona de control exclusiva para móviles y escritorio */}
+      {/* Mango de arrastre - Zona de control exclusiva */}
       <div 
-        className="drag-handle absolute top-0 right-0 bg-background/90 backdrop-blur-sm rounded-bl-xl border-l border-b border-border/40 shadow-sm z-50 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+        className="drag-handle absolute top-0 right-0 bg-background/90 backdrop-blur-sm rounded-bl-xl border-l border-b border-border/40 shadow-sm z-50 transition-opacity"
+        onPointerDown={() => { isReadyToDrag.current = true; }}
         title="Arrastrar para organizar"
       >
         <GripVertical className="h-5 w-5 text-muted-foreground" />

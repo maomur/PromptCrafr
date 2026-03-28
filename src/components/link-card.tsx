@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Link as LinkIcon, ExternalLink, Trash2, GripVertical, Eye, MoreVertical, FolderInput, ChevronUp, ChevronDown, Folder } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import {
   DropdownMenu,
@@ -40,6 +40,7 @@ interface LinkCardProps {
 
 export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToProject, onMoveUp, onMoveDown }: LinkCardProps) {
   const { toast } = useToast();
+  const isReadyToDrag = useRef(false);
 
   const project = useMemo(() => 
     projects.find(p => p.id === link.projectId),
@@ -47,10 +48,7 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
   );
 
   const handleDragStart = (e: React.DragEvent) => {
-    const target = e.target as HTMLElement;
-    const isHandle = target.closest('.drag-handle');
-    
-    if (!isHandle) {
+    if (!isReadyToDrag.current) {
       e.preventDefault();
       return;
     }
@@ -59,13 +57,14 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
     e.dataTransfer.setData('itemType', 'link');
     e.dataTransfer.effectAllowed = 'move';
     
-    const card = target.closest('.group') as HTMLElement;
+    const card = (e.target as HTMLElement).closest('.group') as HTMLElement;
     if (card) {
       setTimeout(() => card.classList.add('opacity-40', 'scale-95'), 0);
     }
   };
 
   const handleDragEnd = (e: React.DragEvent) => {
+    isReadyToDrag.current = false;
     const card = (e.target as HTMLElement).closest('.group') as HTMLElement;
     if (card) {
       card.classList.remove('opacity-40', 'scale-95');
@@ -99,9 +98,10 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
       onClick={handleCardClick}
       className="group flex flex-col h-full rounded-xl border-border/20 bg-card shadow-md transition-all duration-300 hover:shadow-lg relative overflow-hidden select-none"
     >
-      {/* Mango de arrastre - Zona de control exclusiva para móviles y escritorio */}
+      {/* Mango de arrastre - Zona de control exclusiva */}
       <div 
-        className="drag-handle absolute top-0 right-0 bg-background/90 backdrop-blur-sm rounded-bl-xl border-l border-b border-border/40 shadow-sm z-50 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+        className="drag-handle absolute top-0 right-0 bg-background/90 backdrop-blur-sm rounded-bl-xl border-l border-b border-border/40 shadow-sm z-50 transition-opacity"
+        onPointerDown={() => { isReadyToDrag.current = true; }}
         title="Arrastrar para organizar"
       >
         <GripVertical className="h-5 w-5 text-muted-foreground" />
