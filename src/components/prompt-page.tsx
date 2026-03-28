@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import type { Prompt, PromptCategory, Project } from '@/lib/definitions';
 import { promptCategories } from '@/lib/definitions';
 import Header from '@/components/header';
@@ -66,6 +66,7 @@ export default function PromptPage({ user }: PromptPageProps) {
   const firestore = useFirestore();
   const auth = useAuth();
 
+  // Queries
   const projectsQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
     return collection(firestore, 'users', user.uid, 'projects');
@@ -79,6 +80,7 @@ export default function PromptPage({ user }: PromptPageProps) {
   const { data: rawProjects, isLoading: projectsLoading } = useCollection<Project>(projectsQuery);
   const { data: rawPrompts, isLoading: promptsLoading } = useCollection<Prompt>(promptsQuery);
 
+  // States
   const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setEditDialogOpen] = useState(false);
   const [isNewProjectDialogOpen, setNewProjectDialogOpen] = useState(false);
@@ -93,6 +95,13 @@ export default function PromptPage({ user }: PromptPageProps) {
 
   const projects = useMemo(() => rawProjects || [], [rawProjects]);
   const prompts = useMemo(() => rawPrompts || [], [rawPrompts]);
+
+  // FIX: Forzar la limpieza del puntero si Radix se queda bloqueado tras eliminar un elemento del DOM
+  useEffect(() => {
+    if (!isDeleteDialogOpen && !isCreateDialogOpen && !isEditDialogOpen && !isNewProjectDialogOpen) {
+      document.body.style.pointerEvents = 'auto';
+    }
+  }, [isDeleteDialogOpen, isCreateDialogOpen, isEditDialogOpen, isNewProjectDialogOpen]);
 
   const handleSave = useCallback((promptData: {
     title: string;
@@ -225,10 +234,18 @@ export default function PromptPage({ user }: PromptPageProps) {
 
   const confirmDeletePrompt = useCallback(() => {
     if (!promptToDelete || !firestore || !user?.uid) return;
-    deleteDocumentNonBlocking(doc(firestore, 'users', user.uid, 'prompts', promptToDelete.id));
-    setPromptToDelete(null);
+    
+    const targetId = promptToDelete.id;
+    
+    // Primero cerramos el diálogo y limpiamos estados para liberar el DOM
     setDeleteDialogOpen(false);
-    toast({ title: "Prompt eliminado", description: "El prompt ha sido borrado." });
+    
+    // Un pequeño retardo asegura que la transición de cierre se inicie antes de borrar el doc
+    setTimeout(() => {
+      deleteDocumentNonBlocking(doc(firestore, 'users', user.uid, 'prompts', targetId));
+      setPromptToDelete(null);
+      toast({ title: "Prompt eliminado", description: "El prompt ha sido borrado." });
+    }, 50);
   }, [promptToDelete, firestore, user?.uid, toast]);
 
   const filteredPrompts = useMemo(() => {
@@ -406,12 +423,13 @@ export default function PromptPage({ user }: PromptPageProps) {
                 const prompt = prompts.find(p => p.id === id);
                 if (prompt) {
                   setPromptToDelete(prompt);
-                  setDeleteDialogOpen(true);
+                  // Usamos un pequeño delay para asegurar que el dropdown se haya cerrado antes de abrir el modal
+                  setTimeout(() => setDeleteDialogOpen(true), 10);
                 }
               }}
               onEditPrompt={(prompt) => {
                 setSelectedPrompt(prompt);
-                setEditDialogOpen(true);
+                setTimeout(() => setEditDialogOpen(true), 10);
               }}
               onReorder={handleReorder}
               onMoveToProject={handleMoveToProject}
@@ -420,7 +438,7 @@ export default function PromptPage({ user }: PromptPageProps) {
         </main>
       </div>
 
-      {/* Diálogo Global de Eliminación para evitar bloqueos del DOM */}
+      {/* Diálogo Global de Eliminación */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -430,7 +448,7 @@ export default function PromptPage({ user }: PromptPageProps) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setPromptToDelete(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={confirmDeletePrompt}

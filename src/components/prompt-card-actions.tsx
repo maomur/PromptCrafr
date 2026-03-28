@@ -59,18 +59,18 @@ export default function PromptCardActions({
             <span className="sr-only">Más opciones</span>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuContent align="end" className="w-56" onCloseAutoFocus={(e) => e.preventDefault()}>
           <DropdownMenuLabel>Organizar</DropdownMenuLabel>
           
           {onMoveUp && (
-            <DropdownMenuItem onClick={() => onMoveUp(prompt.id)}>
+            <DropdownMenuItem onSelect={() => onMoveUp(prompt.id)}>
               <ChevronUp className="mr-2 h-4 w-4" />
               Subir posición
             </DropdownMenuItem>
           )}
           
           {onMoveDown && (
-            <DropdownMenuItem onClick={() => onMoveDown(prompt.id)}>
+            <DropdownMenuItem onSelect={() => onMoveDown(prompt.id)}>
               <ChevronDown className="mr-2 h-4 w-4" />
               Bajar posición
             </DropdownMenuItem>
@@ -84,14 +84,14 @@ export default function PromptCardActions({
               Mover a Proyecto
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent>
-              <DropdownMenuItem onClick={() => onMoveToProject(prompt.id, null)}>
+              <DropdownMenuItem onSelect={() => onMoveToProject(prompt.id, null)}>
                 Sin Proyecto (General)
               </DropdownMenuItem>
               {projects.length > 0 && <DropdownMenuSeparator />}
               {projects.map((project) => (
                 <DropdownMenuItem 
                   key={project.id} 
-                  onClick={() => onMoveToProject(prompt.id, project.id)}
+                  onSelect={() => onMoveToProject(prompt.id, project.id)}
                   disabled={prompt.projectId === project.id}
                 >
                   {project.name}
@@ -104,7 +104,10 @@ export default function PromptCardActions({
 
           <DropdownMenuItem 
             className="text-destructive focus:bg-destructive focus:text-destructive-foreground"
-            onClick={() => onDelete(prompt.id)}
+            onSelect={(e) => {
+              e.preventDefault(); // Evitamos que el dropdown se cierre bruscamente antes de que el modal se prepare
+              onDelete(prompt.id);
+            }}
           >
             <Trash2 className="mr-2 h-4 w-4" />
             Eliminar Prompt
