@@ -61,7 +61,6 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
     if (cardRef.current) {
       cardRef.current.classList.remove('opacity-40');
     }
-    document.body.classList.remove('dragging-active');
   };
 
   const handleCardClick = useCallback((event: React.MouseEvent) => {

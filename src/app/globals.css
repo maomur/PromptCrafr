@@ -67,7 +67,7 @@
     @apply bg-background text-foreground;
   }
   
-  /* Bloqueo de scroll agresivo durante el arrastre */
+  /* Bloqueo total de scroll durante el arrastre activo */
   body.dragging-active {
     overflow: hidden !important;
     touch-action: none !important;
@@ -79,10 +79,10 @@
 
 .drag-handle {
   cursor: grab;
-  touch-action: none !important; /* Desactiva el scroll nativo en el elemento */
+  touch-action: none !important; /* Desactiva gestos nativos en el mango */
   -webkit-user-select: none;
   user-select: none;
-  -webkit-touch-callout: none; /* Evita el menú de iOS */
+  -webkit-touch-callout: none;
   z-index: 50;
   width: 44px;
   height: 44px;
@@ -94,22 +94,29 @@
   border-bottom-left-radius: 0.75rem;
   border-left: 1px solid hsl(var(--border) / 0.4);
   border-bottom: 1px solid hsl(var(--border) / 0.4);
+  transition: transform 0.2s ease, background-color 0.2s ease;
 }
 
+/* Feedback visual al presionar (antes del arrastre) */
 .drag-handle:active {
   cursor: grabbing;
+  transform: scale(1.1);
+  background-color: hsl(var(--primary) / 0.1);
 }
 
 [draggable="true"] {
   -webkit-user-drag: element;
   user-select: none;
-  touch-action: pan-y; /* Permite scroll vertical normal en la tarjeta */
+  touch-action: pan-y; /* Permite scroll vertical normal si no se usa el mango */
 }
 
+/* Estilo del fantasma de arrastre (Polyfill) */
 .dnd-poly-dragging {
-  opacity: 0.5 !important;
+  opacity: 0.7 !important;
   transform: scale(1.05) !important;
   box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.3) !important;
   z-index: 9999 !important;
   pointer-events: none;
+  background-color: hsl(var(--card)) !important;
+  border-radius: var(--radius) !important;
 }
