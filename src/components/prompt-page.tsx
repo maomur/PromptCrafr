@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -110,18 +111,18 @@ export default function PromptPage() {
       });
     } else {
       const colRef = collection(firestore, 'users', user.uid, 'prompts');
-      const newId = crypto.randomUUID();
-      const docRef = doc(colRef, newId);
+      // Usar el generador de IDs de Firestore en lugar de crypto.randomUUID()
+      const newDocRef = doc(colRef);
       
       const newPrompt: Prompt = {
-        id: newId,
+        id: newDocRef.id,
         ownerId: user.uid,
         createdAt: now,
         updatedAt: now,
         ...promptData,
       };
 
-      setDocumentNonBlocking(docRef, newPrompt, { merge: true });
+      setDocumentNonBlocking(newDocRef, newPrompt, { merge: true });
     }
   };
 
@@ -129,17 +130,16 @@ export default function PromptPage() {
     if (!newProjectName.trim() || !user || !firestore) return;
     
     const colRef = collection(firestore, 'users', user.uid, 'projects');
-    const newId = crypto.randomUUID();
-    const docRef = doc(colRef, newId);
+    const newDocRef = doc(colRef);
     
     const newProject: Project = {
-      id: newId,
+      id: newDocRef.id,
       name: newProjectName,
       ownerId: user.uid,
       createdAt: new Date().toISOString(),
     };
 
-    setDocumentNonBlocking(docRef, newProject, { merge: true });
+    setDocumentNonBlocking(newDocRef, newProject, { merge: true });
 
     setNewProjectName('');
     setNewProjectDialogOpen(false);
