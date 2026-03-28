@@ -95,9 +95,9 @@ export default function PromptPage() {
     if (id) {
       const docRef = doc(firestore, 'users', user.uid, 'prompts', id);
       const updateData = {
-        title: promptData.title || '',
-        description: promptData.description || '',
-        content: promptData.content || '',
+        title: promptData.title,
+        description: promptData.description,
+        content: promptData.content,
         category: promptData.category,
         projectId: promptData.projectId || null,
         updatedAt: now
@@ -112,9 +112,9 @@ export default function PromptPage() {
         ownerId: user.uid,
         createdAt: now,
         updatedAt: now,
-        title: promptData.title || '',
-        description: promptData.description || '',
-        content: promptData.content || '',
+        title: promptData.title,
+        description: promptData.description,
+        content: promptData.content,
         category: promptData.category,
         projectId: promptData.projectId || null,
       };
@@ -184,14 +184,18 @@ export default function PromptPage() {
       result = result.filter(p => p.category === categoryFilter);
     }
 
-    return result.sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+    return result.sort((a, b) => {
+      const dateA = a.updatedAt || a.createdAt || '';
+      const dateB = b.updatedAt || b.createdAt || '';
+      return dateB.localeCompare(dateA);
+    });
   }, [prompts, activeProjectId, categoryFilter]);
 
-  if (isUserLoading || projectsLoading || promptsLoading) {
+  if (isUserLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="text-muted-foreground animate-pulse font-medium">Sincronizando con la nube...</p>
+        <p className="text-muted-foreground animate-pulse font-medium">Verificando sesión...</p>
       </div>
     );
   }
@@ -330,20 +334,27 @@ export default function PromptPage() {
         </aside>
 
         <main className="flex-1 pb-20">
-          <PromptList
-            prompts={filteredPrompts}
-            projects={projects}
-            onDeletePrompt={(id) => {
-              if (!user?.uid || !firestore) return;
-              deleteDocumentNonBlocking(doc(firestore, 'users', user.uid, 'prompts', id));
-            }}
-            onEditPrompt={(prompt) => {
-              setSelectedPrompt(prompt);
-              setEditDialogOpen(true);
-            }}
-            onReorder={() => {}}
-            onMoveToProject={handleMoveToProject}
-          />
+          {projectsLoading || promptsLoading ? (
+             <div className="flex flex-col items-center justify-center pt-20 gap-4">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Cargando biblioteca...</p>
+            </div>
+          ) : (
+            <PromptList
+              prompts={filteredPrompts}
+              projects={projects}
+              onDeletePrompt={(id) => {
+                if (!user?.uid || !firestore) return;
+                deleteDocumentNonBlocking(doc(firestore, 'users', user.uid, 'prompts', id));
+              }}
+              onEditPrompt={(prompt) => {
+                setSelectedPrompt(prompt);
+                setEditDialogOpen(true);
+              }}
+              onReorder={() => {}}
+              onMoveToProject={handleMoveToProject}
+            />
+          )}
         </main>
       </div>
 
