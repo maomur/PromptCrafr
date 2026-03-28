@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import type { Prompt, PromptCategory, Project, Link } from '@/lib/definitions';
 import { promptCategories } from '@/lib/definitions';
 import Header from '@/components/header';
@@ -37,13 +37,6 @@ import {
 } from 'lucide-react';
 import PromptForm from '@/components/prompt-form';
 import LinkForm from '@/components/link-form';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -106,6 +99,16 @@ export default function PromptPage({ user }: PromptPageProps) {
   const prompts = useMemo(() => rawPrompts || [], [rawPrompts]);
   const links = useMemo(() => rawLinks || [], [rawLinks]);
 
+  // Garantizar que el body siempre sea interactivo
+  useEffect(() => {
+    const cleanup = () => {
+      document.body.style.pointerEvents = 'auto';
+    };
+    if (!isCreateDialogOpen && !isEditDialogOpen && !isCreateLinkDialogOpen && !isNewProjectDialogOpen && !isDeleteDialogOpen) {
+      cleanup();
+    }
+  }, [isCreateDialogOpen, isEditDialogOpen, isCreateLinkDialogOpen, isNewProjectDialogOpen, isDeleteDialogOpen]);
+
   const handleSave = useCallback((promptData: {
     title: string;
     description: string;
@@ -150,9 +153,12 @@ export default function PromptPage({ user }: PromptPageProps) {
       setDocumentNonBlocking(newDocRef, newPrompt);
     }
     
-    setCreateDialogOpen(false);
-    setEditDialogOpen(false);
-    setSelectedPrompt(null);
+    setTimeout(() => {
+      setCreateDialogOpen(false);
+      setEditDialogOpen(false);
+      setSelectedPrompt(null);
+      document.body.style.pointerEvents = 'auto';
+    }, 50);
   }, [user?.uid, firestore, prompts]);
 
   const handleSaveLink = useCallback((linkData: {
@@ -180,7 +186,10 @@ export default function PromptPage({ user }: PromptPageProps) {
     };
 
     setDocumentNonBlocking(newDocRef, newLink);
-    setCreateLinkDialogOpen(false);
+    setTimeout(() => {
+      setCreateLinkDialogOpen(false);
+      document.body.style.pointerEvents = 'auto';
+    }, 50);
   }, [user?.uid, firestore]);
 
   const handleCreateProject = useCallback(() => {
@@ -274,14 +283,13 @@ export default function PromptPage({ user }: PromptPageProps) {
     if (!promptToDelete || !firestore || !user?.uid) return;
     
     const targetId = promptToDelete.id;
-    // Cerramos el diálogo primero para que Radix limpie los eventos
     setDeleteDialogOpen(false);
     
-    // Pequeño retardo para permitir que la animación de cierre de Radix complete y libere el body
     setTimeout(() => {
       deleteDocumentNonBlocking(doc(firestore, 'users', user.uid, 'prompts', targetId));
       setPromptToDelete(null);
       toast({ title: "Prompt eliminado", description: "El prompt ha sido borrado." });
+      document.body.style.pointerEvents = 'auto';
     }, 150);
   }, [promptToDelete, firestore, user?.uid, toast]);
 
@@ -315,23 +323,21 @@ export default function PromptPage({ user }: PromptPageProps) {
     <div className="relative min-h-[80vh]">
       <Header>
         <div className="flex items-center gap-4">
-          <Select
-            value={categoryFilter}
-            onValueChange={(value) => setCategoryFilter(value as PromptCategory | 'Todos')}
-          >
-            <SelectTrigger className="w-[180px] hidden md:flex">
-              <Filter className="mr-2 h-4 w-4 opacity-70" />
-              <SelectValue placeholder="Categoría" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Todos">Todas las categorías</SelectItem>
+          <div className="hidden md:flex items-center gap-2">
+            <Filter className="h-4 w-4 opacity-70" />
+            <select
+              className="bg-transparent border-none text-sm focus:ring-0 cursor-pointer font-medium"
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value as PromptCategory | 'Todos')}
+            >
+              <option value="Todos">Todas las categorías</option>
               {promptCategories.map((category) => (
-                <SelectItem key={category} value={category}>
+                <option key={category} value={category}>
                   {category}
-                </SelectItem>
+                </option>
               ))}
-            </SelectContent>
-          </Select>
+            </select>
+          </div>
           
           <div className="flex items-center gap-2 border-l pl-4 border-border/60">
             <div className="hidden lg:flex flex-col items-end">
@@ -478,8 +484,8 @@ export default function PromptPage({ user }: PromptPageProps) {
               )}
 
               <div className="space-y-4">
-                {filteredLinks.length > 0 && (
-                  <h3 className="text-sm font-bold uppercase tracking-widest text-primary flex items-center gap-2 px-1">
+                {filteredLinks.length > 0 && filteredPrompts.length > 0 && (
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-primary flex items-center gap-2 px-1 pt-4">
                     <Folders className="h-4 w-4" />
                     Biblioteca de Prompts ({filteredPrompts.length})
                   </h3>
@@ -507,7 +513,10 @@ export default function PromptPage({ user }: PromptPageProps) {
         </main>
       </div>
 
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={(open) => {
+        setDeleteDialogOpen(open);
+        if (!open) document.body.style.pointerEvents = 'auto';
+      }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Estás seguro de eliminar este prompt?</AlertDialogTitle>
@@ -516,7 +525,7 @@ export default function PromptPage({ user }: PromptPageProps) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => document.body.style.pointerEvents = 'auto'}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={confirmDeletePrompt}
@@ -528,7 +537,10 @@ export default function PromptPage({ user }: PromptPageProps) {
       </AlertDialog>
 
       <div className="fixed bottom-8 right-8 flex items-center gap-3 z-50">
-        <Dialog open={isCreateLinkDialogOpen} onOpenChange={setCreateLinkDialogOpen}>
+        <Dialog open={isCreateLinkDialogOpen} onOpenChange={(open) => {
+          setCreateLinkDialogOpen(open);
+          if (!open) document.body.style.pointerEvents = 'auto';
+        }}>
           <DialogTrigger asChild>
             <Button 
               className="h-16 w-16 rounded-full shadow-2xl transition-all hover:scale-110 active:scale-95 bg-orange-500 hover:bg-orange-600 text-white border-none"
@@ -543,11 +555,17 @@ export default function PromptPage({ user }: PromptPageProps) {
             <DialogHeader>
               <DialogTitle>Nuevo Enlace Externo</DialogTitle>
             </DialogHeader>
-            <LinkForm projects={projects} onSave={handleSaveLink} onClose={() => setCreateLinkDialogOpen(false)} />
+            <LinkForm projects={projects} onSave={handleSaveLink} onClose={() => {
+              setCreateLinkDialogOpen(false);
+              document.body.style.pointerEvents = 'auto';
+            }} />
           </DialogContent>
         </Dialog>
 
-        <Dialog open={isCreateDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <Dialog open={isCreateDialogOpen} onOpenChange={(open) => {
+          setCreateDialogOpen(open);
+          if (!open) document.body.style.pointerEvents = 'auto';
+        }}>
           <DialogTrigger asChild>
             <Button 
               className="h-16 w-16 rounded-full shadow-2xl transition-all hover:scale-110 active:scale-95 bg-primary hover:bg-primary/90"
@@ -562,12 +580,18 @@ export default function PromptPage({ user }: PromptPageProps) {
             <DialogHeader>
               <DialogTitle>Crear Nuevo Prompt</DialogTitle>
             </DialogHeader>
-            <PromptForm onSave={handleSave} onClose={() => setCreateDialogOpen(false)} projects={projects} />
+            <PromptForm onSave={handleSave} onClose={() => {
+              setCreateDialogOpen(false);
+              document.body.style.pointerEvents = 'auto';
+            }} projects={projects} />
           </DialogContent>
         </Dialog>
       </div>
 
-      <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
+      <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
+        setEditDialogOpen(open);
+        if (!open) document.body.style.pointerEvents = 'auto';
+      }}>
         <DialogContent className="sm:max-w-[625px] shadow-3xl">
           <DialogHeader>
             <DialogTitle>Editar Prompt</DialogTitle>
@@ -580,6 +604,7 @@ export default function PromptPage({ user }: PromptPageProps) {
               onClose={() => {
                 setEditDialogOpen(false);
                 setSelectedPrompt(null);
+                document.body.style.pointerEvents = 'auto';
               }}
             />
           )}

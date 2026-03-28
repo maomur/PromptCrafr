@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -9,13 +8,6 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 
 interface LinkFormProps {
   projects: Project[];
@@ -32,7 +24,7 @@ interface LinkFormProps {
 export default function LinkForm({ projects, onSave, onClose }: LinkFormProps) {
   const { toast } = useToast();
   const [url, setUrl] = useState('');
-  const [projectId, setProjectId] = useState<string>('');
+  const [projectId, setProjectId] = useState<string>(projects[0]?.id || '');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<PromptCategory | 'none'>('none');
@@ -62,7 +54,6 @@ export default function LinkForm({ projects, onSave, onClose }: LinkFormProps) {
       title: 'Enlace guardado',
       description: 'El enlace se ha añadido a tu biblioteca.',
     });
-    onClose();
   };
 
   return (
@@ -80,19 +71,19 @@ export default function LinkForm({ projects, onSave, onClose }: LinkFormProps) {
       </div>
 
       <div className="space-y-2">
-        <Label>Asignar a Proyecto (Obligatorio)</Label>
-        <Select value={projectId} onValueChange={setProjectId} required>
-          <SelectTrigger>
-            <SelectValue placeholder="Selecciona un proyecto" />
-          </SelectTrigger>
-          <SelectContent>
-            {projects.map((p) => (
-              <SelectItem key={p.id} value={p.id}>
-                {p.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Label htmlFor="link-project-select">Asignar a Proyecto (Obligatorio)</Label>
+        <select 
+          id="link-project-select"
+          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          value={projectId} 
+          onChange={e => setProjectId(e.target.value)}
+          required
+        >
+          <option value="" disabled>Selecciona un proyecto</option>
+          {projects.map((p) => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </select>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -106,20 +97,18 @@ export default function LinkForm({ projects, onSave, onClose }: LinkFormProps) {
           />
         </div>
         <div className="space-y-2">
-          <Label>Categoría (Opcional)</Label>
-          <Select value={category} onValueChange={(value: any) => setCategory(value)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Categoría" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">Sin categoría</SelectItem>
-              {promptCategories.map((cat) => (
-                <SelectItem key={cat} value={cat}>
-                  {cat}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Label htmlFor="link-category-select">Categoría (Opcional)</Label>
+          <select 
+            id="link-category-select"
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            value={category} 
+            onChange={(e) => setCategory(e.target.value as any)}
+          >
+            <option value="none">Sin categoría</option>
+            {promptCategories.map((cat) => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
         </div>
       </div>
 

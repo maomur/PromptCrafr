@@ -68,7 +68,11 @@
   }
 }
 
-/* Soporte para Drag and Drop en móviles */
+/* Regla de seguridad para evitar bloqueos de puntero */
+body {
+  pointer-events: auto !important;
+}
+
 [draggable="true"] {
   -webkit-user-select: none;
   user-select: none;

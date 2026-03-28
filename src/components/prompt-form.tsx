@@ -3,18 +3,10 @@
 import { useState } from 'react';
 import { type Prompt, promptCategories, type PromptCategory, type Project } from '@/lib/definitions';
 import { useToast } from '@/hooks/use-toast';
-
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import SubmitButton from './submit-button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 
 interface PromptFormProps {
   prompt?: Prompt;
@@ -56,31 +48,13 @@ export default function PromptForm({ prompt, projects = [], onSave, onClose }: P
 
     if (validate()) {
       setIsSubmitting(true);
-      try {
-        onSave({ 
-          title: title.trim(), 
-          description: description.trim(), 
-          content: content.trim(), 
-          category: category,
-          projectId: projectId === 'none' ? null : projectId
-        }, prompt?.id);
-        
-        toast({
-          variant: 'default',
-          className: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300',
-          title: 'Éxito',
-          description: `Prompt ${isEditMode ? 'actualizado' : 'creado'} correctamente.`,
-        });
-        onClose();
-      } catch (error) {
-        toast({
-          variant: 'destructive',
-          title: 'Error inesperado',
-          description: 'No se pudo procesar la solicitud. Por favor, inténtalo de nuevo.',
-        });
-      } finally {
-        setIsSubmitting(false);
-      }
+      onSave({ 
+        title: title.trim(), 
+        description: description.trim(), 
+        content: content.trim(), 
+        category: category,
+        projectId: projectId === 'none' ? null : projectId
+      }, prompt?.id);
     } else {
       toast({
         variant: 'destructive',
@@ -106,20 +80,18 @@ export default function PromptForm({ prompt, projects = [], onSave, onClose }: P
         </div>
 
         <div className="space-y-2">
-          <Label>Proyecto</Label>
-          <Select value={projectId} onValueChange={setProjectId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Sin proyecto" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">Sin proyecto (General)</SelectItem>
-              {projects.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Label htmlFor="project-select">Proyecto</Label>
+          <select 
+            id="project-select"
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            value={projectId} 
+            onChange={e => setProjectId(e.target.value)}
+          >
+            <option value="none">Sin proyecto (General)</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
         </div>
       </div>
       
@@ -136,19 +108,17 @@ export default function PromptForm({ prompt, projects = [], onSave, onClose }: P
       </div>
       
       <div className="space-y-2">
-          <Label>Categoría</Label>
-          <Select value={category} onValueChange={(value: PromptCategory) => setCategory(value)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Categoría" />
-            </SelectTrigger>
-            <SelectContent>
-              {promptCategories.map((cat) => (
-                <SelectItem key={cat} value={cat}>
-                  {cat}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Label htmlFor="category-select">Categoría</Label>
+          <select 
+            id="category-select"
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            value={category} 
+            onChange={(e) => setCategory(e.target.value as PromptCategory)}
+          >
+            {promptCategories.map((cat) => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
       </div>
       
       <div className="space-y-2">
