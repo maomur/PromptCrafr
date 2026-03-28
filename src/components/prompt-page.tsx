@@ -34,7 +34,6 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { 
-  useUser, 
   useFirestore, 
   useAuth, 
   useCollection, 
@@ -45,13 +44,18 @@ import {
   setDocumentNonBlocking
 } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
+import type { User } from 'firebase/auth';
 
-export default function PromptPage() {
+interface PromptPageProps {
+  user: User;
+}
+
+export default function PromptPage({ user }: PromptPageProps) {
   const { toast } = useToast();
-  const { user, isUserLoading } = useUser();
   const { firestore } = useFirestore();
   const auth = useAuth();
 
+  // Usamos el UID del usuario pasado por props para las consultas
   const projectsQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
     return collection(firestore, 'users', user.uid, 'projects');
@@ -85,7 +89,7 @@ export default function PromptPage() {
     projectId: string | null;
   }, id?: string) => {
     if (!user?.uid || !firestore) {
-      toast({ variant: "destructive", title: "Sesión no válida", description: "Por favor, vuelve a iniciar sesión." });
+      toast({ variant: "destructive", title: "Error", description: "Sesión no válida." });
       return;
     }
     
@@ -129,10 +133,8 @@ export default function PromptPage() {
 
   const handleCreateProject = useCallback(() => {
     const name = newProjectName.trim();
-    if (!name) return;
-    
-    if (!user?.uid || !firestore) {
-      toast({ variant: "destructive", title: "Error", description: "No se pudo identificar al usuario." });
+    if (!name || !user?.uid || !firestore) {
+      if (!user?.uid) toast({ variant: "destructive", title: "Error", description: "Usuario no identificado." });
       return;
     }
     
@@ -196,15 +198,6 @@ export default function PromptPage() {
       return dateB.localeCompare(dateA);
     });
   }, [prompts, activeProjectId, categoryFilter]);
-
-  if (isUserLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="text-muted-foreground animate-pulse font-medium">Sincronizando biblioteca...</p>
-      </div>
-    );
-  }
 
   return (
     <div className="relative min-h-[80vh]">

@@ -1,4 +1,3 @@
-
 'use client';
 
 import PromptPage from '@/components/prompt-page';
@@ -24,9 +23,10 @@ export default function Home() {
     return <AuthScreen />;
   }
 
+  // Pasamos el usuario verificado como prop para garantizar consistencia
   return (
     <main className="container mx-auto px-4 py-8 md:py-12">
-      <PromptPage />
+      <PromptPage user={user} />
     </main>
   );
 }
