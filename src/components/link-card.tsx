@@ -41,7 +41,6 @@ interface LinkCardProps {
 export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToProject, onMoveUp, onMoveDown }: LinkCardProps) {
   const { toast } = useToast();
   const [isDragging, setIsDragging] = useState(false);
-  const [canDrag, setCanDrag] = useState(false);
 
   const project = useMemo(() => 
     projects.find(p => p.id === link.projectId),
@@ -49,6 +48,7 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
   );
 
   const handleDragStart = (e: React.DragEvent) => {
+    // VALIDACIÓN CRÍTICA: Solo permitir el arrastre si se inició desde el manejador
     const target = e.target as HTMLElement;
     const isHandle = target.closest('.drag-handle');
     
@@ -65,7 +65,6 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
 
   const handleDragEnd = () => {
     setIsDragging(false);
-    setCanDrag(false);
   };
 
   const handleCardClick = useCallback((event: React.MouseEvent) => {
@@ -96,16 +95,11 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
       className={cn(
         "group flex flex-col h-full rounded-xl border-border/20 bg-card shadow-md transition-all duration-300 hover:shadow-lg relative overflow-hidden select-none touch-pan-y",
         isDragging && "opacity-40 grayscale-[0.5] scale-95",
-        canDrag && "grabbing"
       )}
     >
       <div 
-        className="drag-handle absolute top-2 right-2 p-2 bg-background/80 backdrop-blur-sm rounded-md shadow-sm z-10 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+        className="drag-handle absolute top-2 right-2 p-2 bg-background/80 backdrop-blur-sm rounded-md shadow-sm z-50 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
         title="Arrastrar para organizar"
-        onMouseEnter={() => setCanDrag(true)}
-        onMouseLeave={() => !isDragging && setCanDrag(false)}
-        onTouchStart={() => setCanDrag(true)}
-        onTouchEnd={() => !isDragging && setCanDrag(false)}
       >
         <GripVertical className="h-4 w-4 text-muted-foreground" />
       </div>
