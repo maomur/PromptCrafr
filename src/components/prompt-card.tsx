@@ -28,10 +28,10 @@ interface PromptCardProps {
 }
 
 const categoryIcons = {
-  Video: <Video className="mr-1.5 h-3.5 w-3.5" />,
-  Imagen: <Image className="mr-1.5 h-3.5 w-3.5" />,
-  Textos: <FileText className="mr-1.5 h-3.5 w-3.5" />,
-  Otros: <Sparkles className="mr-1.5 h-3.5 w-3.5" />,
+  Video: <Video className="mr-1.5 h-4 w-4" />,
+  Imagen: <Image className="mr-1.5 h-4 w-4" />,
+  Textos: <FileText className="mr-1.5 h-4 w-4" />,
+  Otros: <Sparkles className="mr-1.5 h-4 w-4" />,
 };
 
 const categoryColors = {
@@ -112,17 +112,17 @@ export default function PromptCard({
     >
       {/* Manejador de arrastre con touch-action: none forzado en CSS */}
       <div 
-        className="drag-handle absolute top-2 right-2 p-2 bg-background/80 backdrop-blur-sm rounded-md shadow-sm z-50 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+        className="drag-handle absolute top-0 right-0 p-3 bg-background/90 backdrop-blur-sm rounded-bl-xl border-l border-b border-border/40 shadow-sm z-50 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
         title="Arrastrar para organizar"
       >
-        <GripVertical className="h-4 w-4 text-muted-foreground" />
+        <GripVertical className="h-5 w-5 text-muted-foreground" />
       </div>
 
-      <CardHeader className="pt-8 md:pt-6 space-y-3">
-        <div className="flex flex-wrap items-center gap-2 pr-6">
+      <CardHeader className="pt-10 md:pt-8 space-y-4">
+        <div className="flex flex-wrap items-center gap-2 pr-10">
           {project && (
             <Badge variant="secondary" className="text-[11px] h-6 bg-muted text-muted-foreground font-normal border-none flex items-center gap-1.5 px-2.5">
-              <Folder className="h-3 w-3" />
+              <Folder className="h-3.5 w-3.5" />
               {project.name}
             </Badge>
           )}
@@ -135,8 +135,8 @@ export default function PromptCard({
           </Badge>
         </div>
         
-        <div className="space-y-1">
-          <CardTitle className="font-bold tracking-tight text-sm truncate">
+        <div className="space-y-1.5">
+          <CardTitle className="font-bold tracking-tight text-base truncate">
             {prompt.title}
           </CardTitle>
           <CardDescription className="line-clamp-2 text-[11px] leading-relaxed">
