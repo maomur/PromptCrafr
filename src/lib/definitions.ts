@@ -1,4 +1,3 @@
-
 export const promptCategories = ['Video', 'Imagen', 'Textos', 'Otros'] as const;
 
 export type PromptCategory = (typeof promptCategories)[number];
@@ -32,4 +31,5 @@ export type Link = {
   category?: PromptCategory;
   createdAt: string;
   ownerId: string;
+  order: number;
 };

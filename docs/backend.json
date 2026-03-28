@@ -42,7 +42,8 @@
         "description": { "type": "string" },
         "category": { "type": "string", "enum": ["Video", "Imagen", "Textos", "Otros"] },
         "createdAt": { "type": "string", "format": "date-time" },
-        "ownerId": { "type": "string" }
+        "ownerId": { "type": "string" },
+        "order": { "type": "integer", "description": "The position of the link in the list." }
       },
       "required": ["id", "url", "projectId", "createdAt", "ownerId"]
     }

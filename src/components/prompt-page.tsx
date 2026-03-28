@@ -5,7 +5,7 @@ import type { Prompt, PromptCategory, Project, Link } from '@/lib/definitions';
 import { promptCategories } from '@/lib/definitions';
 import Header from '@/components/header';
 import PromptList from '@/components/prompt-list';
-import LinkCard from '@/components/link-card';
+import LinkList from '@/components/link-list';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -161,6 +161,7 @@ export default function PromptPage({ user }: PromptPageProps) {
     const userId = user.uid;
     const colRef = collection(firestore, 'users', userId, 'links');
     const newDocRef = doc(colRef);
+    const maxOrder = links.length > 0 ? Math.max(...links.map(l => l.order || 0)) : 0;
     
     const newLink: Link = {
       id: newDocRef.id,
@@ -171,12 +172,13 @@ export default function PromptPage({ user }: PromptPageProps) {
       title: linkData.title || null,
       description: linkData.description || null,
       category: linkData.category || null,
+      order: maxOrder + 1
     };
 
     setDocumentNonBlocking(newDocRef, newLink);
     toast({ title: 'Enlace guardado' });
     setCreateLinkDialogOpen(false);
-  }, [user?.uid, firestore, toast]);
+  }, [user?.uid, firestore, links, toast]);
 
   const handleCreateProject = useCallback(() => {
     const name = newProjectName.trim();
@@ -215,14 +217,18 @@ export default function PromptPage({ user }: PromptPageProps) {
     toast({ title: "Enlace eliminado" });
   }, [user?.uid, firestore, toast]);
 
-  const handleMoveToProject = useCallback((promptId: string, projectId: string | null) => {
+  const handleMoveToProject = useCallback((itemId: string, itemType: string, projectId: string | null) => {
     if (!firestore || !user?.uid) return;
-    const promptRef = doc(firestore, 'users', user.uid, 'prompts', promptId);
-    updateDocumentNonBlocking(promptRef, { 
+    
+    const collectionName = itemType === 'prompt' ? 'prompts' : 'links';
+    const docRef = doc(firestore, 'users', user.uid, collectionName, itemId);
+    
+    updateDocumentNonBlocking(docRef, { 
       projectId: projectId || null, 
-      updatedAt: new Date().toISOString() 
+      ...(itemType === 'prompt' && { updatedAt: new Date().toISOString() })
     });
-    toast({ title: "Prompt organizado" });
+    
+    toast({ title: itemType === 'prompt' ? "Prompt organizado" : "Enlace organizado" });
   }, [user?.uid, firestore, toast]);
 
   const handleReorder = useCallback((draggedId: string, targetId: string) => {
@@ -241,6 +247,22 @@ export default function PromptPage({ user }: PromptPageProps) {
     updateDocumentNonBlocking(targetRef, { order: draggedPrompt.order || 0, updatedAt: new Date().toISOString() });
   }, [prompts, firestore, user?.uid]);
 
+  const handleLinkReorder = useCallback((draggedId: string, targetId: string) => {
+    if (!firestore || !user?.uid) return;
+    
+    const draggedLink = links.find(l => l.id === draggedId);
+    const targetLink = links.find(l => l.id === targetId);
+    
+    if (!draggedLink || !targetLink) return;
+
+    const draggedRef = doc(firestore, 'users', user.uid, 'links', draggedId);
+    const targetRef = doc(firestore, 'users', user.uid, 'links', targetId);
+    
+    const tempOrder = targetLink.order || 0;
+    updateDocumentNonBlocking(draggedRef, { order: tempOrder });
+    updateDocumentNonBlocking(targetRef, { order: draggedLink.order || 0 });
+  }, [links, firestore, user?.uid]);
+
   const handleDragOverProject = (e: React.DragEvent, id: string | null) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
@@ -250,9 +272,11 @@ export default function PromptPage({ user }: PromptPageProps) {
   const handleDropOnProject = (projectId: string | null, e: React.DragEvent) => {
     e.preventDefault();
     setDragOverProject(null);
-    const promptId = e.dataTransfer.getData('text/plain');
-    if (promptId) {
-      handleMoveToProject(promptId, projectId);
+    const itemId = e.dataTransfer.getData('itemId');
+    const itemType = e.dataTransfer.getData('itemType');
+    
+    if (itemId && itemType) {
+      handleMoveToProject(itemId, itemType, projectId);
     }
   };
 
@@ -279,7 +303,7 @@ export default function PromptPage({ user }: PromptPageProps) {
     if (categoryFilter !== 'Todos') {
       result = result.filter(l => l.category === categoryFilter);
     }
-    return result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return result.sort((a, b) => (b.order || 0) - (a.order || 0));
   }, [links, activeProjectId, categoryFilter]);
 
   return (
@@ -343,9 +367,13 @@ export default function PromptPage({ user }: PromptPageProps) {
             <nav className="space-y-1">
               <button
                 onClick={() => setActiveProjectId('all')}
+                onDragOver={e => handleDragOverProject(e, 'all')}
+                onDrop={e => handleDropOnProject(null, e)}
+                onDragLeave={() => setDragOverProject(null)}
                 className={cn(
                   "w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-all",
-                  activeProjectId === 'all' ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50"
+                  activeProjectId === 'all' ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50",
+                  dragOverProject === 'all' && "ring-2 ring-primary bg-accent/30"
                 )}
               >
                 <div className="flex items-center"><Folders className="mr-2 h-4 w-4" />Todos</div>
@@ -354,9 +382,13 @@ export default function PromptPage({ user }: PromptPageProps) {
 
               <button
                 onClick={() => setActiveProjectId('none')}
+                onDragOver={e => handleDragOverProject(e, 'none')}
+                onDrop={e => handleDropOnProject(null, e)}
+                onDragLeave={() => setDragOverProject(null)}
                 className={cn(
                   "w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-all",
-                  activeProjectId === 'none' ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50"
+                  activeProjectId === 'none' ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50",
+                  dragOverProject === 'none' && "ring-2 ring-primary bg-accent/30"
                 )}
               >
                 <div className="flex items-center"><Folder className="mr-2 h-4 w-4" />Sin Proyecto</div>
@@ -402,15 +434,20 @@ export default function PromptPage({ user }: PromptPageProps) {
                   <h3 className="text-sm font-bold uppercase tracking-widest text-orange-600 flex items-center gap-2 px-1">
                     <LinkIcon className="h-4 w-4" /> Enlaces ({filteredLinks.length})
                   </h3>
-                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    {filteredLinks.map((link) => (
-                      <LinkCard key={link.id} link={link} onDelete={handleDeleteLink} />
-                    ))}
-                  </div>
+                  <LinkList 
+                    links={filteredLinks} 
+                    onDeleteLink={handleDeleteLink} 
+                    onReorder={handleLinkReorder}
+                  />
                 </div>
               )}
 
               <div className="space-y-4">
+                {filteredPrompts.length > 0 && (
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-primary flex items-center gap-2 px-1">
+                    <Sparkles className="h-4 w-4" /> Prompts ({filteredPrompts.length})
+                  </h3>
+                )}
                 <PromptList
                   prompts={filteredPrompts}
                   projects={projects}
@@ -426,7 +463,7 @@ export default function PromptPage({ user }: PromptPageProps) {
                     setEditDialogOpen(true);
                   }}
                   onReorder={handleReorder}
-                  onMoveToProject={handleMoveToProject}
+                  onMoveToProject={(promptId, projectId) => handleMoveToProject(promptId, 'prompt', projectId)}
                 />
               </div>
             </div>
@@ -504,3 +541,24 @@ export default function PromptPage({ user }: PromptPageProps) {
     </div>
   );
 }
+
+const Sparkles = ({ className }: { className?: string }) => (
+  <svg 
+    xmlns="http://www.w3.org/2000/svg" 
+    width="24" 
+    height="24" 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round" 
+    className={className}
+  >
+    <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+    <path d="M5 3v4"/>
+    <path d="M19 17v4"/>
+    <path d="M3 5h4"/>
+    <path d="M17 19h4"/>
+  </svg>
+);

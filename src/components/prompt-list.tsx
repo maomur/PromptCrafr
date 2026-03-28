@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { Prompt, Project } from '@/lib/definitions';
@@ -43,8 +42,10 @@ export default function PromptList({
   const handleDrop = (e: React.DragEvent, targetId: string) => {
     e.preventDefault();
     setDragOverId(null);
-    const draggedId = e.dataTransfer.getData('text/plain');
-    if (draggedId && draggedId !== targetId) {
+    const draggedId = e.dataTransfer.getData('itemId');
+    const itemType = e.dataTransfer.getData('itemType');
+    
+    if (itemType === 'prompt' && draggedId && draggedId !== targetId) {
       onReorder(draggedId, targetId);
     }
   };

@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -56,7 +55,6 @@ export default function PromptCard({
   const [isDragging, setIsDragging] = useState(false);
 
   const handleCardClick = (event: React.MouseEvent) => {
-    // No copiar si se hace clic en botones de acción o el drag handle
     if ((event.target as HTMLElement).closest('button') || (event.target as HTMLElement).closest('.drag-handle')) {
       return;
     }
@@ -69,9 +67,9 @@ export default function PromptCard({
   };
 
   const handleDragStart = (e: React.DragEvent) => {
-    e.dataTransfer.setData('text/plain', prompt.id);
+    e.dataTransfer.setData('itemId', prompt.id);
+    e.dataTransfer.setData('itemType', 'prompt');
     e.dataTransfer.effectAllowed = 'move';
-    // Pequeño retardo para asegurar que la imagen fantasma se cree antes de cambiar la opacidad
     setTimeout(() => setIsDragging(true), 0);
   };
 

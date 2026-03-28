@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -13,9 +12,10 @@ import type { Link, Project } from '@/lib/definitions';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
-import { Link as LinkIcon, ExternalLink, Trash2 } from 'lucide-react';
+import { Link as LinkIcon, ExternalLink, Trash2, GripVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useState } from 'react';
 
 interface LinkCardProps {
   link: Link;
@@ -23,9 +23,37 @@ interface LinkCardProps {
 }
 
 export default function LinkCard({ link, onDelete }: LinkCardProps) {
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData('itemId', link.id);
+    e.dataTransfer.setData('itemType', 'link');
+    e.dataTransfer.effectAllowed = 'move';
+    setTimeout(() => setIsDragging(true), 0);
+  };
+
+  const handleDragEnd = () => {
+    setIsDragging(false);
+  };
+
   return (
-    <Card className="group flex flex-col h-full rounded-xl border-orange-200/50 bg-card shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden">
-      <div className="absolute top-0 right-0 p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+    <Card 
+      draggable
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      className={cn(
+        "group flex flex-col h-full rounded-xl border-orange-200/50 bg-card shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden select-none touch-pan-y",
+        isDragging && "opacity-40 grayscale-[0.5] scale-95"
+      )}
+    >
+      <div 
+        className="drag-handle absolute top-2 right-2 p-2 bg-background/80 backdrop-blur-sm rounded-md shadow-sm touch-none z-10 md:opacity-0 md:group-hover:opacity-100 transition-opacity cursor-move"
+        title="Arrastrar para reordenar o mover a proyecto"
+      >
+        <GripVertical className="h-4 w-4 text-muted-foreground" />
+      </div>
+
+      <div className="absolute top-2 right-10 p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
         <Button 
           variant="ghost" 
           size="icon" 
@@ -39,7 +67,7 @@ export default function LinkCard({ link, onDelete }: LinkCardProps) {
         </Button>
       </div>
 
-      <CardHeader className="pb-2">
+      <CardHeader className="pb-2 pt-8 md:pt-6">
         <div className="flex items-center gap-2 mb-1">
           <div className="p-1.5 bg-orange-100 rounded-lg">
             <LinkIcon className="h-4 w-4 text-orange-600" />
@@ -50,7 +78,7 @@ export default function LinkCard({ link, onDelete }: LinkCardProps) {
             </Badge>
           )}
         </div>
-        <CardTitle className="text-sm font-semibold truncate pr-6">
+        <CardTitle className="text-sm font-semibold truncate pr-12">
           {link.title || 'Enlace guardado'}
         </CardTitle>
         {link.description && (
