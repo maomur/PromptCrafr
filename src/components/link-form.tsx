@@ -56,11 +56,6 @@ export default function LinkForm({ projects, onSave, onClose }: LinkFormProps) {
       description: description.trim() || undefined,
       category: category === 'none' ? undefined : category,
     });
-    
-    toast({
-      title: 'Enlace guardado',
-      description: 'El enlace se ha añadido a tu biblioteca.',
-    });
   };
 
   return (

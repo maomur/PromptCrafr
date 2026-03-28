@@ -95,15 +95,14 @@ export default function PromptPage({ user }: PromptPageProps) {
   const [activeProjectId, setActiveProjectId] = useState<string | 'all' | 'none'>('all');
   const [dragOverProject, setDragOverProject] = useState<string | null>(null);
 
-  // Solución definitiva al congelamiento (Reset de interactividad)
+  // Reset de interactividad forzado para evitar congelamientos
   useEffect(() => {
     const isAnyOpen = isCreateDialogOpen || isCreateLinkDialogOpen || isEditDialogOpen || isNewProjectDialogOpen || isDeleteDialogOpen;
     if (!isAnyOpen) {
-      // Forzamos la restauración de la interactividad después de un pequeño delay
       const timer = setTimeout(() => {
         document.body.style.pointerEvents = '';
         document.body.style.overflow = '';
-      }, 100);
+      }, 50);
       return () => clearTimeout(timer);
     }
   }, [isCreateDialogOpen, isCreateLinkDialogOpen, isEditDialogOpen, isNewProjectDialogOpen, isDeleteDialogOpen]);
@@ -134,10 +133,10 @@ export default function PromptPage({ user }: PromptPageProps) {
         projectId: promptData.projectId || null,
         updatedAt: now
       });
+      toast({ title: 'Prompt actualizado' });
     } else {
       const colRef = collection(firestore, 'users', userId, 'prompts');
       const newDocRef = doc(colRef);
-      
       const maxOrder = prompts.length > 0 ? Math.max(...prompts.map(p => p.order || 0)) : 0;
       
       const newPrompt: Prompt = {
@@ -154,12 +153,13 @@ export default function PromptPage({ user }: PromptPageProps) {
       };
 
       setDocumentNonBlocking(newDocRef, newPrompt);
+      toast({ title: 'Prompt creado' });
     }
     
     setCreateDialogOpen(false);
     setEditDialogOpen(false);
     setSelectedPrompt(null);
-  }, [user?.uid, firestore, prompts]);
+  }, [user?.uid, firestore, prompts, toast]);
 
   const handleSaveLink = useCallback((linkData: {
     url: string;
@@ -186,8 +186,9 @@ export default function PromptPage({ user }: PromptPageProps) {
     };
 
     setDocumentNonBlocking(newDocRef, newLink);
+    toast({ title: 'Enlace guardado' });
     setCreateLinkDialogOpen(false);
-  }, [user?.uid, firestore]);
+  }, [user?.uid, firestore, toast]);
 
   const handleCreateProject = useCallback(() => {
     const name = newProjectName.trim();
@@ -205,28 +206,25 @@ export default function PromptPage({ user }: PromptPageProps) {
     };
 
     setDocumentNonBlocking(newDocRef, newProject);
-
     setNewProjectName('');
     setNewProjectDialogOpen(false);
-    toast({ title: "Proyecto creado", description: `"${name}" se ha añadido correctamente.` });
+    toast({ title: "Proyecto creado" });
   }, [newProjectName, user?.uid, firestore, toast]);
 
   const handleDeleteProject = useCallback((id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!firestore || !user?.uid) return;
-
     const projectRef = doc(firestore, 'users', user.uid, 'projects', id);
     deleteDocumentNonBlocking(projectRef);
-
     if (activeProjectId === id) setActiveProjectId('all');
-    toast({ title: "Proyecto eliminado", description: "El proyecto ha sido borrado." });
+    toast({ title: "Proyecto eliminado" });
   }, [user?.uid, firestore, activeProjectId, toast]);
 
   const handleDeleteLink = useCallback((id: string) => {
     if (!firestore || !user?.uid) return;
     const linkRef = doc(firestore, 'users', user.uid, 'links', id);
     deleteDocumentNonBlocking(linkRef);
-    toast({ title: "Enlace eliminado", description: "El enlace ha sido borrado de tu biblioteca." });
+    toast({ title: "Enlace eliminado" });
   }, [user?.uid, firestore, toast]);
 
   const handleMoveToProject = useCallback((promptId: string, projectId: string | null) => {
@@ -236,7 +234,7 @@ export default function PromptPage({ user }: PromptPageProps) {
       projectId: projectId || null, 
       updatedAt: new Date().toISOString() 
     });
-    toast({ title: "Prompt organizado", description: "El prompt ha sido movido correctamente." });
+    toast({ title: "Prompt organizado" });
   }, [user?.uid, firestore, toast]);
 
   const handleReorder = useCallback((draggedId: string, targetId: string) => {
@@ -250,15 +248,9 @@ export default function PromptPage({ user }: PromptPageProps) {
     const draggedRef = doc(firestore, 'users', user.uid, 'prompts', draggedId);
     const targetRef = doc(firestore, 'users', user.uid, 'prompts', targetId);
     
-    let draggedOrder = draggedPrompt.order ?? 0;
-    let targetOrder = targetPrompt.order ?? 0;
-
-    if (draggedOrder === targetOrder) {
-      targetOrder = draggedOrder + 1;
-    }
-
-    updateDocumentNonBlocking(draggedRef, { order: targetOrder, updatedAt: new Date().toISOString() });
-    updateDocumentNonBlocking(targetRef, { order: draggedOrder, updatedAt: new Date().toISOString() });
+    const tempOrder = targetPrompt.order || 0;
+    updateDocumentNonBlocking(draggedRef, { order: tempOrder, updatedAt: new Date().toISOString() });
+    updateDocumentNonBlocking(targetRef, { order: draggedPrompt.order || 0, updatedAt: new Date().toISOString() });
   }, [prompts, firestore, user?.uid]);
 
   const handleDragOverProject = (e: React.DragEvent, id: string | null) => {
@@ -275,19 +267,6 @@ export default function PromptPage({ user }: PromptPageProps) {
       handleMoveToProject(promptId, projectId);
     }
   };
-
-  const confirmDeletePrompt = useCallback(() => {
-    if (!promptToDelete || !firestore || !user?.uid) return;
-    
-    const targetId = promptToDelete.id;
-    setDeleteDialogOpen(false);
-    
-    setTimeout(() => {
-      deleteDocumentNonBlocking(doc(firestore, 'users', user.uid, 'prompts', targetId));
-      setPromptToDelete(null);
-      toast({ title: "Prompt eliminado", description: "El prompt ha sido borrado." });
-    }, 150);
-  }, [promptToDelete, firestore, user?.uid, toast]);
 
   const filteredPrompts = useMemo(() => {
     let result = [...prompts];
@@ -328,18 +307,12 @@ export default function PromptPage({ user }: PromptPageProps) {
             >
               <option value="Todos">Todas las categorías</option>
               {promptCategories.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
+                <option key={category} value={category}>{category}</option>
               ))}
             </select>
           </div>
           
           <div className="flex items-center gap-2 border-l pl-4 border-border/60">
-            <div className="hidden lg:flex flex-col items-end">
-              <span className="text-xs font-medium truncate max-w-[120px]">{user.email}</span>
-              <span className="text-[10px] text-muted-foreground uppercase tracking-widest">En línea</span>
-            </div>
             <Button variant="ghost" size="icon" onClick={() => logOut(auth)} title="Cerrar Sesión">
               <LogOut className="h-5 w-5 text-muted-foreground hover:text-destructive transition-colors" />
             </Button>
@@ -357,7 +330,7 @@ export default function PromptPage({ user }: PromptPageProps) {
               </h2>
               <Dialog open={isNewProjectDialogOpen} onOpenChange={setNewProjectDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-6 w-6 hover:bg-primary/10">
+                  <Button variant="ghost" size="icon" className="h-6 w-6">
                     <Plus className="h-4 w-4" />
                   </Button>
                 </DialogTrigger>
@@ -370,13 +343,8 @@ export default function PromptPage({ user }: PromptPageProps) {
                       placeholder="Nombre del proyecto..." 
                       value={newProjectName} 
                       onChange={e => setNewProjectName(e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && handleCreateProject()}
                     />
-                    <Button 
-                      className="w-full" 
-                      onClick={handleCreateProject} 
-                      disabled={!newProjectName.trim()}
-                    >
+                    <Button className="w-full" onClick={handleCreateProject} disabled={!newProjectName.trim()}>
                       Crear Proyecto
                     </Button>
                   </div>
@@ -387,42 +355,24 @@ export default function PromptPage({ user }: PromptPageProps) {
             <nav className="space-y-1">
               <button
                 onClick={() => setActiveProjectId('all')}
-                onDragOver={e => handleDragOverProject(e, 'all')}
-                onDrop={e => handleDropOnProject(null, e)}
-                onDragLeave={() => setDragOverProject(null)}
                 className={cn(
-                  "w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-lg transition-all",
-                  activeProjectId === 'all' ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50",
-                  dragOverProject === 'all' && "ring-2 ring-primary ring-offset-1 bg-accent/30"
+                  "w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-all",
+                  activeProjectId === 'all' ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50"
                 )}
               >
-                <div className="flex items-center">
-                  <Folders className="mr-2 h-4 w-4" />
-                  Todos
-                </div>
-                <span className={cn("text-xs", activeProjectId === 'all' ? "text-primary-foreground/80" : "opacity-60")}>
-                  {prompts.length + links.length}
-                </span>
+                <div className="flex items-center"><Folders className="mr-2 h-4 w-4" />Todos</div>
+                <span className="text-xs opacity-60">{prompts.length + links.length}</span>
               </button>
 
               <button
                 onClick={() => setActiveProjectId('none')}
-                onDragOver={e => handleDragOverProject(e, 'none')}
-                onDrop={e => handleDropOnProject(null, e)}
-                onDragLeave={() => setDragOverProject(null)}
                 className={cn(
-                  "w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-lg transition-all",
-                  activeProjectId === 'none' ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50",
-                  dragOverProject === 'none' && "ring-2 ring-primary ring-offset-1 bg-accent/30"
+                  "w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-all",
+                  activeProjectId === 'none' ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50"
                 )}
               >
-                <div className="flex items-center">
-                  <Folder className="mr-2 h-4 w-4" />
-                  Sin Proyecto
-                </div>
-                <span className={cn("text-xs", activeProjectId === 'none' ? "text-primary-foreground/80" : "opacity-60")}>
-                  {prompts.filter(p => !p.projectId || p.projectId === 'none').length + links.filter(l => !l.projectId || l.projectId === 'none').length}
-                </span>
+                <div className="flex items-center"><Folder className="mr-2 h-4 w-4" />Sin Proyecto</div>
+                <span className="text-xs opacity-60">{prompts.filter(p => !p.projectId || p.projectId === 'none').length + links.filter(l => !l.projectId || l.projectId === 'none').length}</span>
               </button>
 
               {projects.map((project) => (
@@ -433,9 +383,9 @@ export default function PromptPage({ user }: PromptPageProps) {
                   onDrop={e => handleDropOnProject(project.id, e)}
                   onDragLeave={() => setDragOverProject(null)}
                   className={cn(
-                    "group w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-lg transition-all",
+                    "group w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-all",
                     activeProjectId === project.id ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50",
-                    dragOverProject === project.id && "ring-2 ring-primary ring-offset-1 bg-accent/30"
+                    dragOverProject === project.id && "ring-2 ring-primary bg-accent/30"
                   )}
                 >
                   <div className="flex items-center truncate">
@@ -443,13 +393,7 @@ export default function PromptPage({ user }: PromptPageProps) {
                     <span className="truncate">{project.name}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className={cn("text-xs", activeProjectId === project.id ? "text-primary-foreground/80" : "opacity-60")}>
-                      {prompts.filter(p => p.projectId === project.id).length + links.filter(l => l.projectId === project.id).length}
-                    </span>
-                    <Trash2 
-                      className="h-3 w-3 text-destructive opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110" 
-                      onClick={(e) => handleDeleteProject(project.id, e)}
-                    />
+                    <Trash2 className="h-3 w-3 text-destructive opacity-0 group-hover:opacity-100" onClick={(e) => handleDeleteProject(project.id, e)} />
                   </div>
                 </button>
               ))}
@@ -468,8 +412,7 @@ export default function PromptPage({ user }: PromptPageProps) {
               {filteredLinks.length > 0 && (
                 <div className="space-y-4">
                   <h3 className="text-sm font-bold uppercase tracking-widest text-orange-600 flex items-center gap-2 px-1">
-                    <LinkIcon className="h-4 w-4" />
-                    Enlaces Guardados ({filteredLinks.length})
+                    <LinkIcon className="h-4 w-4" /> Enlaces ({filteredLinks.length})
                   </h3>
                   <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {filteredLinks.map((link) => (
@@ -480,19 +423,13 @@ export default function PromptPage({ user }: PromptPageProps) {
               )}
 
               <div className="space-y-4">
-                {filteredLinks.length > 0 && filteredPrompts.length > 0 && (
-                  <h3 className="text-sm font-bold uppercase tracking-widest text-primary flex items-center gap-2 px-1 pt-4">
-                    <Folders className="h-4 w-4" />
-                    Biblioteca de Prompts ({filteredPrompts.length})
-                  </h3>
-                )}
                 <PromptList
                   prompts={filteredPrompts}
                   projects={projects}
                   onDeletePrompt={(id) => {
-                    const prompt = prompts.find(p => p.id === id);
-                    if (prompt) {
-                      setPromptToDelete(prompt);
+                    const p = prompts.find(pr => pr.id === id);
+                    if (p) {
+                      setPromptToDelete(p);
                       setDeleteDialogOpen(true);
                     }
                   }}
@@ -512,18 +449,23 @@ export default function PromptPage({ user }: PromptPageProps) {
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Estás seguro de eliminar este prompt?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción no se puede deshacer. Se eliminará el prompt "{promptToDelete?.title}".
-            </AlertDialogDescription>
+            <AlertDialogTitle>¿Eliminar prompt?</AlertDialogTitle>
+            <AlertDialogDescription>Se eliminará definitivamente "{promptToDelete?.title}".</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={confirmDeletePrompt}
+              className="bg-destructive text-destructive-foreground"
+              onClick={() => {
+                if (promptToDelete) {
+                  deleteDocumentNonBlocking(doc(firestore, 'users', user.uid, 'prompts', promptToDelete.id));
+                  setDeleteDialogOpen(false);
+                  setPromptToDelete(null);
+                  toast({ title: "Prompt eliminado" });
+                }
+              }}
             >
-              Eliminar Definitivamente
+              Eliminar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -532,48 +474,32 @@ export default function PromptPage({ user }: PromptPageProps) {
       <div className="fixed bottom-8 right-8 flex items-center gap-3 z-50">
         <Dialog open={isCreateLinkDialogOpen} onOpenChange={setCreateLinkDialogOpen}>
           <DialogTrigger asChild>
-            <Button 
-              className="h-16 w-16 rounded-full shadow-2xl transition-all hover:scale-110 active:scale-95 bg-orange-500 hover:bg-orange-600 text-white border-none"
-              size="icon"
-              title="Añadir Enlace"
-            >
-              <LinkIcon className="h-8 w-8" />
-              <span className="sr-only">Nuevo Enlace</span>
+            <Button className="h-16 w-16 rounded-full shadow-2xl bg-orange-500 hover:bg-orange-600" size="icon">
+              <LinkIcon className="h-8 w-8 text-white" />
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[525px]">
-            <DialogHeader>
-              <DialogTitle>Nuevo Enlace Externo</DialogTitle>
-            </DialogHeader>
+            <DialogHeader><DialogTitle>Nuevo Enlace</DialogTitle></DialogHeader>
             <LinkForm projects={projects} onSave={handleSaveLink} onClose={() => setCreateLinkDialogOpen(false)} />
           </DialogContent>
         </Dialog>
 
         <Dialog open={isCreateDialogOpen} onOpenChange={setCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button 
-              className="h-16 w-16 rounded-full shadow-2xl transition-all hover:scale-110 active:scale-95 bg-primary hover:bg-primary/90"
-              size="icon"
-              title="Nuevo Prompt"
-            >
+            <Button className="h-16 w-16 rounded-full shadow-2xl bg-primary hover:bg-primary/90" size="icon">
               <Plus className="h-8 w-8 text-primary-foreground" />
-              <span className="sr-only">Nuevo Prompt</span>
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[625px]">
-            <DialogHeader>
-              <DialogTitle>Crear Nuevo Prompt</DialogTitle>
-            </DialogHeader>
+            <DialogHeader><DialogTitle>Nuevo Prompt</DialogTitle></DialogHeader>
             <PromptForm onSave={handleSave} onClose={() => setCreateDialogOpen(false)} projects={projects} />
           </DialogContent>
         </Dialog>
       </div>
 
       <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-[625px] shadow-3xl">
-          <DialogHeader>
-            <DialogTitle>Editar Prompt</DialogTitle>
-          </DialogHeader>
+        <DialogContent className="sm:max-w-[625px]">
+          <DialogHeader><DialogTitle>Editar Prompt</DialogTitle></DialogHeader>
           {selectedPrompt && (
             <PromptForm
               prompt={selectedPrompt}

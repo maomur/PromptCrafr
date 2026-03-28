@@ -68,11 +68,6 @@
   }
 }
 
-/* Forzar interactividad si el sistema de Radix falla al limpiar */
-body[style*="pointer-events: none"] {
-  pointer-events: auto !important;
-}
-
 [draggable="true"] {
   -webkit-user-select: none;
   user-select: none;
