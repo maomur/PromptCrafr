@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import type { Prompt, PromptCategory, Project, Link } from '@/lib/definitions';
 import { promptCategories } from '@/lib/definitions';
 import Header from '@/components/header';
@@ -98,6 +98,15 @@ export default function PromptPage({ user }: PromptPageProps) {
   const projects = useMemo(() => rawProjects || [], [rawProjects]);
   const prompts = useMemo(() => rawPrompts || [], [rawPrompts]);
   const links = useMemo(() => rawLinks || [], [rawLinks]);
+
+  // Limpiador maestro de interactividad
+  useEffect(() => {
+    const isAnyModalOpen = isCreateDialogOpen || isCreateLinkDialogOpen || isEditDialogOpen || isNewProjectDialogOpen || isDeleteDialogOpen;
+    if (!isAnyModalOpen) {
+      document.body.style.pointerEvents = 'auto';
+      document.body.style.overflow = 'auto';
+    }
+  }, [isCreateDialogOpen, isCreateLinkDialogOpen, isEditDialogOpen, isNewProjectDialogOpen, isDeleteDialogOpen]);
 
   const handleSave = useCallback((promptData: {
     title: string;
