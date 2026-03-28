@@ -65,12 +65,9 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* Regla de seguridad crítica para evitar bloqueos de UI tras cerrar diálogos */
+    pointer-events: auto !important;
   }
-}
-
-/* Regla de seguridad para evitar bloqueos de puntero */
-body {
-  pointer-events: auto !important;
 }
 
 [draggable="true"] {

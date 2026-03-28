@@ -6,6 +6,13 @@ import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 
@@ -72,18 +79,16 @@ export default function LinkForm({ projects, onSave, onClose }: LinkFormProps) {
 
       <div className="space-y-2">
         <Label htmlFor="link-project-select">Asignar a Proyecto (Obligatorio)</Label>
-        <select 
-          id="link-project-select"
-          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          value={projectId} 
-          onChange={e => setProjectId(e.target.value)}
-          required
-        >
-          <option value="" disabled>Selecciona un proyecto</option>
-          {projects.map((p) => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-        </select>
+        <Select value={projectId} onValueChange={setProjectId} required>
+          <SelectTrigger id="link-project-select">
+            <SelectValue placeholder="Selecciona un proyecto" />
+          </SelectTrigger>
+          <SelectContent>
+            {projects.map((p) => (
+              <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -98,17 +103,17 @@ export default function LinkForm({ projects, onSave, onClose }: LinkFormProps) {
         </div>
         <div className="space-y-2">
           <Label htmlFor="link-category-select">Categoría (Opcional)</Label>
-          <select 
-            id="link-category-select"
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            value={category} 
-            onChange={(e) => setCategory(e.target.value as any)}
-          >
-            <option value="none">Sin categoría</option>
-            {promptCategories.map((cat) => (
-              <option key={cat} value={cat}>{cat}</option>
-            ))}
-          </select>
+          <Select value={category} onValueChange={(value) => setCategory(value as any)}>
+            <SelectTrigger id="link-category-select">
+              <SelectValue placeholder="Selecciona una categoría" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Sin categoría</SelectItem>
+              {promptCategories.map((cat) => (
+                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
