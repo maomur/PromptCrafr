@@ -52,19 +52,19 @@ interface PromptPageProps {
 
 export default function PromptPage({ user }: PromptPageProps) {
   const { toast } = useToast();
-  const { firestore } = useFirestore();
+  const firestore = useFirestore(); // Corregido: useFirestore() devuelve la instancia directamente
   const auth = useAuth();
 
-  // Consultas memoizadas para Firebase. Siempre basadas en el UID del usuario prop.
+  // Consultas memoizadas para Firebase
   const projectsQuery = useMemoFirebase(() => {
-    if (!firestore || !user.uid) return null;
+    if (!firestore || !user?.uid) return null;
     return collection(firestore, 'users', user.uid, 'projects');
-  }, [firestore, user.uid]);
+  }, [firestore, user?.uid]);
 
   const promptsQuery = useMemoFirebase(() => {
-    if (!firestore || !user.uid) return null;
+    if (!firestore || !user?.uid) return null;
     return collection(firestore, 'users', user.uid, 'prompts');
-  }, [firestore, user.uid]);
+  }, [firestore, user?.uid]);
 
   const { data: rawProjects, isLoading: projectsLoading } = useCollection<Project>(projectsQuery);
   const { data: rawPrompts, isLoading: promptsLoading } = useCollection<Prompt>(promptsQuery);
@@ -88,7 +88,7 @@ export default function PromptPage({ user }: PromptPageProps) {
     category: PromptCategory;
     projectId: string | null;
   }, id?: string) => {
-    if (!firestore) return;
+    if (!firestore || !user?.uid) return;
     
     const now = new Date().toISOString();
     const userId = user.uid;
@@ -125,11 +125,11 @@ export default function PromptPage({ user }: PromptPageProps) {
     setCreateDialogOpen(false);
     setEditDialogOpen(false);
     setSelectedPrompt(null);
-  }, [user.uid, firestore]);
+  }, [user?.uid, firestore]);
 
   const handleCreateProject = useCallback(() => {
     const name = newProjectName.trim();
-    if (!name || !firestore) return;
+    if (!name || !firestore || !user?.uid) return;
     
     const userId = user.uid;
     const colRef = collection(firestore, 'users', userId, 'projects');
@@ -147,27 +147,27 @@ export default function PromptPage({ user }: PromptPageProps) {
     setNewProjectName('');
     setNewProjectDialogOpen(false);
     toast({ title: "Proyecto creado", description: `"${name}" se ha añadido correctamente.` });
-  }, [newProjectName, user.uid, firestore, toast]);
+  }, [newProjectName, user?.uid, firestore, toast]);
 
   const handleDeleteProject = useCallback((id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!firestore) return;
+    if (!firestore || !user?.uid) return;
 
     const projectRef = doc(firestore, 'users', user.uid, 'projects', id);
     deleteDocumentNonBlocking(projectRef);
 
     if (activeProjectId === id) setActiveProjectId('all');
     toast({ title: "Proyecto eliminado", description: "El proyecto ha sido borrado." });
-  }, [user.uid, firestore, activeProjectId, toast]);
+  }, [user?.uid, firestore, activeProjectId, toast]);
 
   const handleMoveToProject = useCallback((promptId: string, projectId: string | null) => {
-    if (!firestore) return;
+    if (!firestore || !user?.uid) return;
     const promptRef = doc(firestore, 'users', user.uid, 'prompts', promptId);
     updateDocumentNonBlocking(promptRef, { 
       projectId: projectId || null, 
       updatedAt: new Date().toISOString() 
     });
-  }, [user.uid, firestore]);
+  }, [user?.uid, firestore]);
 
   const handleDropOnProject = (projectId: string | null, e: React.DragEvent) => {
     e.preventDefault();
@@ -345,7 +345,7 @@ export default function PromptPage({ user }: PromptPageProps) {
               prompts={filteredPrompts}
               projects={projects}
               onDeletePrompt={(id) => {
-                if (!firestore) return;
+                if (!firestore || !user?.uid) return;
                 deleteDocumentNonBlocking(doc(firestore, 'users', user.uid, 'prompts', id));
               }}
               onEditPrompt={(prompt) => {
