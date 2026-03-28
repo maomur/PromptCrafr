@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -16,7 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Video, Image, FileText, Sparkles, GripVertical, Folder } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 
 interface PromptCardProps {
   prompt: Prompt;
@@ -52,8 +51,9 @@ export default function PromptCard({
   onMoveDown
 }: PromptCardProps) {
   const { toast } = useToast();
+  const cardRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [canDrag, setCanDrag] = useState(false);
+  const [isDragInitiated, setIsDragInitiated] = useState(false);
 
   const project = useMemo(() => 
     projects.find(p => p.id === prompt.projectId),
@@ -88,34 +88,42 @@ export default function PromptCard({
 
   const handleDragEnd = () => {
     setIsDragging(false);
-    setCanDrag(false);
+    setIsDragInitiated(false);
+    if (cardRef.current) {
+      cardRef.current.setAttribute('draggable', 'false');
+    }
+  };
+
+  const initiateDrag = () => {
+    setIsDragInitiated(true);
+    if (cardRef.current) {
+      cardRef.current.setAttribute('draggable', 'true');
+    }
   };
 
   return (
     <Card 
-      draggable={canDrag}
+      ref={cardRef}
+      draggable="false"
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onClick={handleCardClick}
       className={cn(
         "group flex h-full flex-col rounded-xl border-border/20 bg-card text-card-foreground shadow-md transition-all duration-300 hover:shadow-lg relative overflow-hidden select-none touch-pan-y",
         isDragging && "opacity-40 grayscale-[0.5] scale-95",
-        canDrag && "grabbing"
+        isDragInitiated && "grabbing"
       )}
     >
       <div 
         className="drag-handle absolute top-2 right-2 p-2 bg-background/80 backdrop-blur-sm rounded-md shadow-sm z-10 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
         title="Arrastrar para organizar"
-        onMouseDown={() => setCanDrag(true)}
-        onMouseUp={() => setCanDrag(false)}
-        onTouchStart={() => setCanDrag(true)}
-        onTouchEnd={() => setCanDrag(false)}
+        onMouseDown={initiateDrag}
+        onTouchStart={initiateDrag}
       >
         <GripVertical className="h-4 w-4 text-muted-foreground" />
       </div>
 
       <CardHeader className="pt-8 md:pt-6 space-y-3">
-        {/* Superior: Etiquetas aumentadas */}
         <div className="flex flex-wrap items-center gap-2 pr-6">
           {project && (
             <Badge variant="secondary" className="text-[11px] h-6 bg-muted text-muted-foreground font-normal border-none flex items-center gap-1.5 px-2.5">
@@ -132,7 +140,6 @@ export default function PromptCard({
           </Badge>
         </div>
         
-        {/* Cuerpo: Título y Descripción */}
         <div className="space-y-1">
           <CardTitle className="font-bold tracking-tight text-sm truncate">
             {prompt.title}

@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -15,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Link as LinkIcon, ExternalLink, Trash2, GripVertical, Eye, MoreVertical, FolderInput, ChevronUp, ChevronDown, Folder } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import {
   DropdownMenu,
@@ -41,8 +40,9 @@ interface LinkCardProps {
 
 export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToProject, onMoveUp, onMoveDown }: LinkCardProps) {
   const { toast } = useToast();
+  const cardRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [canDrag, setCanDrag] = useState(false);
+  const [isDragInitiated, setIsDragInitiated] = useState(false);
 
   const project = useMemo(() => 
     projects.find(p => p.id === link.projectId),
@@ -58,7 +58,17 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
 
   const handleDragEnd = () => {
     setIsDragging(false);
-    setCanDrag(false);
+    setIsDragInitiated(false);
+    if (cardRef.current) {
+      cardRef.current.setAttribute('draggable', 'false');
+    }
+  };
+
+  const initiateDrag = () => {
+    setIsDragInitiated(true);
+    if (cardRef.current) {
+      cardRef.current.setAttribute('draggable', 'true');
+    }
   };
 
   const handleCardClick = useCallback((event: React.MouseEvent) => {
@@ -82,29 +92,27 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
 
   return (
     <Card 
-      draggable={canDrag}
+      ref={cardRef}
+      draggable="false"
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onClick={handleCardClick}
       className={cn(
         "group flex flex-col h-full rounded-xl border-border/20 bg-card shadow-md transition-all duration-300 hover:shadow-lg relative overflow-hidden select-none touch-pan-y",
         isDragging && "opacity-40 grayscale-[0.5] scale-95",
-        canDrag && "grabbing"
+        isDragInitiated && "grabbing"
       )}
     >
       <div 
         className="drag-handle absolute top-2 right-2 p-2 bg-background/80 backdrop-blur-sm rounded-md shadow-sm z-10 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
         title="Arrastrar para organizar"
-        onMouseDown={() => setCanDrag(true)}
-        onMouseUp={() => setCanDrag(false)}
-        onTouchStart={() => setCanDrag(true)}
-        onTouchEnd={() => setCanDrag(false)}
+        onMouseDown={initiateDrag}
+        onTouchStart={initiateDrag}
       >
         <GripVertical className="h-4 w-4 text-muted-foreground" />
       </div>
 
       <CardHeader className="pt-8 md:pt-6 space-y-3">
-        {/* Superior: Etiquetas aumentadas */}
         <div className="flex flex-wrap items-center gap-2 pr-6">
           {project && (
             <Badge variant="secondary" className="text-[11px] h-6 bg-muted text-muted-foreground font-normal border-none flex items-center gap-1.5 px-2.5">
@@ -124,7 +132,6 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
           </div>
         </div>
 
-        {/* Cuerpo: Título y Descripción */}
         <div className="space-y-1">
           <CardTitle className="text-sm font-bold truncate">
             {link.title || 'Enlace sin título'}
