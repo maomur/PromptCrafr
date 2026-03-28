@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import type { Prompt, PromptCategory, Project } from '@/lib/definitions';
 import { promptCategories } from '@/lib/definitions';
 import Header from '@/components/header';
@@ -19,7 +20,9 @@ import {
   Folders, 
   Trash2, 
   Filter,
-  Loader2
+  Loader2,
+  LogOut,
+  User
 } from 'lucide-react';
 import PromptForm from '@/components/prompt-form';
 import {
@@ -38,7 +41,7 @@ import {
   useAuth, 
   useCollection, 
   useMemoFirebase,
-  initiateAnonymousSignIn,
+  logOut,
   updateDocumentNonBlocking,
   deleteDocumentNonBlocking,
   setDocumentNonBlocking
@@ -47,16 +50,9 @@ import { collection, doc } from 'firebase/firestore';
 
 export default function PromptPage() {
   const { toast } = useToast();
-  const { user, isUserLoading, userError } = useUser();
+  const { user, isUserLoading } = useUser();
   const { firestore } = useFirestore();
   const auth = useAuth();
-
-  // Iniciar sesión anónima si no hay usuario y no estamos cargando
-  useEffect(() => {
-    if (!isUserLoading && !user && !userError) {
-      initiateAnonymousSignIn(auth);
-    }
-  }, [user, isUserLoading, userError, auth]);
 
   // Consultas de Firestore memoizadas
   const projectsQuery = useMemoFirebase(() => {
@@ -72,7 +68,6 @@ export default function PromptPage() {
   const { data: rawProjects, isLoading: projectsLoading } = useCollection<Project>(projectsQuery);
   const { data: rawPrompts, isLoading: promptsLoading } = useCollection<Prompt>(promptsQuery);
 
-  // Estados locales para diálogos
   const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setEditDialogOpen] = useState(false);
   const [isNewProjectDialogOpen, setNewProjectDialogOpen] = useState(false);
@@ -85,12 +80,6 @@ export default function PromptPage() {
   const projects = useMemo(() => rawProjects || [], [rawProjects]);
   const prompts = useMemo(() => rawPrompts || [], [rawPrompts]);
 
-  const closeAllDialogs = useCallback(() => {
-    setCreateDialogOpen(false);
-    setEditDialogOpen(false);
-    setSelectedPrompt(null);
-  }, []);
-
   const handleSave = useCallback((promptData: {
     title: string;
     description: string;
@@ -98,10 +87,7 @@ export default function PromptPage() {
     category: PromptCategory;
     projectId: string | null;
   }, id?: string) => {
-    if (!user?.uid || !firestore) {
-      toast({ variant: 'destructive', title: 'Error', description: 'No se pudo conectar con el servidor.' });
-      return;
-    }
+    if (!user?.uid || !firestore) return;
     
     const now = new Date().toISOString();
     
@@ -131,8 +117,9 @@ export default function PromptPage() {
       setDocumentNonBlocking(newDocRef, newPrompt, { merge: true });
     }
     
-    closeAllDialogs();
-  }, [user?.uid, firestore, toast, closeAllDialogs]);
+    setCreateDialogOpen(false);
+    setEditDialogOpen(false);
+  }, [user?.uid, firestore]);
 
   const handleCreateProject = useCallback(() => {
     if (!newProjectName.trim() || !user?.uid || !firestore) return;
@@ -151,10 +138,7 @@ export default function PromptPage() {
 
     setNewProjectName('');
     setNewProjectDialogOpen(false);
-    toast({
-      title: "Proyecto creado",
-      description: `Se ha creado el proyecto "${newProjectName}"`,
-    });
+    toast({ title: "Proyecto creado", description: `Se ha creado el proyecto "${newProjectName}"` });
   }, [newProjectName, user?.uid, firestore, toast]);
 
   const handleDeleteProject = useCallback((id: string, e: React.MouseEvent) => {
@@ -164,39 +148,21 @@ export default function PromptPage() {
     const projectRef = doc(firestore, 'users', user.uid, 'projects', id);
     deleteDocumentNonBlocking(projectRef);
 
-    // Desasociar prompts de este proyecto
-    prompts.forEach(p => {
-      if (p.projectId === id) {
-        const promptRef = doc(firestore, 'users', user.uid, 'prompts', p.id);
-        updateDocumentNonBlocking(promptRef, { projectId: null });
-      }
-    });
-
     if (activeProjectId === id) setActiveProjectId('all');
-    toast({
-      title: "Proyecto eliminado",
-      description: "Los prompts han sido movidos a la sección general.",
-    });
-  }, [user?.uid, firestore, prompts, activeProjectId, toast]);
+    toast({ title: "Proyecto eliminado", description: "Los prompts han sido movidos a la sección general." });
+  }, [user?.uid, firestore, activeProjectId, toast]);
 
   const handleMoveToProject = useCallback((promptId: string, projectId: string | null) => {
     if (!user?.uid || !firestore) return;
     const promptRef = doc(firestore, 'users', user.uid, 'prompts', promptId);
     updateDocumentNonBlocking(promptRef, { projectId: projectId || null });
-    
-    toast({
-      title: "Prompt movido",
-      description: projectId 
-        ? `Prompt movido a ${projects.find(p => p.id === projectId)?.name}`
-        : "Prompt movido a General",
-    });
-  }, [user?.uid, firestore, projects, toast]);
+  }, [user?.uid, firestore]);
 
-  const handleDropOnProject = useCallback((projectId: string | null, e: React.DragEvent) => {
+  const handleDropOnProject = (projectId: string | null, e: React.DragEvent) => {
     e.preventDefault();
     const promptId = e.dataTransfer.getData('promptId');
     if (promptId) handleMoveToProject(promptId, projectId);
-  }, [handleMoveToProject]);
+  };
 
   const filteredPrompts = useMemo(() => {
     let result = [...prompts];
@@ -211,15 +177,10 @@ export default function PromptPage() {
       result = result.filter(p => p.category === categoryFilter);
     }
 
-    return result.sort((a, b) => {
-      const dateA = a.updatedAt || a.createdAt || '';
-      const dateB = b.updatedAt || b.createdAt || '';
-      return dateB.localeCompare(dateA);
-    });
+    return result.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }, [prompts, activeProjectId, categoryFilter]);
 
-  // CARGA CRÍTICA: Esperar a que el usuario esté listo
-  const isActuallyLoading = isUserLoading || !user || (user && (projectsLoading || promptsLoading));
+  const isActuallyLoading = isUserLoading || projectsLoading || promptsLoading;
 
   if (isActuallyLoading) {
     return (
@@ -233,23 +194,35 @@ export default function PromptPage() {
   return (
     <div className="relative min-h-[80vh]">
       <Header>
-        <Select
-          value={categoryFilter}
-          onValueChange={(value) => setCategoryFilter(value as PromptCategory | 'Todos')}
-        >
-          <SelectTrigger className="w-[180px]">
-            <Filter className="mr-2 h-4 w-4 opacity-70" />
-            <SelectValue placeholder="Categoría" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Todos">Todas las categorías</SelectItem>
-            {promptCategories.map((category) => (
-              <SelectItem key={category} value={category}>
-                {category}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-4">
+          <Select
+            value={categoryFilter}
+            onValueChange={(value) => setCategoryFilter(value as PromptCategory | 'Todos')}
+          >
+            <SelectTrigger className="w-[180px] hidden md:flex">
+              <Filter className="mr-2 h-4 w-4 opacity-70" />
+              <SelectValue placeholder="Categoría" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Todos">Todas las categorías</SelectItem>
+              {promptCategories.map((category) => (
+                <SelectItem key={category} value={category}>
+                  {category}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          
+          <div className="flex items-center gap-2 border-l pl-4 border-border/60">
+            <div className="hidden lg:flex flex-col items-end">
+              <span className="text-xs font-medium truncate max-w-[120px]">{user?.email}</span>
+              <span className="text-[10px] text-muted-foreground uppercase tracking-widest">Premium</span>
+            </div>
+            <Button variant="ghost" size="icon" onClick={() => logOut(auth)} title="Cerrar Sesión">
+              <LogOut className="h-5 w-5 text-muted-foreground hover:text-destructive transition-colors" />
+            </Button>
+          </div>
+        </div>
       </Header>
 
       <div className="flex flex-col md:flex-row gap-8">
@@ -289,15 +262,17 @@ export default function PromptPage() {
                 onDragOver={e => e.preventDefault()}
                 onDrop={e => handleDropOnProject(null, e)}
                 className={cn(
-                  "w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-colors",
-                  activeProjectId === 'all' ? "bg-accent text-accent-foreground" : "hover:bg-accent/50"
+                  "w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-lg transition-all",
+                  activeProjectId === 'all' ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50"
                 )}
               >
                 <div className="flex items-center">
                   <Folders className="mr-2 h-4 w-4" />
                   Todos
                 </div>
-                <span className="text-xs opacity-60">{prompts.length}</span>
+                <span className={cn("text-xs", activeProjectId === 'all' ? "text-primary-foreground/80" : "opacity-60")}>
+                  {prompts.length}
+                </span>
               </button>
 
               <button
@@ -305,15 +280,17 @@ export default function PromptPage() {
                 onDragOver={e => e.preventDefault()}
                 onDrop={e => handleDropOnProject(null, e)}
                 className={cn(
-                  "w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-colors",
-                  activeProjectId === 'none' ? "bg-accent text-accent-foreground" : "hover:bg-accent/50"
+                  "w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-lg transition-all",
+                  activeProjectId === 'none' ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50"
                 )}
               >
                 <div className="flex items-center">
                   <Folder className="mr-2 h-4 w-4" />
-                  Sin Proyecto
+                  General
                 </div>
-                <span className="text-xs opacity-60">{prompts.filter(p => !p.projectId).length}</span>
+                <span className={cn("text-xs", activeProjectId === 'none' ? "text-primary-foreground/80" : "opacity-60")}>
+                  {prompts.filter(p => !p.projectId).length}
+                </span>
               </button>
 
               {projects.map((project) => (
@@ -323,8 +300,8 @@ export default function PromptPage() {
                   onDragOver={e => e.preventDefault()}
                   onDrop={e => handleDropOnProject(project.id, e)}
                   className={cn(
-                    "group w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-colors",
-                    activeProjectId === project.id ? "bg-accent text-accent-foreground" : "hover:bg-accent/50"
+                    "group w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-lg transition-all",
+                    activeProjectId === project.id ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50"
                   )}
                 >
                   <div className="flex items-center truncate">
@@ -332,7 +309,7 @@ export default function PromptPage() {
                     <span className="truncate">{project.name}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs opacity-60">
+                    <span className={cn("text-xs", activeProjectId === project.id ? "text-primary-foreground/80" : "opacity-60")}>
                       {prompts.filter(p => p.projectId === project.id).length}
                     </span>
                     <Trash2 
@@ -346,7 +323,7 @@ export default function PromptPage() {
           </div>
         </aside>
 
-        <div className="flex-1 pb-20">
+        <main className="flex-1 pb-20">
           <PromptList
             prompts={filteredPrompts}
             projects={projects}
@@ -361,16 +338,16 @@ export default function PromptPage() {
             onReorder={() => {}}
             onMoveToProject={handleMoveToProject}
           />
-        </div>
+        </main>
       </div>
 
       <Dialog open={isCreateDialogOpen} onOpenChange={setCreateDialogOpen}>
         <DialogTrigger asChild>
           <Button 
-            className="fixed bottom-8 right-8 h-16 w-16 rounded-full shadow-2xl z-50 transition-transform hover:scale-110 active:scale-95"
+            className="fixed bottom-8 right-8 h-16 w-16 rounded-full shadow-2xl z-50 transition-all hover:scale-110 active:scale-95 bg-primary hover:bg-primary/90"
             size="icon"
           >
-            <Plus className="h-8 w-8" />
+            <Plus className="h-8 w-8 text-primary-foreground" />
             <span className="sr-only">Nuevo</span>
           </Button>
         </DialogTrigger>
@@ -378,7 +355,7 @@ export default function PromptPage() {
           <DialogHeader>
             <DialogTitle>Crear un Nuevo Prompt</DialogTitle>
           </DialogHeader>
-          <PromptForm onSave={handleSave} onClose={closeAllDialogs} projects={projects} />
+          <PromptForm onSave={handleSave} onClose={() => setCreateDialogOpen(false)} projects={projects} />
         </DialogContent>
       </Dialog>
 
@@ -395,7 +372,10 @@ export default function PromptPage() {
               prompt={selectedPrompt}
               projects={projects}
               onSave={handleSave}
-              onClose={closeAllDialogs}
+              onClose={() => {
+                setEditDialogOpen(false);
+                setSelectedPrompt(null);
+              }}
             />
           )}
         </DialogContent>
