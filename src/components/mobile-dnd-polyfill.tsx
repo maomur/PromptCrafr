@@ -13,22 +13,23 @@ export default function MobileDndPolyfill() {
         
         polyfill({
           dragImageTranslateOverride: scrollBehaviourDragImageTranslateOverride,
-          holdToDrag: 150, // 150ms: El estándar para diferenciar toque de arrastre
-          tryEnterPassive: false // Permite bloquear el scroll de forma activa
+          holdToDrag: 0, // Respuesta instantánea ya que bloqueamos el scroll manualmente
+          tryEnterPassive: false
         });
 
-        // BLOQUEO PREVENTIVO DE SCROLL EN MANEJADORES
+        // BLOQUEO CRÍTICO DE BAJO NIVEL: Interceptamos el toque antes que el navegador inicie el scroll
         const handleTouchStart = (e: TouchEvent) => {
           const target = e.target as HTMLElement;
+          // Si el toque ocurre en el mango de arrastre, bloqueamos el scroll nativo de inmediato
           if (target.closest('.drag-handle')) {
-            // Si el toque es en el mango, prevenimos el inicio de cualquier gesto del sistema
             if (e.cancelable) {
-              e.stopPropagation();
+              e.preventDefault(); // Detiene el scroll del sistema
             }
           }
         };
 
-        window.addEventListener('touchstart', handleTouchStart, { passive: true });
+        // El listener DEBE ser passive: false para poder llamar a preventDefault()
+        window.addEventListener('touchstart', handleTouchStart, { passive: false });
 
         return () => {
           window.removeEventListener('touchstart', handleTouchStart);

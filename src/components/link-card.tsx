@@ -49,7 +49,6 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
   );
 
   const handleDragStart = (e: React.DragEvent) => {
-    // Solo permitir arrastre si el contacto fue en el mango
     if (!canDragRef.current) {
       e.preventDefault();
       return;
@@ -101,13 +100,12 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
       onClick={handleCardClick}
       className="group flex flex-col h-full rounded-xl border-border/20 bg-card shadow-md transition-all duration-300 hover:shadow-lg relative overflow-hidden select-none"
     >
-      {/* Mango de arrastre - Con validación de puntero para móviles */}
+      {/* MANEJO DE ARRASTRE - Activamos la bandera en el instante del contacto físico */}
       <div 
         className="drag-handle absolute top-0 right-0 bg-background/90 backdrop-blur-sm rounded-bl-xl border-l border-b border-border/40 shadow-sm z-50"
-        title="Arrastrar para organizar"
         onPointerDown={() => { canDragRef.current = true; }}
         onPointerUp={() => { canDragRef.current = false; }}
-        onPointerLeave={() => { canDragRef.current = false; }}
+        onPointerCancel={() => { canDragRef.current = false; }}
       >
         <GripVertical className="h-5 w-5 text-muted-foreground" />
       </div>
