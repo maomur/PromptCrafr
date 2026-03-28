@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useCallback } from 'react';
@@ -86,14 +85,15 @@ export default function PromptPage() {
     projectId: string | null;
   }, id?: string) => {
     if (!user?.uid || !firestore) {
-      toast({ variant: "destructive", title: "Error de sesión", description: "Inicia sesión para guardar." });
+      toast({ variant: "destructive", title: "Sesión no válida", description: "Por favor, vuelve a iniciar sesión." });
       return;
     }
     
     const now = new Date().toISOString();
+    const userId = user.uid;
     
     if (id) {
-      const docRef = doc(firestore, 'users', user.uid, 'prompts', id);
+      const docRef = doc(firestore, 'users', userId, 'prompts', id);
       const updateData = {
         title: promptData.title,
         description: promptData.description,
@@ -104,12 +104,12 @@ export default function PromptPage() {
       };
       updateDocumentNonBlocking(docRef, updateData);
     } else {
-      const colRef = collection(firestore, 'users', user.uid, 'prompts');
+      const colRef = collection(firestore, 'users', userId, 'prompts');
       const newDocRef = doc(colRef);
       
       const newPrompt: Prompt = {
         id: newDocRef.id,
-        ownerId: user.uid,
+        ownerId: userId,
         createdAt: now,
         updatedAt: now,
         title: promptData.title,
@@ -129,15 +129,21 @@ export default function PromptPage() {
 
   const handleCreateProject = useCallback(() => {
     const name = newProjectName.trim();
-    if (!name || !user?.uid || !firestore) return;
+    if (!name) return;
     
-    const colRef = collection(firestore, 'users', user.uid, 'projects');
+    if (!user?.uid || !firestore) {
+      toast({ variant: "destructive", title: "Error", description: "No se pudo identificar al usuario." });
+      return;
+    }
+    
+    const userId = user.uid;
+    const colRef = collection(firestore, 'users', userId, 'projects');
     const newDocRef = doc(colRef);
     
     const newProject: Project = {
       id: newDocRef.id,
       name: name,
-      ownerId: user.uid,
+      ownerId: userId,
       createdAt: new Date().toISOString(),
     };
 
@@ -145,7 +151,7 @@ export default function PromptPage() {
 
     setNewProjectName('');
     setNewProjectDialogOpen(false);
-    toast({ title: "Proyecto creado", description: `"${name}" está listo.` });
+    toast({ title: "Proyecto creado", description: `"${name}" se ha añadido correctamente.` });
   }, [newProjectName, user?.uid, firestore, toast]);
 
   const handleDeleteProject = useCallback((id: string, e: React.MouseEvent) => {
@@ -156,13 +162,13 @@ export default function PromptPage() {
     deleteDocumentNonBlocking(projectRef);
 
     if (activeProjectId === id) setActiveProjectId('all');
-    toast({ title: "Proyecto eliminado", description: "Se ha borrado el proyecto." });
+    toast({ title: "Proyecto eliminado", description: "El proyecto ha sido borrado." });
   }, [user?.uid, firestore, activeProjectId, toast]);
 
   const handleMoveToProject = useCallback((promptId: string, projectId: string | null) => {
     if (!user?.uid || !firestore) return;
     const promptRef = doc(firestore, 'users', user.uid, 'prompts', promptId);
-    updateDocumentNonBlocking(promptRef, { projectId: projectId || null });
+    updateDocumentNonBlocking(promptRef, { projectId: projectId || null, updatedAt: new Date().toISOString() });
   }, [user?.uid, firestore]);
 
   const handleDropOnProject = (projectId: string | null, e: React.DragEvent) => {
@@ -175,7 +181,7 @@ export default function PromptPage() {
     let result = [...prompts];
     
     if (activeProjectId === 'none') {
-      result = result.filter(p => !p.projectId);
+      result = result.filter(p => !p.projectId || p.projectId === 'none');
     } else if (activeProjectId !== 'all') {
       result = result.filter(p => p.projectId === activeProjectId);
     }
@@ -195,7 +201,7 @@ export default function PromptPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="text-muted-foreground animate-pulse font-medium">Verificando sesión...</p>
+        <p className="text-muted-foreground animate-pulse font-medium">Sincronizando biblioteca...</p>
       </div>
     );
   }
@@ -299,7 +305,7 @@ export default function PromptPage() {
                   Sin Proyecto
                 </div>
                 <span className={cn("text-xs", activeProjectId === 'none' ? "text-primary-foreground/80" : "opacity-60")}>
-                  {prompts.filter(p => !p.projectId).length}
+                  {prompts.filter(p => !p.projectId || p.projectId === 'none').length}
                 </span>
               </button>
 

@@ -1,4 +1,3 @@
-
 'use client';
     
 import {
@@ -19,6 +18,10 @@ import { FirestorePermissionError } from '@/firebase/errors';
  */
 function cleanData(obj: any): any {
   if (obj === null || typeof obj !== 'object') return obj;
+  
+  // Do not clean common Firestore-compatible types if they were ever used
+  if (obj instanceof Date) return obj.toISOString();
+  
   const newObj: any = Array.isArray(obj) ? [] : {};
   for (const key in obj) {
     if (Object.prototype.hasOwnProperty.call(obj, key)) {
