@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import type { Prompt, PromptCategory, Project } from '@/lib/definitions';
 import { promptCategories } from '@/lib/definitions';
 import Header from '@/components/header';
@@ -53,7 +52,6 @@ export default function PromptPage() {
   const { firestore } = useFirestore();
   const auth = useAuth();
 
-  // Consultas de Firestore memoizadas para evitar re-renderizados infinitos
   const projectsQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
     return collection(firestore, 'users', user.uid, 'projects');
@@ -87,7 +85,7 @@ export default function PromptPage() {
     projectId: string | null;
   }, id?: string) => {
     if (!user?.uid || !firestore) {
-      toast({ variant: "destructive", title: "Error de sesión", description: "No se pudo identificar al usuario." });
+      toast({ variant: "destructive", title: "Error de sesión", description: "Inicia sesión para guardar." });
       return;
     }
     
@@ -95,11 +93,15 @@ export default function PromptPage() {
     
     if (id) {
       const docRef = doc(firestore, 'users', user.uid, 'prompts', id);
-      updateDocumentNonBlocking(docRef, { 
-        ...promptData, 
-        updatedAt: now,
-        projectId: promptData.projectId || null // Asegurar que nunca sea undefined
-      });
+      const updateData = {
+        title: promptData.title || '',
+        description: promptData.description || '',
+        content: promptData.content || '',
+        category: promptData.category,
+        projectId: promptData.projectId || null,
+        updatedAt: now
+      };
+      updateDocumentNonBlocking(docRef, updateData);
     } else {
       const colRef = collection(firestore, 'users', user.uid, 'prompts');
       const newDocRef = doc(colRef);
@@ -113,34 +115,36 @@ export default function PromptPage() {
         description: promptData.description || '',
         content: promptData.content || '',
         category: promptData.category,
-        projectId: promptData.projectId || null, // Asegurar que nunca sea undefined
+        projectId: promptData.projectId || null,
       };
 
-      setDocumentNonBlocking(newDocRef, newPrompt, { merge: true });
+      setDocumentNonBlocking(newDocRef, newPrompt);
     }
     
     setCreateDialogOpen(false);
     setEditDialogOpen(false);
+    setSelectedPrompt(null);
   }, [user?.uid, firestore, toast]);
 
   const handleCreateProject = useCallback(() => {
-    if (!newProjectName.trim() || !user?.uid || !firestore) return;
+    const name = newProjectName.trim();
+    if (!name || !user?.uid || !firestore) return;
     
     const colRef = collection(firestore, 'users', user.uid, 'projects');
     const newDocRef = doc(colRef);
     
     const newProject: Project = {
       id: newDocRef.id,
-      name: newProjectName.trim(),
+      name: name,
       ownerId: user.uid,
       createdAt: new Date().toISOString(),
     };
 
-    setDocumentNonBlocking(newDocRef, newProject, { merge: true });
+    setDocumentNonBlocking(newDocRef, newProject);
 
     setNewProjectName('');
     setNewProjectDialogOpen(false);
-    toast({ title: "Proyecto creado", description: `Se ha creado el proyecto "${newProjectName}"` });
+    toast({ title: "Proyecto creado", description: `"${name}" está listo.` });
   }, [newProjectName, user?.uid, firestore, toast]);
 
   const handleDeleteProject = useCallback((id: string, e: React.MouseEvent) => {
@@ -151,7 +155,7 @@ export default function PromptPage() {
     deleteDocumentNonBlocking(projectRef);
 
     if (activeProjectId === id) setActiveProjectId('all');
-    toast({ title: "Proyecto eliminado", description: "El proyecto ha sido eliminado." });
+    toast({ title: "Proyecto eliminado", description: "Se ha borrado el proyecto." });
   }, [user?.uid, firestore, activeProjectId, toast]);
 
   const handleMoveToProject = useCallback((promptId: string, projectId: string | null) => {
@@ -182,13 +186,11 @@ export default function PromptPage() {
     return result.sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
   }, [prompts, activeProjectId, categoryFilter]);
 
-  const isActuallyLoading = isUserLoading || projectsLoading || promptsLoading;
-
-  if (isActuallyLoading) {
+  if (isUserLoading || projectsLoading || promptsLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="text-muted-foreground animate-pulse font-medium">Sincronizando biblioteca...</p>
+        <p className="text-muted-foreground animate-pulse font-medium">Sincronizando con la nube...</p>
       </div>
     );
   }
@@ -218,7 +220,7 @@ export default function PromptPage() {
           <div className="flex items-center gap-2 border-l pl-4 border-border/60">
             <div className="hidden lg:flex flex-col items-end">
               <span className="text-xs font-medium truncate max-w-[120px]">{user?.email}</span>
-              <span className="text-[10px] text-muted-foreground uppercase tracking-widest">Cuenta Activa</span>
+              <span className="text-[10px] text-muted-foreground uppercase tracking-widest">En línea</span>
             </div>
             <Button variant="ghost" size="icon" onClick={() => logOut(auth)} title="Cerrar Sesión">
               <LogOut className="h-5 w-5 text-muted-foreground hover:text-destructive transition-colors" />
@@ -356,7 +358,7 @@ export default function PromptPage() {
         </DialogTrigger>
         <DialogContent className="sm:max-w-[625px]">
           <DialogHeader>
-            <DialogTitle>Crear un Nuevo Prompt</DialogTitle>
+            <DialogTitle>Crear Nuevo Prompt</DialogTitle>
           </DialogHeader>
           <PromptForm onSave={handleSave} onClose={() => setCreateDialogOpen(false)} projects={projects} />
         </DialogContent>

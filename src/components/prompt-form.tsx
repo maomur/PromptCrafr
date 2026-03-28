@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { type Prompt, promptCategories, type PromptCategory, type Project } from '@/lib/definitions';
 import { useToast } from '@/hooks/use-toast';
 
@@ -33,7 +33,6 @@ export default function PromptForm({ prompt, projects = [], onSave, onClose }: P
   const { toast } = useToast();
   const isEditMode = !!prompt;
   
-  // Estados con valores iniciales limpios
   const [title, setTitle] = useState(prompt?.title || '');
   const [description, setDescription] = useState(prompt?.description || '');
   const [category, setCategory] = useState<PromptCategory>(prompt?.category || 'Textos');
@@ -46,7 +45,6 @@ export default function PromptForm({ prompt, projects = [], onSave, onClose }: P
     const newErrors: Record<string, string> = {};
     if (!title.trim()) newErrors.title = 'El título es obligatorio.';
     if (!description.trim()) newErrors.description = 'La descripción es obligatoria.';
-    if (!category) newErrors.category = 'Por favor, selecciona una categoría.';
     if (!content.trim()) newErrors.content = 'El contenido es obligatorio.';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -63,22 +61,22 @@ export default function PromptForm({ prompt, projects = [], onSave, onClose }: P
           title: title.trim(), 
           description: description.trim(), 
           content: content.trim(), 
-          category: category as PromptCategory,
+          category: category,
           projectId: projectId === 'none' ? null : projectId
         }, prompt?.id);
         
         toast({
           variant: 'default',
           className: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300',
-          title: 'Éxito',
-          description: `Prompt ${isEditMode ? 'actualizado' : 'creado'} con éxito.`,
+          title: 'Hecho',
+          description: `El prompt ha sido ${isEditMode ? 'actualizado' : 'creado'}.`,
         });
         onClose();
       } catch (error) {
         toast({
           variant: 'destructive',
-          title: 'Error al guardar',
-          description: 'Hubo un problema técnico al procesar tu solicitud.',
+          title: 'Error inesperado',
+          description: 'No se pudo procesar la solicitud en este momento.',
         });
       } finally {
         setIsSubmitting(false);
@@ -87,7 +85,7 @@ export default function PromptForm({ prompt, projects = [], onSave, onClose }: P
       toast({
         variant: 'destructive',
         title: 'Formulario incompleto',
-        description: 'Por favor, revisa los campos marcados en rojo.',
+        description: 'Por favor, completa todos los campos obligatorios.',
       });
     }
   };
@@ -100,7 +98,7 @@ export default function PromptForm({ prompt, projects = [], onSave, onClose }: P
           <Input 
             id='title' 
             name="title" 
-            placeholder="Nombre del prompt..." 
+            placeholder="Título del prompt..." 
             value={title} 
             onChange={e => setTitle(e.target.value)} 
           />
@@ -108,7 +106,7 @@ export default function PromptForm({ prompt, projects = [], onSave, onClose }: P
         </div>
 
         <div className="space-y-2">
-          <Label>Proyecto (Opcional)</Label>
+          <Label>Proyecto</Label>
           <Select value={projectId} onValueChange={setProjectId}>
             <SelectTrigger>
               <SelectValue placeholder="Sin proyecto" />
@@ -126,11 +124,11 @@ export default function PromptForm({ prompt, projects = [], onSave, onClose }: P
       </div>
       
       <div className="space-y-2">
-          <Label htmlFor='description'>Descripción Corta</Label>
+          <Label htmlFor='description'>Descripción</Label>
           <Input 
             id='description' 
             name="description" 
-            placeholder="¿Para qué sirve este prompt?" 
+            placeholder="Escribe una breve descripción..." 
             value={description} 
             onChange={e => setDescription(e.target.value)} 
           />
@@ -141,7 +139,7 @@ export default function PromptForm({ prompt, projects = [], onSave, onClose }: P
           <Label>Categoría</Label>
           <Select value={category} onValueChange={(value: PromptCategory) => setCategory(value)}>
             <SelectTrigger>
-              <SelectValue placeholder="Selecciona una categoría" />
+              <SelectValue placeholder="Categoría" />
             </SelectTrigger>
             <SelectContent>
               {promptCategories.map((cat) => (
@@ -151,16 +149,15 @@ export default function PromptForm({ prompt, projects = [], onSave, onClose }: P
               ))}
             </SelectContent>
           </Select>
-          {errors.category && <p className="text-xs font-medium text-destructive">{errors.category}</p>}
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor='content'>Contenido del Prompt</Label>
+        <Label htmlFor='content'>Contenido</Label>
         <Textarea
           id='content'
           name="content"
-          placeholder="Escribe aquí el contenido completo..."
-          className="min-h-[150px] font-mono text-sm resize-y"
+          placeholder="Escribe el prompt completo aquí..."
+          className="min-h-[150px] font-mono text-sm"
           value={content} 
           onChange={e => setContent(e.target.value)}
         />
