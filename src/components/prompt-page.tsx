@@ -99,13 +99,10 @@ export default function PromptPage({ user }: PromptPageProps) {
   const prompts = useMemo(() => rawPrompts || [], [rawPrompts]);
   const links = useMemo(() => rawLinks || [], [rawLinks]);
 
-  // Garantizar que el body siempre sea interactivo
+  // Recuperar interactividad del body tras cerrar diálogos
   useEffect(() => {
-    const cleanup = () => {
-      document.body.style.pointerEvents = 'auto';
-    };
     if (!isCreateDialogOpen && !isEditDialogOpen && !isCreateLinkDialogOpen && !isNewProjectDialogOpen && !isDeleteDialogOpen) {
-      cleanup();
+      document.body.style.pointerEvents = 'auto';
     }
   }, [isCreateDialogOpen, isEditDialogOpen, isCreateLinkDialogOpen, isNewProjectDialogOpen, isDeleteDialogOpen]);
 
@@ -153,12 +150,9 @@ export default function PromptPage({ user }: PromptPageProps) {
       setDocumentNonBlocking(newDocRef, newPrompt);
     }
     
-    setTimeout(() => {
-      setCreateDialogOpen(false);
-      setEditDialogOpen(false);
-      setSelectedPrompt(null);
-      document.body.style.pointerEvents = 'auto';
-    }, 50);
+    setCreateDialogOpen(false);
+    setEditDialogOpen(false);
+    setSelectedPrompt(null);
   }, [user?.uid, firestore, prompts]);
 
   const handleSaveLink = useCallback((linkData: {
@@ -186,10 +180,7 @@ export default function PromptPage({ user }: PromptPageProps) {
     };
 
     setDocumentNonBlocking(newDocRef, newLink);
-    setTimeout(() => {
-      setCreateLinkDialogOpen(false);
-      document.body.style.pointerEvents = 'auto';
-    }, 50);
+    setCreateLinkDialogOpen(false);
   }, [user?.uid, firestore]);
 
   const handleCreateProject = useCallback(() => {
@@ -289,7 +280,6 @@ export default function PromptPage({ user }: PromptPageProps) {
       deleteDocumentNonBlocking(doc(firestore, 'users', user.uid, 'prompts', targetId));
       setPromptToDelete(null);
       toast({ title: "Prompt eliminado", description: "El prompt ha sido borrado." });
-      document.body.style.pointerEvents = 'auto';
     }, 150);
   }, [promptToDelete, firestore, user?.uid, toast]);
 
@@ -513,10 +503,7 @@ export default function PromptPage({ user }: PromptPageProps) {
         </main>
       </div>
 
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={(open) => {
-        setDeleteDialogOpen(open);
-        if (!open) document.body.style.pointerEvents = 'auto';
-      }}>
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Estás seguro de eliminar este prompt?</AlertDialogTitle>
@@ -525,7 +512,7 @@ export default function PromptPage({ user }: PromptPageProps) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => document.body.style.pointerEvents = 'auto'}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={confirmDeletePrompt}
@@ -537,10 +524,7 @@ export default function PromptPage({ user }: PromptPageProps) {
       </AlertDialog>
 
       <div className="fixed bottom-8 right-8 flex items-center gap-3 z-50">
-        <Dialog open={isCreateLinkDialogOpen} onOpenChange={(open) => {
-          setCreateLinkDialogOpen(open);
-          if (!open) document.body.style.pointerEvents = 'auto';
-        }}>
+        <Dialog open={isCreateLinkDialogOpen} onOpenChange={setCreateLinkDialogOpen}>
           <DialogTrigger asChild>
             <Button 
               className="h-16 w-16 rounded-full shadow-2xl transition-all hover:scale-110 active:scale-95 bg-orange-500 hover:bg-orange-600 text-white border-none"
@@ -555,17 +539,11 @@ export default function PromptPage({ user }: PromptPageProps) {
             <DialogHeader>
               <DialogTitle>Nuevo Enlace Externo</DialogTitle>
             </DialogHeader>
-            <LinkForm projects={projects} onSave={handleSaveLink} onClose={() => {
-              setCreateLinkDialogOpen(false);
-              document.body.style.pointerEvents = 'auto';
-            }} />
+            <LinkForm projects={projects} onSave={handleSaveLink} onClose={() => setCreateLinkDialogOpen(false)} />
           </DialogContent>
         </Dialog>
 
-        <Dialog open={isCreateDialogOpen} onOpenChange={(open) => {
-          setCreateDialogOpen(open);
-          if (!open) document.body.style.pointerEvents = 'auto';
-        }}>
+        <Dialog open={isCreateDialogOpen} onOpenChange={setCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button 
               className="h-16 w-16 rounded-full shadow-2xl transition-all hover:scale-110 active:scale-95 bg-primary hover:bg-primary/90"
@@ -580,18 +558,12 @@ export default function PromptPage({ user }: PromptPageProps) {
             <DialogHeader>
               <DialogTitle>Crear Nuevo Prompt</DialogTitle>
             </DialogHeader>
-            <PromptForm onSave={handleSave} onClose={() => {
-              setCreateDialogOpen(false);
-              document.body.style.pointerEvents = 'auto';
-            }} projects={projects} />
+            <PromptForm onSave={handleSave} onClose={() => setCreateDialogOpen(false)} projects={projects} />
           </DialogContent>
         </Dialog>
       </div>
 
-      <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
-        setEditDialogOpen(open);
-        if (!open) document.body.style.pointerEvents = 'auto';
-      }}>
+      <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="sm:max-w-[625px] shadow-3xl">
           <DialogHeader>
             <DialogTitle>Editar Prompt</DialogTitle>
@@ -604,7 +576,6 @@ export default function PromptPage({ user }: PromptPageProps) {
               onClose={() => {
                 setEditDialogOpen(false);
                 setSelectedPrompt(null);
-                document.body.style.pointerEvents = 'auto';
               }}
             />
           )}
