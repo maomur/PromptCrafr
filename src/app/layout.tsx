@@ -57,6 +57,23 @@ export default function RootLayout({
             </a>
           </footer>
         </FirebaseClientProvider>
+        
+        {/* Polyfill para Drag and Drop en móviles */}
+        <Script id="dnd-polyfill" strategy="afterInteractive">
+          {`
+            import('mobile-drag-drop').then((m) => {
+              m.polyfill({
+                dragImageTranslateOverride: (event, element, offset) => {
+                  return {
+                    x: offset.x,
+                    y: offset.y
+                  };
+                }
+              });
+            });
+          `}
+        </Script>
+
         <Script id="register-sw" strategy="afterInteractive">
           {`
             if ('serviceWorker' in navigator) {
