@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -51,7 +50,7 @@ export default function PromptForm({ prompt, projects = [], onSave, onClose }: P
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
 
@@ -69,15 +68,15 @@ export default function PromptForm({ prompt, projects = [], onSave, onClose }: P
         toast({
           variant: 'default',
           className: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300',
-          title: 'Hecho',
-          description: `El prompt ha sido ${isEditMode ? 'actualizado' : 'creado'}.`,
+          title: 'Éxito',
+          description: `Prompt ${isEditMode ? 'actualizado' : 'creado'} correctamente.`,
         });
         onClose();
       } catch (error) {
         toast({
           variant: 'destructive',
           title: 'Error inesperado',
-          description: 'No se pudo procesar la solicitud en este momento.',
+          description: 'No se pudo procesar la solicitud. Por favor, inténtalo de nuevo.',
         });
       } finally {
         setIsSubmitting(false);
@@ -99,7 +98,7 @@ export default function PromptForm({ prompt, projects = [], onSave, onClose }: P
           <Input 
             id='title' 
             name="title" 
-            placeholder="Título del prompt..." 
+            placeholder="Ej: Asistente de Código" 
             value={title} 
             onChange={e => setTitle(e.target.value)} 
           />
@@ -129,7 +128,7 @@ export default function PromptForm({ prompt, projects = [], onSave, onClose }: P
           <Input 
             id='description' 
             name="description" 
-            placeholder="Escribe una breve descripción..." 
+            placeholder="Breve resumen de para qué sirve..." 
             value={description} 
             onChange={e => setDescription(e.target.value)} 
           />
@@ -153,7 +152,7 @@ export default function PromptForm({ prompt, projects = [], onSave, onClose }: P
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor='content'>Contenido</Label>
+        <Label htmlFor='content'>Contenido del Prompt</Label>
         <Textarea
           id='content'
           name="content"

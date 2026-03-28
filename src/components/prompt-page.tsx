@@ -55,7 +55,7 @@ export default function PromptPage({ user }: PromptPageProps) {
   const { firestore } = useFirestore();
   const auth = useAuth();
 
-  // Usamos el UID del usuario pasado por props para las consultas
+  // Consultas memoizadas para Firebase
   const projectsQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
     return collection(firestore, 'users', user.uid, 'projects');
@@ -89,71 +89,80 @@ export default function PromptPage({ user }: PromptPageProps) {
     projectId: string | null;
   }, id?: string) => {
     if (!user?.uid || !firestore) {
-      toast({ variant: "destructive", title: "Error", description: "Sesión no válida." });
+      toast({ variant: "destructive", title: "Error", description: "Sesión no válida para guardar." });
       return;
     }
     
-    const now = new Date().toISOString();
-    const userId = user.uid;
-    
-    if (id) {
-      const docRef = doc(firestore, 'users', userId, 'prompts', id);
-      const updateData = {
-        title: promptData.title,
-        description: promptData.description,
-        content: promptData.content,
-        category: promptData.category,
-        projectId: promptData.projectId || null,
-        updatedAt: now
-      };
-      updateDocumentNonBlocking(docRef, updateData);
-    } else {
-      const colRef = collection(firestore, 'users', userId, 'prompts');
-      const newDocRef = doc(colRef);
+    try {
+      const now = new Date().toISOString();
+      const userId = user.uid;
       
-      const newPrompt: Prompt = {
-        id: newDocRef.id,
-        ownerId: userId,
-        createdAt: now,
-        updatedAt: now,
-        title: promptData.title,
-        description: promptData.description,
-        content: promptData.content,
-        category: promptData.category,
-        projectId: promptData.projectId || null,
-      };
+      if (id) {
+        const docRef = doc(firestore, 'users', userId, 'prompts', id);
+        updateDocumentNonBlocking(docRef, {
+          title: promptData.title,
+          description: promptData.description,
+          content: promptData.content,
+          category: promptData.category,
+          projectId: promptData.projectId || null,
+          updatedAt: now
+        });
+      } else {
+        const colRef = collection(firestore, 'users', userId, 'prompts');
+        const newDocRef = doc(colRef);
+        
+        const newPrompt: Prompt = {
+          id: newDocRef.id,
+          ownerId: userId,
+          createdAt: now,
+          updatedAt: now,
+          title: promptData.title,
+          description: promptData.description,
+          content: promptData.content,
+          category: promptData.category,
+          projectId: promptData.projectId || null,
+        };
 
-      setDocumentNonBlocking(newDocRef, newPrompt);
+        setDocumentNonBlocking(newDocRef, newPrompt);
+      }
+      
+      setCreateDialogOpen(false);
+      setEditDialogOpen(false);
+      setSelectedPrompt(null);
+    } catch (error) {
+      toast({ variant: "destructive", title: "Error al guardar", description: "Ocurrió un error inesperado al intentar guardar el prompt." });
     }
-    
-    setCreateDialogOpen(false);
-    setEditDialogOpen(false);
-    setSelectedPrompt(null);
   }, [user?.uid, firestore, toast]);
 
   const handleCreateProject = useCallback(() => {
     const name = newProjectName.trim();
-    if (!name || !user?.uid || !firestore) {
-      if (!user?.uid) toast({ variant: "destructive", title: "Error", description: "Usuario no identificado." });
+    if (!name) return;
+    
+    if (!user?.uid || !firestore) {
+      toast({ variant: "destructive", title: "Error", description: "No se ha podido identificar al usuario." });
       return;
     }
     
-    const userId = user.uid;
-    const colRef = collection(firestore, 'users', userId, 'projects');
-    const newDocRef = doc(colRef);
-    
-    const newProject: Project = {
-      id: newDocRef.id,
-      name: name,
-      ownerId: userId,
-      createdAt: new Date().toISOString(),
-    };
+    try {
+      const userId = user.uid;
+      const colRef = collection(firestore, 'users', userId, 'projects');
+      const newDocRef = doc(colRef);
+      
+      const newProject: Project = {
+        id: newDocRef.id,
+        name: name,
+        ownerId: userId,
+        createdAt: new Date().toISOString(),
+      };
 
-    setDocumentNonBlocking(newDocRef, newProject);
+      setDocumentNonBlocking(newDocRef, newProject);
 
-    setNewProjectName('');
-    setNewProjectDialogOpen(false);
-    toast({ title: "Proyecto creado", description: `"${name}" se ha añadido correctamente.` });
+      setNewProjectName('');
+      setNewProjectDialogOpen(false);
+      toast({ title: "Proyecto creado", description: `"${name}" se ha añadido correctamente.` });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Error al crear proyecto", description: "Hubo un problema al intentar crear el proyecto." });
+    }
   }, [newProjectName, user?.uid, firestore, toast]);
 
   const handleDeleteProject = useCallback((id: string, e: React.MouseEvent) => {
@@ -247,7 +256,7 @@ export default function PromptPage({ user }: PromptPageProps) {
                     <Plus className="h-4 w-4" />
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
                   <DialogHeader>
                     <DialogTitle>Nuevo Proyecto</DialogTitle>
                   </DialogHeader>
@@ -259,7 +268,13 @@ export default function PromptPage({ user }: PromptPageProps) {
                       onKeyDown={e => e.key === 'Enter' && handleCreateProject()}
                       autoFocus
                     />
-                    <Button className="w-full" onClick={handleCreateProject} disabled={!newProjectName.trim()}>Crear Proyecto</Button>
+                    <Button 
+                      className="w-full" 
+                      onClick={handleCreateProject} 
+                      disabled={!newProjectName.trim()}
+                    >
+                      Crear Proyecto
+                    </Button>
                   </div>
                 </DialogContent>
               </Dialog>

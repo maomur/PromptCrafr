@@ -19,17 +19,17 @@ import { FirestorePermissionError } from '@/firebase/errors';
 function cleanData(obj: any): any {
   if (obj === null || typeof obj !== 'object') return obj;
   
-  // Do not clean common Firestore-compatible types if they were ever used
   if (obj instanceof Date) return obj.toISOString();
   
   const newObj: any = Array.isArray(obj) ? [] : {};
   for (const key in obj) {
     if (Object.prototype.hasOwnProperty.call(obj, key)) {
       const value = obj[key];
+      // Importante: No dejar campos como undefined. Convertir a null o ignorar.
       if (value !== undefined) {
         newObj[key] = cleanData(value);
       } else {
-        newObj[key] = null; // Convert undefined to null for Firestore safety
+        newObj[key] = null;
       }
     }
   }
@@ -40,72 +40,88 @@ function cleanData(obj: any): any {
  * Initiates a setDoc operation for a document reference.
  */
 export function setDocumentNonBlocking(docRef: DocumentReference, data: any, options?: SetOptions) {
-  const finalOptions = options || {};
-  const safeData = cleanData(data);
-  
-  setDoc(docRef, safeData, finalOptions)
-    .catch(error => {
-      errorEmitter.emit(
-        'permission-error',
-        new FirestorePermissionError({
-          path: docRef.path,
-          operation: 'write',
-          requestResourceData: safeData,
-        })
-      );
-    });
+  try {
+    const finalOptions = options || {};
+    const safeData = cleanData(data);
+    
+    setDoc(docRef, safeData, finalOptions)
+      .catch(error => {
+        errorEmitter.emit(
+          'permission-error',
+          new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'write',
+            requestResourceData: safeData,
+          })
+        );
+      });
+  } catch (syncError: any) {
+    console.error("Firestore Sync Error (setDoc):", syncError);
+  }
 }
 
 /**
  * Initiates an addDoc operation for a collection reference.
  */
 export function addDocumentNonBlocking(colRef: CollectionReference, data: any) {
-  const safeData = cleanData(data);
-  
-  addDoc(colRef, safeData)
-    .catch(error => {
-      errorEmitter.emit(
-        'permission-error',
-        new FirestorePermissionError({
-          path: colRef.path,
-          operation: 'create',
-          requestResourceData: safeData,
-        })
-      );
-    });
+  try {
+    const safeData = cleanData(data);
+    
+    addDoc(colRef, safeData)
+      .catch(error => {
+        errorEmitter.emit(
+          'permission-error',
+          new FirestorePermissionError({
+            path: colRef.path,
+            operation: 'create',
+            requestResourceData: safeData,
+          })
+        );
+      });
+  } catch (syncError: any) {
+    console.error("Firestore Sync Error (addDoc):", syncError);
+  }
 }
 
 /**
  * Initiates an updateDoc operation for a document reference.
  */
 export function updateDocumentNonBlocking(docRef: DocumentReference, data: any) {
-  const safeData = cleanData(data);
-  
-  updateDoc(docRef, safeData)
-    .catch(error => {
-      errorEmitter.emit(
-        'permission-error',
-        new FirestorePermissionError({
-          path: docRef.path,
-          operation: 'update',
-          requestResourceData: safeData,
-        })
-      );
-    });
+  try {
+    const safeData = cleanData(data);
+    
+    updateDoc(docRef, safeData)
+      .catch(error => {
+        errorEmitter.emit(
+          'permission-error',
+          new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'update',
+            requestResourceData: safeData,
+          })
+        );
+      });
+  } catch (syncError: any) {
+    console.error("Firestore Sync Error (updateDoc):", syncError);
+  }
 }
 
 /**
  * Initiates a deleteDoc operation for a document reference.
  */
 export function deleteDocumentNonBlocking(docRef: DocumentReference) {
-  deleteDoc(docRef)
-    .catch(error => {
-      errorEmitter.emit(
-        'permission-error',
-        new FirestorePermissionError({
-          path: docRef.path,
-          operation: 'delete',
-        })
-      );
-    });
+  try {
+    deleteDoc(docRef)
+      .catch(error => {
+        errorEmitter.emit(
+          'permission-error',
+          new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'delete',
+          })
+        );
+      });
+  } catch (syncError: any) {
+    console.error("Firestore Sync Error (deleteDoc):", syncError);
+  }
 }
