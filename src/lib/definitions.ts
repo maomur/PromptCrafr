@@ -1,3 +1,4 @@
+
 export const promptCategories = ['Video', 'Imagen', 'Textos', 'Otros'] as const;
 
 export type PromptCategory = (typeof promptCategories)[number];
@@ -18,5 +19,5 @@ export type Prompt = {
   createdAt: string;
   updatedAt: string;
   ownerId: string;
-  projectId: string | null;
+  projectId: string | null; // Cambiado a explícitamente nullable para Firestore
 };

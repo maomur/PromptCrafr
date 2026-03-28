@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import type { Prompt, PromptCategory, Project } from '@/lib/definitions';
 import { promptCategories } from '@/lib/definitions';
 import Header from '@/components/header';
@@ -21,8 +21,7 @@ import {
   Trash2, 
   Filter,
   Loader2,
-  LogOut,
-  User
+  LogOut
 } from 'lucide-react';
 import PromptForm from '@/components/prompt-form';
 import {
@@ -54,7 +53,7 @@ export default function PromptPage() {
   const { firestore } = useFirestore();
   const auth = useAuth();
 
-  // Consultas de Firestore memoizadas
+  // Consultas de Firestore memoizadas para evitar re-renderizados infinitos
   const projectsQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
     return collection(firestore, 'users', user.uid, 'projects');
@@ -87,7 +86,10 @@ export default function PromptPage() {
     category: PromptCategory;
     projectId: string | null;
   }, id?: string) => {
-    if (!user?.uid || !firestore) return;
+    if (!user?.uid || !firestore) {
+      toast({ variant: "destructive", title: "Error de sesión", description: "No se pudo identificar al usuario." });
+      return;
+    }
     
     const now = new Date().toISOString();
     
@@ -96,7 +98,7 @@ export default function PromptPage() {
       updateDocumentNonBlocking(docRef, { 
         ...promptData, 
         updatedAt: now,
-        projectId: promptData.projectId || null
+        projectId: promptData.projectId || null // Asegurar que nunca sea undefined
       });
     } else {
       const colRef = collection(firestore, 'users', user.uid, 'prompts');
@@ -111,7 +113,7 @@ export default function PromptPage() {
         description: promptData.description || '',
         content: promptData.content || '',
         category: promptData.category,
-        projectId: promptData.projectId || null,
+        projectId: promptData.projectId || null, // Asegurar que nunca sea undefined
       };
 
       setDocumentNonBlocking(newDocRef, newPrompt, { merge: true });
@@ -119,7 +121,7 @@ export default function PromptPage() {
     
     setCreateDialogOpen(false);
     setEditDialogOpen(false);
-  }, [user?.uid, firestore]);
+  }, [user?.uid, firestore, toast]);
 
   const handleCreateProject = useCallback(() => {
     if (!newProjectName.trim() || !user?.uid || !firestore) return;
@@ -149,7 +151,7 @@ export default function PromptPage() {
     deleteDocumentNonBlocking(projectRef);
 
     if (activeProjectId === id) setActiveProjectId('all');
-    toast({ title: "Proyecto eliminado", description: "Los prompts han sido movidos a la sección general." });
+    toast({ title: "Proyecto eliminado", description: "El proyecto ha sido eliminado." });
   }, [user?.uid, firestore, activeProjectId, toast]);
 
   const handleMoveToProject = useCallback((promptId: string, projectId: string | null) => {
@@ -177,7 +179,7 @@ export default function PromptPage() {
       result = result.filter(p => p.category === categoryFilter);
     }
 
-    return result.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    return result.sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
   }, [prompts, activeProjectId, categoryFilter]);
 
   const isActuallyLoading = isUserLoading || projectsLoading || promptsLoading;
@@ -186,7 +188,7 @@ export default function PromptPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="text-muted-foreground animate-pulse">Sincronizando biblioteca...</p>
+        <p className="text-muted-foreground animate-pulse font-medium">Sincronizando biblioteca...</p>
       </div>
     );
   }
@@ -216,7 +218,7 @@ export default function PromptPage() {
           <div className="flex items-center gap-2 border-l pl-4 border-border/60">
             <div className="hidden lg:flex flex-col items-end">
               <span className="text-xs font-medium truncate max-w-[120px]">{user?.email}</span>
-              <span className="text-[10px] text-muted-foreground uppercase tracking-widest">Premium</span>
+              <span className="text-[10px] text-muted-foreground uppercase tracking-widest">Cuenta Activa</span>
             </div>
             <Button variant="ghost" size="icon" onClick={() => logOut(auth)} title="Cerrar Sesión">
               <LogOut className="h-5 w-5 text-muted-foreground hover:text-destructive transition-colors" />
@@ -235,7 +237,7 @@ export default function PromptPage() {
               </h2>
               <Dialog open={isNewProjectDialogOpen} onOpenChange={setNewProjectDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-6 w-6">
+                  <Button variant="ghost" size="icon" className="h-6 w-6 hover:bg-primary/10">
                     <Plus className="h-4 w-4" />
                   </Button>
                 </DialogTrigger>
@@ -249,6 +251,7 @@ export default function PromptPage() {
                       value={newProjectName} 
                       onChange={e => setNewProjectName(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && handleCreateProject()}
+                      autoFocus
                     />
                     <Button className="w-full" onClick={handleCreateProject} disabled={!newProjectName.trim()}>Crear Proyecto</Button>
                   </div>
@@ -286,7 +289,7 @@ export default function PromptPage() {
               >
                 <div className="flex items-center">
                   <Folder className="mr-2 h-4 w-4" />
-                  General
+                  Sin Proyecto
                 </div>
                 <span className={cn("text-xs", activeProjectId === 'none' ? "text-primary-foreground/80" : "opacity-60")}>
                   {prompts.filter(p => !p.projectId).length}
@@ -348,7 +351,7 @@ export default function PromptPage() {
             size="icon"
           >
             <Plus className="h-8 w-8 text-primary-foreground" />
-            <span className="sr-only">Nuevo</span>
+            <span className="sr-only">Nuevo Prompt</span>
           </Button>
         </DialogTrigger>
         <DialogContent className="sm:max-w-[625px]">
