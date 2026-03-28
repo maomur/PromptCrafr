@@ -6,6 +6,7 @@ import { promptCategories } from '@/lib/definitions';
 import Header from '@/components/header';
 import PromptList from '@/components/prompt-list';
 import LinkList from '@/components/link-list';
+import EmptyState from '@/components/empty-state';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -115,7 +116,8 @@ export default function PromptPage({ user }: PromptPageProps) {
       document.body.classList.remove('pointer-events-none');
     };
     cleanup();
-    setTimeout(cleanup, 100);
+    setTimeout(cleanup, 50);
+    setTimeout(cleanup, 150);
     setTimeout(cleanup, 300);
   }, []);
 
@@ -464,55 +466,61 @@ export default function PromptPage({ user }: PromptPageProps) {
             </div>
           ) : (
             <div className="space-y-8">
-              {filteredLinks.length > 0 && (
-                <div className="space-y-4">
-                  <h3 className="text-sm font-bold uppercase tracking-widest text-orange-600 flex items-center gap-2 px-1">
-                    <LinkIcon className="h-4 w-4" /> Enlaces ({filteredLinks.length})
-                  </h3>
-                  <LinkList 
-                    links={filteredLinks} 
-                    projects={projects}
-                    onDeleteLink={(id) => {
-                      const l = links.find(li => li.id === id);
-                      if (l) {
-                        setLinkToDelete(l);
-                        setLinkDeleteDialogOpen(true);
-                      }
-                    }} 
-                    onEditLink={(link) => {
-                      setSelectedLink(link);
-                      setEditLinkDialogOpen(true);
-                    }}
-                    onReorder={handleLinkReorder}
-                    onMoveToProject={(linkId, projectId) => handleMoveToProject(linkId, 'link', projectId)}
-                  />
-                </div>
-              )}
+              {filteredLinks.length === 0 && filteredPrompts.length === 0 ? (
+                <EmptyState />
+              ) : (
+                <>
+                  {filteredLinks.length > 0 && (
+                    <div className="space-y-4">
+                      <h3 className="text-sm font-bold uppercase tracking-widest text-orange-600 flex items-center gap-2 px-1">
+                        <LinkIcon className="h-4 w-4" /> Enlaces ({filteredLinks.length})
+                      </h3>
+                      <LinkList 
+                        links={filteredLinks} 
+                        projects={projects}
+                        onDeleteLink={(id) => {
+                          const l = links.find(li => li.id === id);
+                          if (l) {
+                            setLinkToDelete(l);
+                            setLinkDeleteDialogOpen(true);
+                          }
+                        }} 
+                        onEditLink={(link) => {
+                          setSelectedLink(link);
+                          setEditLinkDialogOpen(true);
+                        }}
+                        onReorder={handleLinkReorder}
+                        onMoveToProject={(linkId, projectId) => handleMoveToProject(linkId, 'link', projectId)}
+                      />
+                    </div>
+                  )}
 
-              <div className="space-y-4">
-                {filteredPrompts.length > 0 && (
-                  <h3 className="text-sm font-bold uppercase tracking-widest text-primary flex items-center gap-2 px-1">
-                    <Sparkles className="h-4 w-4" /> Prompts ({filteredPrompts.length})
-                  </h3>
-                )}
-                <PromptList
-                  prompts={filteredPrompts}
-                  projects={projects}
-                  onDeletePrompt={(id) => {
-                    const p = prompts.find(pr => pr.id === id);
-                    if (p) {
-                      setPromptToDelete(p);
-                      setDeleteDialogOpen(true);
-                    }
-                  }}
-                  onEditPrompt={(prompt) => {
-                    setSelectedPrompt(prompt);
-                    setEditDialogOpen(true);
-                  }}
-                  onReorder={handleReorder}
-                  onMoveToProject={(promptId, projectId) => handleMoveToProject(promptId, 'prompt', projectId)}
-                />
-              </div>
+                  <div className="space-y-4">
+                    {filteredPrompts.length > 0 && (
+                      <h3 className="text-sm font-bold uppercase tracking-widest text-primary flex items-center gap-2 px-1">
+                        <Sparkles className="h-4 w-4" /> Prompts ({filteredPrompts.length})
+                      </h3>
+                    )}
+                    <PromptList
+                      prompts={filteredPrompts}
+                      projects={projects}
+                      onDeletePrompt={(id) => {
+                        const p = prompts.find(pr => pr.id === id);
+                        if (p) {
+                          setPromptToDelete(p);
+                          setDeleteDialogOpen(true);
+                        }
+                      }}
+                      onEditPrompt={(prompt) => {
+                        setSelectedPrompt(prompt);
+                        setEditDialogOpen(true);
+                      }}
+                      onReorder={handleReorder}
+                      onMoveToProject={(promptId, projectId) => handleMoveToProject(promptId, 'prompt', projectId)}
+                    />
+                  </div>
+                </>
+              )}
             </div>
           )}
         </main>
@@ -538,7 +546,7 @@ export default function PromptPage({ user }: PromptPageProps) {
                     setDeleteDialogOpen(false);
                     toast({ title: "Prompt eliminado" });
                     unblockInterface();
-                  }, 50);
+                  }, 150);
                 }
               }}
             >
@@ -568,7 +576,7 @@ export default function PromptPage({ user }: PromptPageProps) {
                     setLinkDeleteDialogOpen(false);
                     toast({ title: "Enlace eliminado" });
                     unblockInterface();
-                  }, 50);
+                  }, 150);
                 }
               }}
             >

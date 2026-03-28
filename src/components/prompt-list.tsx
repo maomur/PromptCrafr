@@ -2,7 +2,6 @@
 
 import type { Prompt, Project } from '@/lib/definitions';
 import PromptCard from '@/components/prompt-card';
-import EmptyState from './empty-state';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 
@@ -26,7 +25,7 @@ export default function PromptList({
   const [dragOverId, setDragOverId] = useState<string | null>(null);
 
   if (prompts.length === 0) {
-    return <EmptyState />;
+    return null;
   }
 
   const handleDragOver = (e: React.DragEvent, id: string) => {

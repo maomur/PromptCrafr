@@ -1,8 +1,8 @@
+'use client';
+
 import { Button } from './ui/button';
 import { Plus, Lightbulb } from 'lucide-react';
 
-// NOTA: El botón 'Crea tu primer prompt' aquí es para efecto visual.
-// El verdadero disparador del diálogo está en el encabezado para mantener una estructura de componentes limpia.
 export default function EmptyState() {
   return (
     <div className="flex flex-col items-center justify-center text-center p-8 mt-12 rounded-lg border-2 border-dashed">
@@ -11,14 +11,14 @@ export default function EmptyState() {
           <Lightbulb className="w-8 h-8 text-muted-foreground" />
         </div>
       </div>
-      <h2 className="text-2xl font-semibold font-headline">Tu Biblioteca de Prompts está vacía</h2>
+      <h2 className="text-2xl font-semibold font-headline">Tu Biblioteca de Recursos está vacía</h2>
       <p className="mt-2 text-muted-foreground max-w-md mx-auto">
-        Parece que aún no has creado ningún prompt. Empieza creando el primero.
+        Parece que aún no has guardado nada. Empieza creando tu primer prompt o guardando un enlace de interés.
       </p>
       <div className="mt-6">
         <Button disabled variant="outline">
           <Plus className="-ml-1 h-4 w-4" />
-          Crea Tu Primer Prompt
+          Crea Tu Primer Recurso
         </Button>
       </div>
     </div>
