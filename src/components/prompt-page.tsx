@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import type { Prompt, PromptCategory, Project, Link } from '@/lib/definitions';
 import { promptCategories } from '@/lib/definitions';
 import Header from '@/components/header';
@@ -95,18 +95,6 @@ export default function PromptPage({ user }: PromptPageProps) {
   const [activeProjectId, setActiveProjectId] = useState<string | 'all' | 'none'>('all');
   const [dragOverProject, setDragOverProject] = useState<string | null>(null);
 
-  // Reset de interactividad forzado para evitar congelamientos
-  useEffect(() => {
-    const isAnyOpen = isCreateDialogOpen || isCreateLinkDialogOpen || isEditDialogOpen || isNewProjectDialogOpen || isDeleteDialogOpen;
-    if (!isAnyOpen) {
-      const timer = setTimeout(() => {
-        document.body.style.pointerEvents = '';
-        document.body.style.overflow = '';
-      }, 50);
-      return () => clearTimeout(timer);
-    }
-  }, [isCreateDialogOpen, isCreateLinkDialogOpen, isEditDialogOpen, isNewProjectDialogOpen, isDeleteDialogOpen]);
-
   const projects = useMemo(() => rawProjects || [], [rawProjects]);
   const prompts = useMemo(() => rawPrompts || [], [rawPrompts]);
   const links = useMemo(() => rawLinks || [], [rawLinks]);
@@ -134,6 +122,7 @@ export default function PromptPage({ user }: PromptPageProps) {
         updatedAt: now
       });
       toast({ title: 'Prompt actualizado' });
+      setEditDialogOpen(false);
     } else {
       const colRef = collection(firestore, 'users', userId, 'prompts');
       const newDocRef = doc(colRef);
@@ -154,10 +143,9 @@ export default function PromptPage({ user }: PromptPageProps) {
 
       setDocumentNonBlocking(newDocRef, newPrompt);
       toast({ title: 'Prompt creado' });
+      setCreateDialogOpen(false);
     }
     
-    setCreateDialogOpen(false);
-    setEditDialogOpen(false);
     setSelectedPrompt(null);
   }, [user?.uid, firestore, prompts, toast]);
 

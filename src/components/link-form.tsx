@@ -74,11 +74,11 @@ export default function LinkForm({ projects, onSave, onClose }: LinkFormProps) {
 
       <div className="space-y-2">
         <Label htmlFor="link-project-select">Asignar a Proyecto (Obligatorio)</Label>
-        <Select value={projectId} onValueChange={setProjectId} required modal={false}>
+        <Select value={projectId} onValueChange={setProjectId} modal={false}>
           <SelectTrigger id="link-project-select">
             <SelectValue placeholder="Selecciona un proyecto" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent position="popper" sideOffset={4}>
             {projects.map((p) => (
               <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
             ))}
@@ -102,7 +102,7 @@ export default function LinkForm({ projects, onSave, onClose }: LinkFormProps) {
             <SelectTrigger id="link-category-select">
               <SelectValue placeholder="Selecciona una categoría" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent position="popper" sideOffset={4}>
               <SelectItem value="none">Sin categoría</SelectItem>
               {promptCategories.map((cat) => (
                 <SelectItem key={cat} value={cat}>{cat}</SelectItem>

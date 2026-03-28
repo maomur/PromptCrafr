@@ -92,7 +92,7 @@ export default function PromptForm({ prompt, projects = [], onSave, onClose }: P
             <SelectTrigger id="project-select">
               <SelectValue placeholder="Selecciona un proyecto" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent position="popper" sideOffset={4}>
               <SelectItem value="none">Sin proyecto (General)</SelectItem>
               {projects.map((p) => (
                 <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
@@ -120,7 +120,7 @@ export default function PromptForm({ prompt, projects = [], onSave, onClose }: P
             <SelectTrigger id="category-select">
               <SelectValue placeholder="Selecciona una categoría" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent position="popper" sideOffset={4}>
               {promptCategories.map((cat) => (
                 <SelectItem key={cat} value={cat}>{cat}</SelectItem>
               ))}
