@@ -222,8 +222,7 @@ export default function PromptPage({ user }: PromptPageProps) {
   };
 
   /**
-   * BORRADO DESACOPLADO
-   * Cerramos el diálogo PRIMERO y esperamos a que Radix limpie el body.
+   * ACCIONES DE BORRADO - REFORZADAS CON TIMEOUT
    */
   const executeDeletePrompt = () => {
     if (promptToDelete && firestore && user?.uid) {
@@ -336,7 +335,7 @@ export default function PromptPage({ user }: PromptPageProps) {
                 className={cn("w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-all text-left", activeProjectId === 'all' ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50")}
               >
                 <div className="flex items-center"><Folders className="mr-2 h-4 w-4" />Todos</div>
-                <span className="text-xs opacity-60 font-mono">{prompts.length + links.length}</span>
+                <span className="text-sm opacity-70 font-mono font-medium">({prompts.length + links.length})</span>
               </button>
               
               <button 
@@ -344,8 +343,8 @@ export default function PromptPage({ user }: PromptPageProps) {
                 className={cn("w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-all text-left", activeProjectId === 'none' ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50")}
               >
                 <div className="flex items-center"><Folder className="mr-2 h-4 w-4" />Sin Proyecto</div>
-                <span className="text-xs opacity-60 font-mono">
-                  {prompts.filter(p => !p.projectId || p.projectId === 'none').length + links.filter(l => !l.projectId || l.projectId === 'none').length}
+                <span className="text-sm opacity-70 font-mono font-medium">
+                  ({prompts.filter(p => !p.projectId || p.projectId === 'none').length + links.filter(l => !l.projectId || l.projectId === 'none').length})
                 </span>
               </button>
 
@@ -362,7 +361,7 @@ export default function PromptPage({ user }: PromptPageProps) {
                       <span className="truncate">{p.name}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs opacity-60 font-mono">{count}</span>
+                      <span className="text-sm opacity-70 font-mono font-medium">({count})</span>
                       <Trash2 
                         className="h-3.5 w-3.5 text-destructive opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110" 
                         onClick={(e) => openDeleteProjectDialog(p, e)} 
