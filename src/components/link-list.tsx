@@ -29,27 +29,22 @@ const LinkList = memo(function LinkList({
     const el = listRef.current;
     if (!el) return;
 
+    let nextSibling: Node | null = null;
+
     const sortable = new Sortable(el, {
       animation: 150,
       handle: '.drag-handle',
       ghostClass: 'sortable-ghost',
       forceFallback: true,
+      onStart: (evt) => {
+        nextSibling = evt.item.nextSibling;
+      },
       onEnd: (evt) => {
         const { oldIndex, newIndex, item, from } = evt;
         
-        /**
-         * REVERSIÓN ATÓMICA:
-         * Devolvemos el nodo a su posición original para que React gestione 
-         * la actualización de la lista sin colisiones de DOM.
-         */
         if (from && item) {
           try {
-            const nextSibling = from.children[oldIndex!] || null;
-            if (nextSibling) {
-              from.insertBefore(item, nextSibling);
-            } else {
-              from.appendChild(item);
-            }
+            from.insertBefore(item, nextSibling);
           } catch (e) {}
         }
 

@@ -29,31 +29,30 @@ const PromptList = memo(function PromptList({
     const el = listRef.current;
     if (!el) return;
 
-    // Inicialización de SortableJS con técnica de reversión de DOM para React
+    let nextSibling: Node | null = null;
+
     const sortable = new Sortable(el, {
       animation: 150,
       handle: '.drag-handle',
       ghostClass: 'sortable-ghost',
       forceFallback: true,
+      onStart: (evt) => {
+        // Capturar el hermano siguiente para la reversión atómica perfecta
+        nextSibling = evt.item.nextSibling;
+      },
       onEnd: (evt) => {
         const { oldIndex, newIndex, item, from } = evt;
         
         /**
-         * REVERSIÓN ATÓMICA:
-         * SortableJS manipula el DOM real. Devolvemos el nodo a su posición original
-         * antes de que React procese el cambio de estado. Esto evita errores de 
-         * desincronización de nodos (NotFoundError) al eliminar elementos.
+         * REVERSIÓN ATÓMICA DE DOM:
+         * Devolvemos el nodo a su posición original EXACTA antes de que React actualice.
+         * Esto previene que React falle al intentar limpiar nodos "ensuciados" por SortableJS.
          */
         if (from && item) {
           try {
-            const nextSibling = from.children[oldIndex!] || null;
-            if (nextSibling) {
-              from.insertBefore(item, nextSibling);
-            } else {
-              from.appendChild(item);
-            }
+            from.insertBefore(item, nextSibling);
           } catch (e) {
-            // Error silencioso si el nodo ya no existe
+            // Silencioso: el nodo puede haber sido ya gestionado por React
           }
         }
         
@@ -73,7 +72,7 @@ const PromptList = memo(function PromptList({
         sortableRef.current = null;
       }
     };
-  }, []); // Dependencias vacías para mantener una instancia única y estable
+  }, []); // Efecto estático para evitar colisiones durante re-renders de Firebase
 
   return (
     <div 

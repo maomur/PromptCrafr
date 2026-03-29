@@ -106,10 +106,9 @@ export default function PromptPage({ user }: PromptPageProps) {
   const [activeProjectId, setActiveProjectId] = useState<string | 'all' | 'none'>('all');
 
   /**
-   * EFECTO DE SEGURIDAD CRÍTICO:
-   * Forza la limpieza de los estilos del body aplicados por Radix UI/Shadcn.
-   * Esto previene que la aplicación se congele (pointer-events: none) si un diálogo 
-   * intenta devolver el foco a un elemento que ya ha sido eliminado del DOM.
+   * LIMPIEZA AGRESIVA DE BLOQUEOS (Pointer-Events)
+   * Soluciona el problema de la aplicación congelada tras borrar un elemento.
+   * Radix UI a veces no limpia el body si el elemento que tenía el foco desaparece.
    */
   useEffect(() => {
     const isAnyDialogOpen = 
@@ -122,12 +121,21 @@ export default function PromptPage({ user }: PromptPageProps) {
       isNewProjectDialogOpen;
 
     if (!isAnyDialogOpen) {
-      // Forzar desbloqueo de la interfaz con un pequeño retardo para asegurar que Radix terminó
-      const timer = setTimeout(() => {
+      const cleanup = () => {
         document.body.style.pointerEvents = 'auto';
         document.body.style.overflow = 'auto';
-      }, 50);
-      return () => clearTimeout(timer);
+        document.body.classList.remove('pointer-events-none');
+      };
+
+      // Ejecutar inmediatamente y con varios retardos para asegurar el desbloqueo
+      cleanup();
+      const t1 = setTimeout(cleanup, 100);
+      const t2 = setTimeout(cleanup, 500);
+      
+      return () => {
+        clearTimeout(t1);
+        clearTimeout(t2);
+      };
     }
   }, [isDeleteDialogOpen, isLinkDeleteDialogOpen, isCreateDialogOpen, isEditDialogOpen, isCreateLinkDialogOpen, isEditLinkDialogOpen, isNewProjectDialogOpen]);
 
@@ -213,10 +221,9 @@ export default function PromptPage({ user }: PromptPageProps) {
   }, [user?.uid, firestore, activeProjectId, toast]);
 
   /**
-   * ELIMINACIÓN DESACOPLADA:
-   * Cerramos el diálogo primero y esperamos a que el DOM se asiente
-   * antes de eliminar de Firebase. Esto evita que Radix intente restaurar 
-   * el foco a un elemento inexistente.
+   * BORRADO DESACOPLADO (Definitivo)
+   * Cerramos el diálogo PRIMERO y esperamos a que Radix limpie el body y el foco.
+   * Solo después borramos de Firebase para evitar conflictos de "Trigger Missing".
    */
   const executeDeletePrompt = () => {
     if (promptToDelete && firestore && user?.uid) {
@@ -225,7 +232,7 @@ export default function PromptPage({ user }: PromptPageProps) {
       
       setDeleteDialogOpen(false);
       
-      // Permitimos que el diálogo se desmonte completamente
+      // Esperar 150ms para que Radix termine su ciclo de vida y restaure el body
       setTimeout(() => {
         deleteDocumentNonBlocking(docRef);
         setPromptToDelete(null);
@@ -409,7 +416,7 @@ export default function PromptPage({ user }: PromptPageProps) {
         </DialogContent>
       </Dialog>
       
-      {/* DIÁLOGOS DE BORRADO - EXTERNALIZADOS Y DESACOPLADOS */}
+      {/* DIÁLOGOS DE BORRADO - DESACOPLADOS */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
