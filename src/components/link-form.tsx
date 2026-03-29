@@ -24,7 +24,7 @@ interface LinkFormProps {
     projectId: string;
     title?: string;
     description?: string;
-    category?: PromptCategory;
+    category: PromptCategory;
   }, id?: string) => void;
   onClose: () => void;
 }
@@ -37,7 +37,7 @@ export default function LinkForm({ link, projects, onSave, onClose }: LinkFormPr
   const [projectId, setProjectId] = useState<string>(link?.projectId || projects[0]?.id || 'none');
   const [title, setTitle] = useState(link?.title || '');
   const [description, setDescription] = useState(link?.description || '');
-  const [category, setCategory] = useState<PromptCategory | 'none'>(link?.category || 'none');
+  const [category, setCategory] = useState<PromptCategory>(link?.category || 'Textos');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -57,7 +57,7 @@ export default function LinkForm({ link, projects, onSave, onClose }: LinkFormPr
       projectId,
       title: title.trim() || undefined,
       description: description.trim() || undefined,
-      category: category === 'none' ? undefined : category,
+      category: category,
     }, link?.id);
   };
 
@@ -82,7 +82,7 @@ export default function LinkForm({ link, projects, onSave, onClose }: LinkFormPr
             <SelectValue placeholder="Selecciona un proyecto" />
           </SelectTrigger>
           <SelectContent position="popper" sideOffset={4}>
-            <SelectItem value="none">Sin proyecto</SelectItem>
+            <SelectItem value="none">Sin proyecto (General)</SelectItem>
             {projects.map((p) => (
               <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
             ))}
@@ -101,13 +101,12 @@ export default function LinkForm({ link, projects, onSave, onClose }: LinkFormPr
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="link-category-select">Categoría (Opcional)</Label>
-          <Select value={category} onValueChange={(value) => setCategory(value as any)} modal={false}>
+          <Label htmlFor="link-category-select">Categoría</Label>
+          <Select value={category} onValueChange={(value) => setCategory(value as PromptCategory)} modal={false}>
             <SelectTrigger id="link-category-select">
               <SelectValue placeholder="Selecciona una categoría" />
             </SelectTrigger>
             <SelectContent position="popper" sideOffset={4}>
-              <SelectItem value="none">Sin categoría</SelectItem>
               {promptCategories.map((cat) => (
                 <SelectItem key={cat} value={cat}>{cat}</SelectItem>
               ))}
