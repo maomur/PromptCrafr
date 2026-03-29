@@ -63,6 +63,17 @@ export default function PromptCard({
     e.dataTransfer.setData('itemId', prompt.id);
     e.dataTransfer.setData('itemType', 'prompt');
     e.dataTransfer.effectAllowed = 'move';
+    
+    // Visual feedback for dragging
+    if (cardRef.current) {
+      cardRef.current.style.opacity = '0.4';
+    }
+  };
+
+  const handleDragEnd = () => {
+    if (cardRef.current) {
+      cardRef.current.style.opacity = '1';
+    }
   };
 
   const handleCardClick = useCallback((event: React.MouseEvent) => {
@@ -88,6 +99,7 @@ export default function PromptCard({
       ref={cardRef}
       draggable={true}
       onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
       onClick={handleCardClick}
       className="group flex h-full flex-col rounded-xl border-border/20 bg-card text-card-foreground shadow-md transition-all duration-300 hover:shadow-lg relative overflow-hidden"
     >

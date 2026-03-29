@@ -73,8 +73,8 @@
   cursor: grab;
   -webkit-user-select: none;
   user-select: none;
-  width: 44px;
-  height: 44px;
+  width: 48px; /* Increased hit area for mobile */
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -84,7 +84,14 @@
   border-left: 1px solid hsl(var(--border) / 0.4);
   border-bottom: 1px solid hsl(var(--border) / 0.4);
   transition: transform 0.2s ease, background-color 0.2s ease;
-  touch-action: none !important; /* Critical: tells browser not to scroll here */
+  touch-action: none !important; /* Critical: block native scroll on the handle */
+  -webkit-touch-callout: none !important;
+  -webkit-user-drag: none !important;
+  z-index: 20;
+}
+
+.drag-handle svg {
+  pointer-events: none !important; /* Icons should not steal the touch event */
 }
 
 .drag-handle:active {
@@ -95,6 +102,8 @@
 
 [draggable="true"] {
   -webkit-user-drag: element;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 /* Mobile DND Polyfill styles */
@@ -109,4 +118,5 @@
 body.dragging-active {
   overflow: hidden !important;
   touch-action: none !important;
+  -webkit-overflow-scrolling: auto !important;
 }

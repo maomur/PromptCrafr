@@ -52,6 +52,17 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
     e.dataTransfer.setData('itemId', link.id);
     e.dataTransfer.setData('itemType', 'link');
     e.dataTransfer.effectAllowed = 'move';
+    
+    // Visual feedback for dragging
+    if (cardRef.current) {
+      cardRef.current.style.opacity = '0.4';
+    }
+  };
+
+  const handleDragEnd = () => {
+    if (cardRef.current) {
+      cardRef.current.style.opacity = '1';
+    }
   };
 
   const handleCardClick = useCallback((event: React.MouseEvent) => {
@@ -77,6 +88,7 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
       ref={cardRef}
       draggable={true}
       onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
       onClick={handleCardClick}
       className="group flex flex-col h-full rounded-xl border-border/20 bg-card shadow-md transition-all duration-300 hover:shadow-lg relative overflow-hidden"
     >
