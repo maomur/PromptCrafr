@@ -63,7 +63,6 @@ export default function PromptPage({ user }: PromptPageProps) {
   const firestore = useFirestore();
   const auth = useAuth();
 
-  // Queries con memoización correcta
   const projectsQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
     return collection(firestore, 'users', user.uid, 'projects');
@@ -87,7 +86,6 @@ export default function PromptPage({ user }: PromptPageProps) {
   const prompts = useMemo(() => rawPrompts || [], [rawPrompts]);
   const links = useMemo(() => rawLinks || [], [rawLinks]);
 
-  // UI State
   const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
   const [isCreateLinkDialogOpen, setCreateLinkDialogOpen] = useState(false);
   const [isEditDialogOpen, setEditDialogOpen] = useState(false);
@@ -104,7 +102,6 @@ export default function PromptPage({ user }: PromptPageProps) {
   const [categoryFilter, setCategoryFilter] = useState<PromptCategory | 'Todos'>('Todos');
   const [activeProjectId, setActiveProjectId] = useState<string | 'all' | 'none'>('all');
 
-  // Business Logic
   const handleMoveToProject = useCallback((itemId: string, itemType: string, projectId: string | null) => {
     if (!firestore || !user?.uid) return;
     const collectionName = itemType === 'prompt' ? 'prompts' : 'links';
@@ -186,19 +183,15 @@ export default function PromptPage({ user }: PromptPageProps) {
     toast({ title: "Proyecto eliminado" });
   }, [user?.uid, firestore, activeProjectId, toast]);
 
-  // Reordenamiento seguro
   const handleReorderPrompts = useCallback((oldIndex: number, newIndex: number) => {
-    if (!firestore || !user?.uid) return;
-    // Lógica de reordenamiento aquí si se desea persistir
-    console.log(`Reordered prompt from ${oldIndex} to ${newIndex}`);
-  }, [user?.uid, firestore]);
+    // Implementación futura de persistencia de orden
+    console.log(`Reorder prompts: ${oldIndex} to ${newIndex}`);
+  }, []);
 
   const handleReorderLinks = useCallback((oldIndex: number, newIndex: number) => {
-    if (!firestore || !user?.uid) return;
-    console.log(`Reordered link from ${oldIndex} to ${newIndex}`);
-  }, [user?.uid, firestore]);
+    console.log(`Reorder links: ${oldIndex} to ${newIndex}`);
+  }, []);
 
-  // Filtros
   const filteredPrompts = useMemo(() => {
     let result = prompts.filter(p => {
       const matchesProject = activeProjectId === 'all' || 
@@ -304,7 +297,8 @@ export default function PromptPage({ user }: PromptPageProps) {
                         <LinkIcon className="h-4 w-4" /> Enlaces ({filteredLinks.length})
                       </h3>
                       <LinkList 
-                        links={filteredLinks} projects={projects}
+                        links={filteredLinks} 
+                        projects={projects}
                         onDeleteLink={(id) => { const l = links.find(li => li.id === id); if (l) { setLinkToDelete(l); setLinkDeleteDialogOpen(true); } }} 
                         onEditLink={(link) => { setSelectedLink(link); setEditLinkDialogOpen(true); }}
                         onReorder={handleReorderLinks}
@@ -318,7 +312,8 @@ export default function PromptPage({ user }: PromptPageProps) {
                         <Sparkles className="h-4 w-4" /> Prompts ({filteredPrompts.length})
                       </h3>
                       <PromptList
-                        prompts={filteredPrompts} projects={projects}
+                        prompts={filteredPrompts} 
+                        projects={projects}
                         onDeletePrompt={(id) => { const p = prompts.find(pr => pr.id === id); if (p) { setPromptToDelete(p); setDeleteDialogOpen(true); } }}
                         onEditPrompt={(prompt) => { setSelectedPrompt(prompt); setEditDialogOpen(true); }}
                         onReorder={handleReorderPrompts}
@@ -333,7 +328,6 @@ export default function PromptPage({ user }: PromptPageProps) {
         </main>
       </div>
 
-      {/* Floating Actions */}
       <div className="fixed bottom-8 right-8 flex items-center gap-3 z-50">
         <Dialog open={isCreateLinkDialogOpen} onOpenChange={setCreateLinkDialogOpen}>
           <DialogTrigger asChild><Button className="h-16 w-16 rounded-full shadow-2xl bg-orange-500 hover:bg-orange-600" size="icon"><LinkIcon className="h-8 w-8 text-white" /></Button></DialogTrigger>
@@ -345,7 +339,6 @@ export default function PromptPage({ user }: PromptPageProps) {
         </Dialog>
       </div>
 
-      {/* Shared Dialogs */}
       <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="sm:max-w-[625px]">
           <DialogHeader><DialogTitle>Editar Prompt</DialogTitle></DialogHeader>

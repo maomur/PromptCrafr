@@ -36,16 +36,21 @@ export default function LinkList({
       fallbackOnBody: true,
       onEnd: (evt) => {
         const { item, newIndex, oldIndex, from } = evt;
-        if (oldIndex !== undefined && newIndex !== undefined && oldIndex !== newIndex) {
-          // Reversión de DOM inmediata
-          if (from && item) {
-            const children = Array.from(from.children);
-            if (oldIndex < newIndex) {
-              from.insertBefore(item, children[oldIndex]);
+        
+        // REVERSIÓN DE DOM OBLIGATORIA
+        if (from && item && oldIndex !== undefined) {
+          try {
+            if (oldIndex < (newIndex ?? 0)) {
+              from.insertBefore(item, from.children[oldIndex] || null);
             } else {
-              from.insertBefore(item, children[oldIndex].nextSibling || null);
+              from.insertBefore(item, from.children[oldIndex + 1] || null);
             }
+          } catch (e) {
+            // Silencioso
           }
+        }
+
+        if (oldIndex !== undefined && newIndex !== undefined && oldIndex !== newIndex) {
           onReorder(oldIndex, newIndex);
         }
       },
@@ -58,7 +63,7 @@ export default function LinkList({
         try {
           sortableRef.current.destroy();
         } catch (e) {
-          // Silencioso si falla
+          // Silencioso
         }
         sortableRef.current = null;
       }
