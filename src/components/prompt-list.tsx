@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, memo } from 'react';
 import type { Prompt, Project } from '@/lib/definitions';
 import PromptCard from '@/components/prompt-card';
 import Sortable from 'sortablejs';
@@ -14,7 +14,7 @@ interface PromptListProps {
   onMoveToProject: (promptId: string, projectId: string | null) => void;
 }
 
-export default function PromptList({ 
+const PromptList = memo(function PromptList({ 
   prompts, 
   projects,
   onDeletePrompt, 
@@ -24,42 +24,48 @@ export default function PromptList({
 }: PromptListProps) {
   const listRef = useRef<HTMLDivElement>(null);
   const sortableRef = useRef<Sortable | null>(null);
+  
+  // Usamos una ref para el callback para mantener el useEffect estable
+  const onReorderRef = useRef(onReorder);
+  useEffect(() => {
+    onReorderRef.current = onReorder;
+  }, [onReorder]);
 
   useEffect(() => {
     const el = listRef.current;
     if (!el) return;
 
-    // Inicializamos SortableJS una sola vez para el contenedor
     const sortable = new Sortable(el, {
       animation: 150,
       handle: '.drag-handle',
       ghostClass: 'sortable-ghost',
-      forceFallback: true, // Crucial para móviles
+      forceFallback: true,
       fallbackOnBody: true,
       delay: 150,
       delayOnTouchOnly: true,
       onStart: (evt) => {
-        // Capturamos el hermano siguiente original para la reversión exacta
+        // Almacenamos la posición original exacta para la reversión
         (evt.item as any)._originalNextSibling = evt.item.nextSibling;
       },
       onEnd: (evt) => {
         const { item, from, oldIndex, newIndex } = evt;
         
-        // REVERSIÓN DE DOM OBLIGATORIA: 
-        // Devolvemos el nodo a su sitio exacto ANTES de que React vea el cambio de estado.
-        // Esto evita el error fatal "Failed to execute 'removeChild' on 'Node'".
+        // REVERSIÓN ATÓMICA: Devolvemos el nodo a su sitio ANTES de cualquier cambio de estado
         if (from && item) {
           try {
             const nextSibling = (item as any)._originalNextSibling;
             from.insertBefore(item, nextSibling || null);
           } catch (e) {
-            // Ignorar errores silenciosamente
+            // Ignorar errores de manipulación de DOM si el nodo ya no existe
           }
         }
 
-        // Notificamos el cambio de orden solo si las posiciones cambiaron realmente
+        // Ejecutamos la lógica de negocio después de restaurar el DOM
         if (oldIndex !== undefined && newIndex !== undefined && oldIndex !== newIndex) {
-          onReorder(oldIndex, newIndex);
+          // Usamos setTimeout para asegurar que React procese el cambio en un nuevo ciclo
+          setTimeout(() => {
+            onReorderRef.current(oldIndex, newIndex);
+          }, 0);
         }
       },
     });
@@ -69,16 +75,18 @@ export default function PromptList({
     return () => {
       if (sortableRef.current) {
         try {
-          sortableRef.current.destroy();
+          // Limpieza segura: solo si el elemento sigue en el DOM
+          if (el && document.contains(el)) {
+            sortableRef.current.destroy();
+          }
         } catch (e) {
-          // Destrucción segura
+          // ignore
         }
         sortableRef.current = null;
       }
     };
-    // No incluimos 'prompts' en las dependencias para evitar ciclos de destrucción
-    // que causan bloqueos durante las eliminaciones de React.
-  }, [onReorder]);
+    // Dependencias mínimas para evitar reinicializaciones costosas
+  }, []);
 
   if (prompts.length === 0) return null;
 
@@ -100,4 +108,6 @@ export default function PromptList({
       ))}
     </div>
   );
-}
+});
+
+export default PromptList;

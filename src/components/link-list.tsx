@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, memo } from 'react';
 import type { Link, Project } from '@/lib/definitions';
 import LinkCard from '@/components/link-card';
 import Sortable from 'sortablejs';
@@ -14,7 +14,7 @@ interface LinkListProps {
   onMoveToProject: (linkId: string, projectId: string | null) => void;
 }
 
-export default function LinkList({ 
+const LinkList = memo(function LinkList({ 
   links, 
   projects,
   onDeleteLink, 
@@ -24,6 +24,12 @@ export default function LinkList({
 }: LinkListProps) {
   const listRef = useRef<HTMLDivElement>(null);
   const sortableRef = useRef<Sortable | null>(null);
+
+  // Mantenemos el callback actualizado sin recrear el effect
+  const onReorderRef = useRef(onReorder);
+  useEffect(() => {
+    onReorderRef.current = onReorder;
+  }, [onReorder]);
 
   useEffect(() => {
     const el = listRef.current;
@@ -53,7 +59,9 @@ export default function LinkList({
         }
 
         if (oldIndex !== undefined && newIndex !== undefined && oldIndex !== newIndex) {
-          onReorder(oldIndex, newIndex);
+          setTimeout(() => {
+            onReorderRef.current(oldIndex, newIndex);
+          }, 0);
         }
       },
     });
@@ -63,14 +71,16 @@ export default function LinkList({
     return () => {
       if (sortableRef.current) {
         try {
-          sortableRef.current.destroy();
+          if (el && document.contains(el)) {
+            sortableRef.current.destroy();
+          }
         } catch (e) {
-          // Limpieza segura
+          // ignore
         }
         sortableRef.current = null;
       }
     };
-  }, [onReorder]);
+  }, []);
 
   return (
     <div 
@@ -90,4 +100,6 @@ export default function LinkList({
       ))}
     </div>
   );
-}
+});
+
+export default LinkList;
