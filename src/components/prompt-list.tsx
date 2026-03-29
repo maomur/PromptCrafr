@@ -26,42 +26,20 @@ export default function PromptList({
   const sortableRef = useRef<Sortable | null>(null);
 
   useEffect(() => {
-    // Si no hay referencia al DOM, nos aseguramos de limpiar
-    if (!listRef.current) {
-      if (sortableRef.current) {
-        try {
-          sortableRef.current.destroy();
-        } catch (e) {}
-        sortableRef.current = null;
-      }
-      return;
-    }
+    if (!listRef.current || prompts.length === 0) return;
 
-    // Inicializamos SortableJS con emulación de software (Force Fallback)
     sortableRef.current = new Sortable(listRef.current, {
       animation: 150,
       handle: '.drag-handle',
       ghostClass: 'sortable-ghost',
-      chosenClass: 'sortable-chosen',
-      dragClass: 'sortable-drag',
-      group: {
-        name: 'shared-items',
-        pull: true,
-        put: true
-      },
-      dataIdAttr: 'data-id',
       forceFallback: true,
-      fallbackClass: 'sortable-fallback',
-      fallbackOnBody: true,
       delay: 150,
       delayOnTouchOnly: true,
       onEnd: (evt) => {
-        const { item, to, newIndex, oldIndex, from } = evt;
-        const draggedId = item.getAttribute('data-id');
-        
-        // Solo reordenar si el elemento se soltó en la misma lista
-        if (to === from && oldIndex !== undefined && newIndex !== undefined && oldIndex !== newIndex) {
-          const targetItem = to.children[newIndex] as HTMLElement;
+        const { item, newIndex, oldIndex } = evt;
+        if (oldIndex !== undefined && newIndex !== undefined && oldIndex !== newIndex) {
+          const draggedId = item.getAttribute('data-id');
+          const targetItem = listRef.current?.children[newIndex] as HTMLElement;
           const targetId = targetItem?.getAttribute('data-id');
           if (draggedId && targetId) {
             onReorder(draggedId, targetId);
@@ -72,17 +50,13 @@ export default function PromptList({
 
     return () => {
       if (sortableRef.current) {
-        try {
-          sortableRef.current.destroy();
-        } catch (e) {}
+        sortableRef.current.destroy();
         sortableRef.current = null;
       }
     };
-  }, [prompts.length, onReorder, onMoveToProject]); 
+  }, [prompts.length, onReorder]); 
 
-  if (prompts.length === 0) {
-    return null;
-  }
+  if (prompts.length === 0) return null;
 
   return (
     <div 
@@ -90,7 +64,7 @@ export default function PromptList({
       className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
     >
       {prompts.map((prompt) => (
-        <div key={prompt.id} data-id={prompt.id} data-type="prompt" className="h-full">
+        <div key={prompt.id} data-id={prompt.id} className="h-full">
           <PromptCard 
             prompt={prompt} 
             projects={projects}

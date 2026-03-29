@@ -26,39 +26,20 @@ export default function LinkList({
   const sortableRef = useRef<Sortable | null>(null);
 
   useEffect(() => {
-    if (!listRef.current) {
-      if (sortableRef.current) {
-        try {
-          sortableRef.current.destroy();
-        } catch (e) {}
-        sortableRef.current = null;
-      }
-      return;
-    }
+    if (!listRef.current || links.length === 0) return;
 
     sortableRef.current = new Sortable(listRef.current, {
       animation: 150,
       handle: '.drag-handle',
       ghostClass: 'sortable-ghost',
-      chosenClass: 'sortable-chosen',
-      dragClass: 'sortable-drag',
-      group: {
-        name: 'shared-items',
-        pull: true,
-        put: true
-      },
-      dataIdAttr: 'data-id',
       forceFallback: true,
-      fallbackClass: 'sortable-fallback',
-      fallbackOnBody: true,
       delay: 150,
       delayOnTouchOnly: true,
       onEnd: (evt) => {
-        const { item, to, newIndex, oldIndex, from } = evt;
-        const draggedId = item.getAttribute('data-id');
-        
-        if (to === from && oldIndex !== undefined && newIndex !== undefined && oldIndex !== newIndex) {
-          const targetItem = to.children[newIndex] as HTMLElement;
+        const { item, newIndex, oldIndex } = evt;
+        if (oldIndex !== undefined && newIndex !== undefined && oldIndex !== newIndex) {
+          const draggedId = item.getAttribute('data-id');
+          const targetItem = listRef.current?.children[newIndex] as HTMLElement;
           const targetId = targetItem?.getAttribute('data-id');
           if (draggedId && targetId) {
             onReorder(draggedId, targetId);
@@ -69,13 +50,11 @@ export default function LinkList({
 
     return () => {
       if (sortableRef.current) {
-        try {
-          sortableRef.current.destroy();
-        } catch (e) {}
+        sortableRef.current.destroy();
         sortableRef.current = null;
       }
     };
-  }, [links.length, onReorder, onMoveToProject]);
+  }, [links.length, onReorder]);
 
   return (
     <div 
@@ -83,7 +62,7 @@ export default function LinkList({
       className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
     >
       {links.map((link) => (
-        <div key={link.id} data-id={link.id} data-type="link" className="h-full">
+        <div key={link.id} data-id={link.id} className="h-full">
           <LinkCard 
             link={link} 
             projects={projects}

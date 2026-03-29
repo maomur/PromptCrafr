@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import type { Prompt, PromptCategory, Project, Link } from '@/lib/definitions';
 import { promptCategories } from '@/lib/definitions';
 import Header from '@/components/header';
@@ -53,7 +53,6 @@ import {
 } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
-import Sortable from 'sortablejs';
 
 interface PromptPageProps {
   user: User;
@@ -63,7 +62,6 @@ export default function PromptPage({ user }: PromptPageProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
   const auth = useAuth();
-  const sidebarNavRef = useRef<HTMLElement>(null);
 
   // Queries
   const projectsQuery = useMemoFirebase(() => {
@@ -89,70 +87,7 @@ export default function PromptPage({ user }: PromptPageProps) {
   const prompts = useMemo(() => rawPrompts || [], [rawPrompts]);
   const links = useMemo(() => rawLinks || [], [rawLinks]);
 
-  // Handler for moving items
-  const handleMoveToProject = useCallback((itemId: string, itemType: string, projectId: string | null) => {
-    if (!firestore || !user?.uid) return;
-    
-    const collectionName = itemType === 'prompt' ? 'prompts' : 'links';
-    const docRef = doc(firestore, 'users', user.uid, collectionName, itemId);
-    
-    updateDocumentNonBlocking(docRef, { 
-      projectId: projectId || null, 
-      ...(itemType === 'prompt' && { updatedAt: new Date().toISOString() })
-    });
-    
-    toast({ title: itemType === 'prompt' ? "Prompt organizado" : "Enlace organizado" });
-  }, [user?.uid, firestore, toast]);
-
-  // Initializing Project Drop targets with mobile support
-  useEffect(() => {
-    if (sidebarNavRef.current && !projectsLoading) {
-      const dropTargets = sidebarNavRef.current.querySelectorAll('.project-drop-target');
-      const sortables: Sortable[] = [];
-      
-      dropTargets.forEach((target) => {
-        sortables.push(new Sortable(target as HTMLElement, {
-          group: {
-            name: 'shared-items',
-            put: true,
-            pull: false
-          },
-          sort: false,
-          forceFallback: true,
-          delay: 150,
-          delayOnTouchOnly: true,
-          ghostClass: 'sortable-ghost',
-          dragClass: 'sortable-drag',
-          onAdd: (evt) => {
-            const { item, to, from, oldIndex } = evt;
-            const draggedId = item.getAttribute('data-id');
-            const itemType = item.getAttribute('data-type');
-            const projectId = to.getAttribute('data-project-id');
-
-            if (draggedId && itemType) {
-              // CRITICAL: Revert DOM change immediately so React doesn't crash during re-render
-              // This puts the element back where it came from before Firebase state updates
-              if (from && typeof oldIndex === 'number') {
-                from.insertBefore(item, from.children[oldIndex] || null);
-              }
-
-              const targetProjectId = projectId === 'all' || projectId === 'none' ? null : projectId;
-              handleMoveToProject(draggedId, itemType, targetProjectId);
-            }
-          }
-        }));
-      });
-
-      return () => sortables.forEach(s => {
-        try {
-          s.destroy();
-        } catch (e) {
-          // Silent catch for stability
-        }
-      });
-    }
-  }, [projectsLoading, projects.length, handleMoveToProject]);
-
+  // UI State
   const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
   const [isCreateLinkDialogOpen, setCreateLinkDialogOpen] = useState(false);
   const [isEditDialogOpen, setEditDialogOpen] = useState(false);
@@ -169,118 +104,75 @@ export default function PromptPage({ user }: PromptPageProps) {
   const [categoryFilter, setCategoryFilter] = useState<PromptCategory | 'Todos'>('Todos');
   const [activeProjectId, setActiveProjectId] = useState<string | 'all' | 'none'>('all');
 
-  const handleSave = useCallback((promptData: {
-    title: string;
-    description: string;
-    content: string;
-    category: PromptCategory | null;
-    projectId: string | null;
-  }, id?: string) => {
+  // Business Logic
+  const handleMoveToProject = useCallback((itemId: string, itemType: string, projectId: string | null) => {
     if (!firestore || !user?.uid) return;
-    
-    const now = new Date().toISOString();
+    const collectionName = itemType === 'prompt' ? 'prompts' : 'links';
+    const docRef = doc(firestore, 'users', user.uid, collectionName, itemId);
+    updateDocumentNonBlocking(docRef, { projectId: projectId || null });
+    toast({ title: "Recurso organizado" });
+  }, [user?.uid, firestore, toast]);
+
+  const handleSavePrompt = useCallback((promptData: any, id?: string) => {
+    if (!firestore || !user?.uid) return;
     const userId = user.uid;
+    const now = new Date().toISOString();
     
     if (id) {
       const docRef = doc(firestore, 'users', userId, 'prompts', id);
-      updateDocumentNonBlocking(docRef, {
-        title: promptData.title,
-        description: promptData.description,
-        content: promptData.content,
-        category: promptData.category || null,
-        projectId: promptData.projectId || null,
-        updatedAt: now
-      });
-      toast({ title: 'Prompt actualizado' });
+      updateDocumentNonBlocking(docRef, { ...promptData, updatedAt: now });
       setEditDialogOpen(false);
     } else {
       const colRef = collection(firestore, 'users', userId, 'prompts');
       const newDocRef = doc(colRef);
       const maxOrder = prompts.length > 0 ? Math.max(...prompts.map(p => p.order || 0)) : 0;
-      
-      const newPrompt: Prompt = {
+      setDocumentNonBlocking(newDocRef, {
+        ...promptData,
         id: newDocRef.id,
         ownerId: userId,
         createdAt: now,
         updatedAt: now,
-        title: promptData.title,
-        description: promptData.description,
-        content: promptData.content,
-        category: promptData.category || null,
-        projectId: promptData.projectId || null,
         order: maxOrder + 1
-      };
-
-      setDocumentNonBlocking(newDocRef, newPrompt);
-      toast({ title: 'Prompt creado' });
+      });
       setCreateDialogOpen(false);
     }
-    
-    setSelectedPrompt(null);
+    toast({ title: id ? 'Prompt actualizado' : 'Prompt creado' });
   }, [user?.uid, firestore, prompts, toast]);
 
-  const handleSaveLink = useCallback((linkData: {
-    url: string;
-    projectId: string | null;
-    title?: string;
-    description?: string;
-    category?: PromptCategory | null;
-  }, id?: string) => {
+  const handleSaveLink = useCallback((linkData: any, id?: string) => {
     if (!firestore || !user?.uid) return;
-    
     const userId = user.uid;
     
     if (id) {
       const docRef = doc(firestore, 'users', userId, 'links', id);
-      updateDocumentNonBlocking(docRef, {
-        url: linkData.url,
-        projectId: linkData.projectId || null,
-        title: linkData.title || null,
-        description: linkData.description || null,
-        category: linkData.category || null,
-      });
-      toast({ title: 'Enlace actualizado' });
+      updateDocumentNonBlocking(docRef, linkData);
       setEditLinkDialogOpen(false);
-      setSelectedLink(null);
     } else {
       const colRef = collection(firestore, 'users', userId, 'links');
       const newDocRef = doc(colRef);
       const maxOrder = links.length > 0 ? Math.max(...links.map(l => l.order || 0)) : 0;
-      
-      const newLink: Link = {
+      setDocumentNonBlocking(newDocRef, {
+        ...linkData,
         id: newDocRef.id,
         ownerId: userId,
         createdAt: new Date().toISOString(),
-        url: linkData.url,
-        projectId: linkData.projectId || null,
-        title: linkData.title || null,
-        description: linkData.description || null,
-        category: linkData.category || null,
         order: maxOrder + 1
-      };
-
-      setDocumentNonBlocking(newDocRef, newLink);
-      toast({ title: 'Enlace guardado' });
+      });
       setCreateLinkDialogOpen(false);
     }
+    toast({ title: id ? 'Enlace actualizado' : 'Enlace guardado' });
   }, [user?.uid, firestore, links, toast]);
 
   const handleCreateProject = useCallback(() => {
-    const name = newProjectName.trim();
-    if (!name || !firestore || !user?.uid) return;
-    
-    const userId = user.uid;
-    const colRef = collection(firestore, 'users', userId, 'projects');
+    if (!newProjectName.trim() || !firestore || !user?.uid) return;
+    const colRef = collection(firestore, 'users', user.uid, 'projects');
     const newDocRef = doc(colRef);
-    
-    const newProject: Project = {
+    setDocumentNonBlocking(newDocRef, {
       id: newDocRef.id,
-      name: name,
-      ownerId: userId,
+      name: newProjectName.trim(),
+      ownerId: user.uid,
       createdAt: new Date().toISOString(),
-    };
-
-    setDocumentNonBlocking(newDocRef, newProject);
+    });
     setNewProjectName('');
     setNewProjectDialogOpen(false);
     toast({ title: "Proyecto creado" });
@@ -289,67 +181,31 @@ export default function PromptPage({ user }: PromptPageProps) {
   const handleDeleteProject = useCallback((id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!firestore || !user?.uid) return;
-    const projectRef = doc(firestore, 'users', user.uid, 'projects', id);
-    deleteDocumentNonBlocking(projectRef);
+    deleteDocumentNonBlocking(doc(firestore, 'users', user.uid, 'projects', id));
     if (activeProjectId === id) setActiveProjectId('all');
     toast({ title: "Proyecto eliminado" });
   }, [user?.uid, firestore, activeProjectId, toast]);
 
-  const handleReorder = useCallback((draggedId: string, targetId: string) => {
-    if (!firestore || !user?.uid) return;
-    
-    const draggedPrompt = prompts.find(p => p.id === draggedId);
-    const targetPrompt = prompts.find(p => p.id === targetId);
-    
-    if (!draggedPrompt || !targetPrompt) return;
-
-    const draggedRef = doc(firestore, 'users', user.uid, 'prompts', draggedId);
-    const targetRef = doc(firestore, 'users', user.uid, 'prompts', targetId);
-    
-    const tempOrder = targetPrompt.order || 0;
-    updateDocumentNonBlocking(draggedRef, { order: tempOrder, updatedAt: new Date().toISOString() });
-    updateDocumentNonBlocking(targetRef, { order: draggedPrompt.order || 0, updatedAt: new Date().toISOString() });
-  }, [prompts, firestore, user?.uid]);
-
-  const handleLinkReorder = useCallback((draggedId: string, targetId: string) => {
-    if (!firestore || !user?.uid) return;
-    
-    const draggedLink = links.find(l => l.id === draggedId);
-    const targetLink = links.find(l => l.id === targetId);
-    
-    if (!draggedLink || !targetLink) return;
-
-    const draggedRef = doc(firestore, 'users', user.uid, 'links', draggedId);
-    const targetRef = doc(firestore, 'users', user.uid, 'links', targetId);
-    
-    const tempOrder = targetLink.order || 0;
-    updateDocumentNonBlocking(draggedRef, { order: tempOrder });
-    updateDocumentNonBlocking(targetRef, { order: draggedLink.order || 0 });
-  }, [links, firestore, user?.uid]);
-
+  // Filters & Sorting
   const filteredPrompts = useMemo(() => {
-    let result = [...prompts];
-    if (activeProjectId === 'none') {
-      result = result.filter(p => !p.projectId || p.projectId === 'none');
-    } else if (activeProjectId !== 'all') {
-      result = result.filter(p => p.projectId === activeProjectId);
-    }
-    if (categoryFilter !== 'Todos') {
-      result = result.filter(p => p.category === categoryFilter);
-    }
+    let result = prompts.filter(p => {
+      const matchesProject = activeProjectId === 'all' || 
+                           (activeProjectId === 'none' && (!p.projectId || p.projectId === 'none')) ||
+                           p.projectId === activeProjectId;
+      const matchesCategory = categoryFilter === 'Todos' || p.category === categoryFilter;
+      return matchesProject && matchesCategory;
+    });
     return result.sort((a, b) => (b.order || 0) - (a.order || 0));
   }, [prompts, activeProjectId, categoryFilter]);
 
   const filteredLinks = useMemo(() => {
-    let result = [...links];
-    if (activeProjectId === 'none') {
-      result = result.filter(l => !l.projectId || l.projectId === 'none');
-    } else if (activeProjectId !== 'all') {
-      result = result.filter(l => l.projectId === activeProjectId);
-    }
-    if (categoryFilter !== 'Todos') {
-      result = result.filter(l => l.category === categoryFilter);
-    }
+    let result = links.filter(l => {
+      const matchesProject = activeProjectId === 'all' || 
+                           (activeProjectId === 'none' && (!l.projectId || l.projectId === 'none')) ||
+                           l.projectId === activeProjectId;
+      const matchesCategory = categoryFilter === 'Todos' || l.category === categoryFilter;
+      return matchesProject && matchesCategory;
+    });
     return result.sort((a, b) => (b.order || 0) - (a.order || 0));
   }, [links, activeProjectId, categoryFilter]);
 
@@ -370,7 +226,6 @@ export default function PromptPage({ user }: PromptPageProps) {
               ))}
             </select>
           </div>
-          
           <div className="flex items-center gap-2 border-l pl-4 border-border/60">
             <Button variant="ghost" size="icon" onClick={() => logOut(auth)} title="Cerrar Sesión">
               <LogOut className="h-5 w-5 text-muted-foreground hover:text-destructive transition-colors" />
@@ -384,8 +239,7 @@ export default function PromptPage({ user }: PromptPageProps) {
           <div className="space-y-2">
             <div className="flex items-center justify-between px-2 pb-2 border-b border-border/40">
               <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center">
-                <Folders className="mr-2 h-4 w-4" />
-                Proyectos
+                <Folders className="mr-2 h-4 w-4" /> Proyectos
               </h2>
               <Dialog open={isNewProjectDialogOpen} onOpenChange={setNewProjectDialogOpen}>
                 <DialogTrigger asChild>
@@ -394,65 +248,28 @@ export default function PromptPage({ user }: PromptPageProps) {
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Nuevo Proyecto</DialogTitle>
-                  </DialogHeader>
+                  <DialogHeader><DialogTitle>Nuevo Proyecto</DialogTitle></DialogHeader>
                   <div className="space-y-4 pt-4">
-                    <Input 
-                      placeholder="Nombre del proyecto..." 
-                      value={newProjectName} 
-                      onChange={e => setNewProjectName(e.target.value)}
-                    />
-                    <Button className="w-full" onClick={handleCreateProject} disabled={!newProjectName.trim()}>
-                      Crear Proyecto
-                    </Button>
+                    <Input placeholder="Nombre del proyecto..." value={newProjectName} onChange={e => setNewProjectName(e.target.value)} />
+                    <Button className="w-full" onClick={handleCreateProject} disabled={!newProjectName.trim()}>Crear</Button>
                   </div>
                 </DialogContent>
               </Dialog>
             </div>
 
-            <nav ref={sidebarNavRef} className="space-y-1">
-              <button
-                onClick={() => setActiveProjectId('all')}
-                data-project-id="all"
-                className={cn(
-                  "project-drop-target w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-all",
-                  activeProjectId === 'all' ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50"
-                )}
-              >
-                <div className="flex items-center pointer-events-none"><Folders className="mr-2 h-4 w-4" />Todos</div>
-                <span className="text-xs opacity-60 pointer-events-none">{prompts.length + links.length}</span>
+            <nav className="space-y-1">
+              <button onClick={() => setActiveProjectId('all')} className={cn("w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-all", activeProjectId === 'all' ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50")}>
+                <div className="flex items-center"><Folders className="mr-2 h-4 w-4" />Todos</div>
+                <span className="text-xs opacity-60">{prompts.length + links.length}</span>
               </button>
-
-              <button
-                onClick={() => setActiveProjectId('none')}
-                data-project-id="none"
-                className={cn(
-                  "project-drop-target w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-all",
-                  activeProjectId === 'none' ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50"
-                )}
-              >
-                <div className="flex items-center pointer-events-none"><Folder className="mr-2 h-4 w-4" />Sin Proyecto</div>
-                <span className="text-xs opacity-60 pointer-events-none">{prompts.filter(p => !p.projectId || p.projectId === 'none').length + links.filter(l => !l.projectId || l.projectId === 'none').length}</span>
+              <button onClick={() => setActiveProjectId('none')} className={cn("w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-all", activeProjectId === 'none' ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50")}>
+                <div className="flex items-center"><Folder className="mr-2 h-4 w-4" />Sin Proyecto</div>
+                <span className="text-xs opacity-60">{prompts.filter(p => !p.projectId || p.projectId === 'none').length + links.filter(l => !l.projectId || l.projectId === 'none').length}</span>
               </button>
-
-              {projects.map((project) => (
-                <button
-                  key={project.id}
-                  onClick={() => setActiveProjectId(project.id)}
-                  data-project-id={project.id}
-                  className={cn(
-                    "project-drop-target group w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-all",
-                    activeProjectId === project.id ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50"
-                  )}
-                >
-                  <div className="flex items-center truncate pointer-events-none">
-                    <Folder className="mr-2 h-4 w-4 shrink-0" />
-                    <span className="truncate">{project.name}</span>
-                  </div>
-                  <div className="flex items-center gap-2 pointer-events-none">
-                    <Trash2 className="h-3 w-3 text-destructive opacity-0 group-hover:opacity-100 pointer-events-auto" onClick={(e) => handleDeleteProject(project.id, e)} />
-                  </div>
+              {projects.map((p) => (
+                <button key={p.id} onClick={() => setActiveProjectId(p.id)} className={cn("group w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-all", activeProjectId === p.id ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50")}>
+                  <div className="flex items-center truncate"><Folder className="mr-2 h-4 w-4 shrink-0" /><span className="truncate">{p.name}</span></div>
+                  <Trash2 className="h-3 w-3 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => handleDeleteProject(p.id, e)} />
                 </button>
               ))}
             </nav>
@@ -463,13 +280,11 @@ export default function PromptPage({ user }: PromptPageProps) {
           {projectsLoading || promptsLoading || linksLoading ? (
              <div className="flex flex-col items-center justify-center pt-20 gap-4">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">Cargando biblioteca...</p>
+              <p className="text-sm text-muted-foreground">Cargando...</p>
             </div>
           ) : (
             <div className="space-y-8">
-              {filteredLinks.length === 0 && filteredPrompts.length === 0 ? (
-                <EmptyState />
-              ) : (
+              {filteredLinks.length === 0 && filteredPrompts.length === 0 ? <EmptyState /> : (
                 <>
                   {filteredLinks.length > 0 && (
                     <div className="space-y-4">
@@ -477,49 +292,28 @@ export default function PromptPage({ user }: PromptPageProps) {
                         <LinkIcon className="h-4 w-4" /> Enlaces ({filteredLinks.length})
                       </h3>
                       <LinkList 
-                        links={filteredLinks} 
-                        projects={projects}
-                        onDeleteLink={(id) => {
-                          const l = links.find(li => li.id === id);
-                          if (l) {
-                            setLinkToDelete(l);
-                            setLinkDeleteDialogOpen(true);
-                          }
-                        }} 
-                        onEditLink={(link) => {
-                          setSelectedLink(link);
-                          setEditLinkDialogOpen(true);
-                        }}
-                        onReorder={handleLinkReorder}
+                        links={filteredLinks} projects={projects}
+                        onDeleteLink={(id) => { const l = links.find(li => li.id === id); if (l) { setLinkToDelete(l); setLinkDeleteDialogOpen(true); } }} 
+                        onEditLink={(link) => { setSelectedLink(link); setEditLinkDialogOpen(true); }}
+                        onReorder={() => {}} // Reordering disabled for this view for stability
                         onMoveToProject={(linkId, projectId) => handleMoveToProject(linkId, 'link', projectId)}
                       />
                     </div>
                   )}
-
-                  <div className="space-y-4">
-                    {filteredPrompts.length > 0 && (
+                  {filteredPrompts.length > 0 && (
+                    <div className="space-y-4">
                       <h3 className="text-sm font-bold uppercase tracking-widest text-primary flex items-center gap-2 px-1">
                         <Sparkles className="h-4 w-4" /> Prompts ({filteredPrompts.length})
                       </h3>
-                    )}
-                    <PromptList
-                      prompts={filteredPrompts}
-                      projects={projects}
-                      onDeletePrompt={(id) => {
-                        const p = prompts.find(pr => pr.id === id);
-                        if (p) {
-                          setPromptToDelete(p);
-                          setDeleteDialogOpen(true);
-                        }
-                      }}
-                      onEditPrompt={(prompt) => {
-                        setSelectedPrompt(prompt);
-                        setEditDialogOpen(true);
-                      }}
-                      onReorder={handleReorder}
-                      onMoveToProject={(promptId, projectId) => handleMoveToProject(promptId, 'prompt', projectId)}
-                    />
-                  </div>
+                      <PromptList
+                        prompts={filteredPrompts} projects={projects}
+                        onDeletePrompt={(id) => { const p = prompts.find(pr => pr.id === id); if (p) { setPromptToDelete(p); setDeleteDialogOpen(true); } }}
+                        onEditPrompt={(prompt) => { setSelectedPrompt(prompt); setEditDialogOpen(true); }}
+                        onReorder={() => {}} // Reordering disabled for stability
+                        onMoveToProject={(promptId, projectId) => handleMoveToProject(promptId, 'prompt', projectId)}
+                      />
+                    </div>
+                  )}
                 </>
               )}
             </div>
@@ -527,124 +321,43 @@ export default function PromptPage({ user }: PromptPageProps) {
         </main>
       </div>
 
-      {/* Dialogs */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar prompt?</AlertDialogTitle>
-            <AlertDialogDescription>Se eliminará definitivamente "{promptToDelete?.title}".</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground"
-              onClick={(e) => {
-                e.preventDefault();
-                if (promptToDelete && firestore) {
-                  const docRef = doc(firestore, 'users', user.uid, 'prompts', promptToDelete.id);
-                  deleteDocumentNonBlocking(docRef);
-                  setTimeout(() => {
-                    setPromptToDelete(null);
-                    setDeleteDialogOpen(false);
-                    toast({ title: "Prompt eliminado" });
-                  }, 150);
-                }
-              }}
-            >
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={isLinkDeleteDialogOpen} onOpenChange={setLinkDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar enlace?</AlertDialogTitle>
-            <AlertDialogDescription>Se eliminará definitivamente "{linkToDelete?.title || linkToDelete?.url}".</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground"
-              onClick={(e) => {
-                e.preventDefault();
-                if (linkToDelete && firestore) {
-                  const docRef = doc(firestore, 'users', user.uid, 'links', linkToDelete.id);
-                  deleteDocumentNonBlocking(docRef);
-                  setTimeout(() => {
-                    setLinkToDelete(null);
-                    setLinkDeleteDialogOpen(false);
-                    toast({ title: "Enlace eliminado" });
-                  }, 150);
-                }
-              }}
-            >
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
+      {/* Floating Actions */}
       <div className="fixed bottom-8 right-8 flex items-center gap-3 z-50">
         <Dialog open={isCreateLinkDialogOpen} onOpenChange={setCreateLinkDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="h-16 w-16 rounded-full shadow-2xl bg-orange-500 hover:bg-orange-600" size="icon">
-              <LinkIcon className="h-8 w-8 text-white" />
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[525px]">
-            <DialogHeader><DialogTitle>Nuevo Enlace</DialogTitle></DialogHeader>
-            <LinkForm projects={projects} onSave={handleSaveLink} onClose={() => setCreateLinkDialogOpen(false)} />
-          </DialogContent>
+          <DialogTrigger asChild><Button className="h-16 w-16 rounded-full shadow-2xl bg-orange-500 hover:bg-orange-600" size="icon"><LinkIcon className="h-8 w-8 text-white" /></Button></DialogTrigger>
+          <DialogContent className="sm:max-w-[525px]"><DialogHeader><DialogTitle>Nuevo Enlace</DialogTitle></DialogHeader><LinkForm projects={projects} onSave={handleSaveLink} onClose={() => setCreateLinkDialogOpen(false)} /></DialogContent>
         </Dialog>
-
         <Dialog open={isCreateDialogOpen} onOpenChange={setCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="h-16 w-16 rounded-full shadow-2xl bg-primary hover:bg-primary/90" size="icon">
-              <Plus className="h-8 w-8 text-primary-foreground" />
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[625px]">
-            <DialogHeader><DialogTitle>Nuevo Prompt</DialogTitle></DialogHeader>
-            <PromptForm onSave={handleSave} onClose={() => setCreateDialogOpen(false)} projects={projects} />
-          </DialogContent>
+          <DialogTrigger asChild><Button className="h-16 w-16 rounded-full shadow-2xl bg-primary hover:bg-primary/90" size="icon"><Plus className="h-8 w-8 text-primary-foreground" /></Button></DialogTrigger>
+          <DialogContent className="sm:max-w-[625px]"><DialogHeader><DialogTitle>Nuevo Prompt</DialogTitle></DialogHeader><PromptForm onSave={handleSavePrompt} onClose={() => setCreateDialogOpen(false)} projects={projects} /></DialogContent>
         </Dialog>
       </div>
 
+      {/* Shared Dialogs */}
       <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="sm:max-w-[625px]">
           <DialogHeader><DialogTitle>Editar Prompt</DialogTitle></DialogHeader>
-          {selectedPrompt && (
-            <PromptForm
-              prompt={selectedPrompt}
-              projects={projects}
-              onSave={handleSave}
-              onClose={() => {
-                setEditDialogOpen(false);
-                setSelectedPrompt(null);
-              }}
-            />
-          )}
+          {selectedPrompt && <PromptForm prompt={selectedPrompt} projects={projects} onSave={handleSavePrompt} onClose={() => setEditDialogOpen(false)} />}
         </DialogContent>
       </Dialog>
-
       <Dialog open={isEditLinkDialogOpen} onOpenChange={setEditLinkDialogOpen}>
         <DialogContent className="sm:max-w-[525px]">
           <DialogHeader><DialogTitle>Editar Enlace</DialogTitle></DialogHeader>
-          {selectedLink && (
-            <LinkForm
-              link={selectedLink}
-              projects={projects}
-              onSave={handleSaveLink}
-              onClose={() => {
-                setEditLinkDialogOpen(false);
-                setSelectedLink(null);
-              }}
-            />
-          )}
+          {selectedLink && <LinkForm link={selectedLink} projects={projects} onSave={handleSaveLink} onClose={() => setEditLinkDialogOpen(false)} />}
         </DialogContent>
       </Dialog>
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader><AlertDialogTitle>¿Eliminar prompt?</AlertDialogTitle><AlertDialogDescription>Se eliminará definitivamente "{promptToDelete?.title}".</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction className="bg-destructive" onClick={() => { if (promptToDelete) deleteDocumentNonBlocking(doc(firestore, 'users', user.uid, 'prompts', promptToDelete.id)); setDeleteDialogOpen(false); }}>Eliminar</AlertDialogAction></AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={isLinkDeleteDialogOpen} onOpenChange={setLinkDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader><AlertDialogTitle>¿Eliminar enlace?</AlertDialogTitle><AlertDialogDescription>Se eliminará definitivamente "{linkToDelete?.title || linkToDelete?.url}".</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction className="bg-destructive" onClick={() => { if (linkToDelete) deleteDocumentNonBlocking(doc(firestore, 'users', user.uid, 'links', linkToDelete.id)); setLinkDeleteDialogOpen(false); }}>Eliminar</AlertDialogAction></AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
