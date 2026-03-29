@@ -28,27 +28,30 @@ export default function PromptList({
   useEffect(() => {
     if (!listRef.current) return;
 
-    // Inicialización extremadamente estable de SortableJS
+    // Inicialización de SortableJS con modo de emulación (forceFallback) para máxima estabilidad en móviles
     const sortable = new Sortable(listRef.current, {
       animation: 150,
       handle: '.drag-handle',
       ghostClass: 'sortable-ghost',
-      forceFallback: true, // Crucial para móviles y para evitar interferencias de sistema
+      forceFallback: true,
       fallbackOnBody: true,
+      delay: 150, // Retraso para permitir scroll táctil
+      delayOnTouchOnly: true,
       onEnd: (evt) => {
         const { item, newIndex, oldIndex, from } = evt;
         
-        // REVERSIÓN DE DOM OBLIGATORIA: Devolvemos el nodo a donde React lo espera.
-        // Esto evita el error "NotFoundError: Failed to execute 'removeChild' on 'Node'"
-        if (from && item && oldIndex !== undefined) {
+        // REVERSIÓN DE DOM OBLIGATORIA: Devolvemos el nodo a su sitio antes de que React lo vea.
+        // Esto evita el error "Failed to execute 'removeChild' on 'Node'"
+        if (from && item && oldIndex !== undefined && newIndex !== undefined) {
           try {
-            if (oldIndex < (newIndex ?? 0)) {
-              from.insertBefore(item, from.children[oldIndex] || null);
+            const children = Array.from(from.children);
+            if (oldIndex < children.length) {
+              from.insertBefore(item, from.children[oldIndex + (oldIndex < newIndex ? 1 : 0)] || null);
             } else {
-              from.insertBefore(item, from.children[oldIndex + 1] || null);
+              from.appendChild(item);
             }
           } catch (e) {
-            // Error silencioso si el DOM ya cambió
+            // Error silencioso: el DOM se restaurará en el siguiente renderizado de React
           }
         }
 
@@ -65,7 +68,7 @@ export default function PromptList({
         try {
           sortableRef.current.destroy();
         } catch (e) {
-          // No hacer nada si el nodo ya fue eliminado por React
+          // Ignorar si el nodo ya no existe
         }
         sortableRef.current = null;
       }

@@ -7,6 +7,8 @@ import Header from '@/components/header';
 import PromptList from '@/components/prompt-list';
 import LinkList from '@/components/link-list';
 import EmptyState from '@/components/empty-state';
+import PromptForm from '@/components/prompt-form';
+import LinkForm from '@/components/link-form';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -37,8 +39,6 @@ import {
   Link as LinkIcon,
   Sparkles
 } from 'lucide-react';
-import PromptForm from '@/components/prompt-form';
-import LinkForm from '@/components/link-form';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -185,11 +185,10 @@ export default function PromptPage({ user }: PromptPageProps) {
 
   const handleReorderPrompts = useCallback((oldIndex: number, newIndex: number) => {
     // Implementación futura de persistencia de orden
-    console.log(`Reorder prompts: ${oldIndex} to ${newIndex}`);
   }, []);
 
   const handleReorderLinks = useCallback((oldIndex: number, newIndex: number) => {
-    console.log(`Reorder links: ${oldIndex} to ${newIndex}`);
+    // Implementación futura
   }, []);
 
   const filteredPrompts = useMemo(() => {

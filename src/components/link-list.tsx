@@ -34,16 +34,19 @@ export default function LinkList({
       ghostClass: 'sortable-ghost',
       forceFallback: true,
       fallbackOnBody: true,
+      delay: 150,
+      delayOnTouchOnly: true,
       onEnd: (evt) => {
         const { item, newIndex, oldIndex, from } = evt;
         
         // REVERSIÓN DE DOM OBLIGATORIA
-        if (from && item && oldIndex !== undefined) {
+        if (from && item && oldIndex !== undefined && newIndex !== undefined) {
           try {
-            if (oldIndex < (newIndex ?? 0)) {
-              from.insertBefore(item, from.children[oldIndex] || null);
+            const children = Array.from(from.children);
+            if (oldIndex < children.length) {
+              from.insertBefore(item, from.children[oldIndex + (oldIndex < newIndex ? 1 : 0)] || null);
             } else {
-              from.insertBefore(item, from.children[oldIndex + 1] || null);
+              from.appendChild(item);
             }
           } catch (e) {
             // Silencioso
