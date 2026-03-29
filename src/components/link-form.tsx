@@ -76,7 +76,7 @@ export default function LinkForm({ link, projects, onSave, onClose }: LinkFormPr
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="link-project-select">Asignar a Proyecto (Opcional)</Label>
+        <Label htmlFor="link-project-select">Proyecto</Label>
         <Select value={projectId} onValueChange={setProjectId} modal={false}>
           <SelectTrigger id="link-project-select">
             <SelectValue placeholder="Selecciona un proyecto" />
