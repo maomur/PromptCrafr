@@ -26,17 +26,18 @@ export default function PromptList({
   const sortableRef = useRef<Sortable | null>(null);
 
   useEffect(() => {
-    // Si no hay prompts o no hay referencia al DOM, nos aseguramos de limpiar
-    if (!listRef.current || prompts.length === 0) {
+    // Si no hay referencia al DOM, nos aseguramos de limpiar
+    if (!listRef.current) {
       if (sortableRef.current) {
-        sortableRef.current.destroy();
+        try {
+          sortableRef.current.destroy();
+        } catch (e) {}
         sortableRef.current = null;
       }
       return;
     }
 
     // Inicializamos SortableJS con emulación de software (Force Fallback)
-    // Este método es el más robusto para evitar conflictos con el scroll en móviles
     sortableRef.current = new Sortable(listRef.current, {
       animation: 150,
       handle: '.drag-handle',
@@ -49,20 +50,18 @@ export default function PromptList({
         put: true
       },
       dataIdAttr: 'data-id',
-      // CRITICAL: Force Fallback garantiza que no dependamos de la API nativa fallida de móviles
       forceFallback: true,
       fallbackClass: 'sortable-fallback',
       fallbackOnBody: true,
-      // Delay de 150ms para permitir scroll normal antes de arrastrar
       delay: 150,
       delayOnTouchOnly: true,
       onEnd: (evt) => {
-        const { item, to, newIndex, oldIndex } = evt;
+        const { item, to, newIndex, oldIndex, from } = evt;
         const draggedId = item.getAttribute('data-id');
         
         // Solo reordenar si el elemento se soltó en la misma lista
-        if (to === listRef.current && oldIndex !== undefined && newIndex !== undefined && oldIndex !== newIndex) {
-          const targetItem = listRef.current.children[newIndex] as HTMLElement;
+        if (to === from && oldIndex !== undefined && newIndex !== undefined && oldIndex !== newIndex) {
+          const targetItem = to.children[newIndex] as HTMLElement;
           const targetId = targetItem?.getAttribute('data-id');
           if (draggedId && targetId) {
             onReorder(draggedId, targetId);
@@ -73,11 +72,13 @@ export default function PromptList({
 
     return () => {
       if (sortableRef.current) {
-        sortableRef.current.destroy();
+        try {
+          sortableRef.current.destroy();
+        } catch (e) {}
         sortableRef.current = null;
       }
     };
-  }, [prompts.length, onReorder, onMoveToProject]); // Escuchamos cambios en la longitud
+  }, [prompts.length, onReorder, onMoveToProject]); 
 
   if (prompts.length === 0) {
     return null;

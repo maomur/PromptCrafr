@@ -114,7 +114,8 @@ export default function PromptPage({ user }: PromptPageProps) {
         sortables.push(new Sortable(target as HTMLElement, {
           group: {
             name: 'shared-items',
-            put: true
+            put: true,
+            pull: false
           },
           sort: false,
           forceFallback: true,
@@ -123,19 +124,20 @@ export default function PromptPage({ user }: PromptPageProps) {
           ghostClass: 'sortable-ghost',
           dragClass: 'sortable-drag',
           onAdd: (evt) => {
-            const { item, to } = evt;
+            const { item, to, from, oldIndex } = evt;
             const draggedId = item.getAttribute('data-id');
             const itemType = item.getAttribute('data-type');
             const projectId = to.getAttribute('data-project-id');
 
             if (draggedId && itemType) {
+              // CRITICAL: Revert DOM change immediately so React doesn't crash during re-render
+              // This puts the element back where it came from before Firebase state updates
+              if (from && typeof oldIndex === 'number') {
+                from.insertBefore(item, from.children[oldIndex] || null);
+              }
+
               const targetProjectId = projectId === 'all' || projectId === 'none' ? null : projectId;
               handleMoveToProject(draggedId, itemType, targetProjectId);
-              
-              // Remove the DOM element immediately as it shouldn't be in the sidebar list
-              if (item.parentNode) {
-                item.parentNode.removeChild(item);
-              }
             }
           }
         }));
@@ -145,7 +147,7 @@ export default function PromptPage({ user }: PromptPageProps) {
         try {
           s.destroy();
         } catch (e) {
-          // Ignorar errores si el elemento ya no existe
+          // Silent catch for stability
         }
       });
     }

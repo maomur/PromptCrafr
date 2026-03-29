@@ -26,9 +26,11 @@ export default function LinkList({
   const sortableRef = useRef<Sortable | null>(null);
 
   useEffect(() => {
-    if (!listRef.current || links.length === 0) {
+    if (!listRef.current) {
       if (sortableRef.current) {
-        sortableRef.current.destroy();
+        try {
+          sortableRef.current.destroy();
+        } catch (e) {}
         sortableRef.current = null;
       }
       return;
@@ -52,11 +54,11 @@ export default function LinkList({
       delay: 150,
       delayOnTouchOnly: true,
       onEnd: (evt) => {
-        const { item, to, newIndex, oldIndex } = evt;
+        const { item, to, newIndex, oldIndex, from } = evt;
         const draggedId = item.getAttribute('data-id');
         
-        if (to === listRef.current && oldIndex !== undefined && newIndex !== undefined && oldIndex !== newIndex) {
-          const targetItem = listRef.current.children[newIndex] as HTMLElement;
+        if (to === from && oldIndex !== undefined && newIndex !== undefined && oldIndex !== newIndex) {
+          const targetItem = to.children[newIndex] as HTMLElement;
           const targetId = targetItem?.getAttribute('data-id');
           if (draggedId && targetId) {
             onReorder(draggedId, targetId);
@@ -67,7 +69,9 @@ export default function LinkList({
 
     return () => {
       if (sortableRef.current) {
-        sortableRef.current.destroy();
+        try {
+          sortableRef.current.destroy();
+        } catch (e) {}
         sortableRef.current = null;
       }
     };
