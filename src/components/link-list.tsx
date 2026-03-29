@@ -1,9 +1,10 @@
+
 'use client';
 
+import { useEffect, useRef } from 'react';
 import type { Link, Project } from '@/lib/definitions';
 import LinkCard from '@/components/link-card';
-import { cn } from '@/lib/utils';
-import { useState } from 'react';
+import Sortable from 'sortablejs';
 
 interface LinkListProps {
   links: Link[];
@@ -22,64 +23,62 @@ export default function LinkList({
   onReorder,
   onMoveToProject
 }: LinkListProps) {
-  const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const sortableRef = useRef<Sortable | null>(null);
 
-  const handleDragOver = (e: React.DragEvent, id: string) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    if (dragOverId !== id) setDragOverId(id);
-  };
+  useEffect(() => {
+    if (listRef.current && links.length > 0) {
+      sortableRef.current = new Sortable(listRef.current, {
+        animation: 150,
+        handle: '.drag-handle',
+        ghostClass: 'sortable-ghost',
+        chosenClass: 'sortable-chosen',
+        dragClass: 'sortable-drag',
+        group: 'shared-items',
+        dataIdAttr: 'data-id',
+        onEnd: (evt) => {
+          const { item, to, newIndex, oldIndex } = evt;
+          const draggedId = item.getAttribute('data-id');
+          
+          if (to === listRef.current && oldIndex !== undefined && newIndex !== undefined && oldIndex !== newIndex) {
+            const targetItem = listRef.current.children[newIndex] as HTMLElement;
+            const targetId = targetItem?.getAttribute('data-id');
+            if (draggedId && targetId) {
+              onReorder(draggedId, targetId);
+            }
+          }
 
-  const handleDragLeave = () => {
-    setDragOverId(null);
-  };
-
-  const handleDrop = (e: React.DragEvent, targetId: string) => {
-    e.preventDefault();
-    setDragOverId(null);
-    const draggedId = e.dataTransfer.getData('itemId');
-    const itemType = e.dataTransfer.getData('itemType');
-    
-    if (itemType === 'link' && draggedId && draggedId !== targetId) {
-      onReorder(draggedId, targetId);
+          if (to.classList.contains('project-drop-target')) {
+            const projectId = to.getAttribute('data-project-id');
+            if (draggedId) {
+              onMoveToProject(draggedId, projectId === 'all' || projectId === 'none' ? null : projectId);
+              if (item.parentNode === to) {
+                to.removeChild(item);
+              }
+            }
+          }
+        },
+      });
     }
-  };
 
-  const moveUp = (id: string) => {
-    const index = links.findIndex(l => l.id === id);
-    if (index > 0) {
-      onReorder(id, links[index - 1].id);
-    }
-  };
-
-  const moveDown = (id: string) => {
-    const index = links.findIndex(l => l.id === id);
-    if (index < links.length - 1) {
-      onReorder(id, links[index + 1].id);
-    }
-  };
+    return () => {
+      sortableRef.current?.destroy();
+    };
+  }, [links, onReorder, onMoveToProject]);
 
   return (
-    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <div 
+      ref={listRef}
+      className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+    >
       {links.map((link) => (
-        <div 
-          key={link.id} 
-          onDragOver={(e) => handleDragOver(e, link.id)}
-          onDragLeave={handleDragLeave}
-          onDrop={(e) => handleDrop(e, link.id)}
-          className={cn(
-            "h-full transition-all duration-200",
-            dragOverId === link.id && "scale-[1.02] ring-2 ring-orange-400 ring-offset-2 rounded-xl"
-          )}
-        >
+        <div key={link.id} data-id={link.id} className="h-full">
           <LinkCard 
             link={link} 
             projects={projects}
             onDelete={onDeleteLink}
             onEdit={onEditLink}
             onMoveToProject={onMoveToProject}
-            onMoveUp={moveUp}
-            onMoveDown={moveDown}
           />
         </div>
       ))}

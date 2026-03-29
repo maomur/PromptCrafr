@@ -1,12 +1,13 @@
+
 'use client';
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import type { Prompt, PromptCategory, Project, Link } from '@/lib/definitions';
 import { promptCategories } from '@/lib/definitions';
-import Header from '@/components/header';
-import PromptList from '@/components/prompt-list';
-import LinkList from '@/components/link-list';
-import EmptyState from '@/components/empty-state';
+import Header from '@/header';
+import PromptList from '@/prompt-list';
+import LinkList from '@/link-list';
+import EmptyState from '@/empty-state';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -37,8 +38,8 @@ import {
   Link as LinkIcon,
   Sparkles
 } from 'lucide-react';
-import PromptForm from '@/components/prompt-form';
-import LinkForm from '@/components/link-form';
+import PromptForm from '@/prompt-form';
+import LinkForm from '@/link-form';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -53,6 +54,7 @@ import {
 } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
+import Sortable from 'sortablejs';
 
 interface PromptPageProps {
   user: User;
@@ -62,6 +64,7 @@ export default function PromptPage({ user }: PromptPageProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
   const auth = useAuth();
+  const sidebarNavRef = useRef<HTMLElement>(null);
 
   // Queries
   const projectsQuery = useMemoFirebase(() => {
@@ -99,34 +102,30 @@ export default function PromptPage({ user }: PromptPageProps) {
   const [linkToDelete, setLinkToDelete] = useState<Link | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<PromptCategory | 'Todos'>('Todos');
   const [activeProjectId, setActiveProjectId] = useState<string | 'all' | 'none'>('all');
-  const [dragOverProject, setDragOverProject] = useState<string | null>(null);
 
   const projects = useMemo(() => rawProjects || [], [rawProjects]);
   const prompts = useMemo(() => rawPrompts || [], [rawPrompts]);
   const links = useMemo(() => rawLinks || [], [rawLinks]);
 
-  // UNBLOCKER MAESTRO: Limpiador de seguridad ultra-robusto
-  const unblockInterface = useCallback(() => {
-    if (typeof document === 'undefined') return;
-    const cleanup = () => {
-      document.body.style.pointerEvents = 'auto';
-      document.body.style.overflow = 'auto';
-      document.documentElement.style.pointerEvents = 'auto';
-      document.documentElement.style.overflow = 'auto';
-      document.body.classList.remove('pointer-events-none');
-    };
-    cleanup();
-    setTimeout(cleanup, 50);
-    setTimeout(cleanup, 150);
-    setTimeout(cleanup, 300);
-  }, []);
-
+  // Initializing Project Drop targets
   useEffect(() => {
-    const isAnyDialogOpen = isCreateDialogOpen || isCreateLinkDialogOpen || isEditDialogOpen || isEditLinkDialogOpen || isNewProjectDialogOpen || isDeleteDialogOpen || isLinkDeleteDialogOpen;
-    if (!isAnyDialogOpen) {
-      unblockInterface();
+    if (sidebarNavRef.current && !projectsLoading) {
+      const dropTargets = sidebarNavRef.current.querySelectorAll('.project-drop-target');
+      const sortables: Sortable[] = [];
+      
+      dropTargets.forEach((target) => {
+        sortables.push(new Sortable(target as HTMLElement, {
+          group: 'shared-items',
+          sort: false, // Don't sort inside the target
+          onAdd: (evt) => {
+            // Handled in PromptList/LinkList onEnd for better control
+          }
+        }));
+      });
+
+      return () => sortables.forEach(s => s.destroy());
     }
-  }, [isCreateDialogOpen, isCreateLinkDialogOpen, isEditDialogOpen, isEditLinkDialogOpen, isNewProjectDialogOpen, isDeleteDialogOpen, isLinkDeleteDialogOpen, unblockInterface]);
+  }, [projectsLoading, projects]);
 
   const handleSave = useCallback((promptData: {
     title: string;
@@ -257,16 +256,18 @@ export default function PromptPage({ user }: PromptPageProps) {
   const handleMoveToProject = useCallback((itemId: string, itemType: string, projectId: string | null) => {
     if (!firestore || !user?.uid) return;
     
-    const collectionName = itemType === 'prompt' ? 'prompts' : 'links';
+    // We determine the collection by checking both local lists
+    const isPrompt = prompts.some(p => p.id === itemId);
+    const collectionName = isPrompt ? 'prompts' : 'links';
     const docRef = doc(firestore, 'users', user.uid, collectionName, itemId);
     
     updateDocumentNonBlocking(docRef, { 
       projectId: projectId || null, 
-      ...(itemType === 'prompt' && { updatedAt: new Date().toISOString() })
+      ...(isPrompt && { updatedAt: new Date().toISOString() })
     });
     
-    toast({ title: itemType === 'prompt' ? "Prompt organizado" : "Enlace organizado" });
-  }, [user?.uid, firestore, toast]);
+    toast({ title: isPrompt ? "Prompt organizado" : "Enlace organizado" });
+  }, [user?.uid, firestore, prompts, toast]);
 
   const handleReorder = useCallback((draggedId: string, targetId: string) => {
     if (!firestore || !user?.uid) return;
@@ -299,23 +300,6 @@ export default function PromptPage({ user }: PromptPageProps) {
     updateDocumentNonBlocking(draggedRef, { order: tempOrder });
     updateDocumentNonBlocking(targetRef, { order: draggedLink.order || 0 });
   }, [links, firestore, user?.uid]);
-
-  const handleDragOverProject = (e: React.DragEvent, id: string | null) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    if (dragOverProject !== id) setDragOverProject(id);
-  };
-
-  const handleDropOnProject = (projectId: string | null, e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOverProject(null);
-    const itemId = e.dataTransfer.getData('itemId');
-    const itemType = e.dataTransfer.getData('itemType');
-    
-    if (itemId && itemType) {
-      handleMoveToProject(itemId, itemType, projectId === 'all' || projectId === 'none' ? null : projectId);
-    }
-  };
 
   const filteredPrompts = useMemo(() => {
     let result = [...prompts];
@@ -401,56 +385,47 @@ export default function PromptPage({ user }: PromptPageProps) {
               </Dialog>
             </div>
 
-            <nav className="space-y-1">
+            <nav ref={sidebarNavRef} className="space-y-1">
               <button
                 onClick={() => setActiveProjectId('all')}
-                onDragOver={e => handleDragOverProject(e, 'all')}
-                onDrop={e => handleDropOnProject('all', e)}
-                onDragLeave={() => setDragOverProject(null)}
+                data-project-id="all"
                 className={cn(
-                  "w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-all",
-                  activeProjectId === 'all' ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50",
-                  dragOverProject === 'all' && "ring-2 ring-primary bg-accent/30"
+                  "project-drop-target w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-all",
+                  activeProjectId === 'all' ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50"
                 )}
               >
-                <div className="flex items-center"><Folders className="mr-2 h-4 w-4" />Todos</div>
-                <span className="text-xs opacity-60">{prompts.length + links.length}</span>
+                <div className="flex items-center pointer-events-none"><Folders className="mr-2 h-4 w-4" />Todos</div>
+                <span className="text-xs opacity-60 pointer-events-none">{prompts.length + links.length}</span>
               </button>
 
               <button
                 onClick={() => setActiveProjectId('none')}
-                onDragOver={e => handleDragOverProject(e, 'none')}
-                onDrop={e => handleDropOnProject('none', e)}
-                onDragLeave={() => setDragOverProject(null)}
+                data-project-id="none"
                 className={cn(
-                  "w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-all",
-                  activeProjectId === 'none' ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50",
-                  dragOverProject === 'none' && "ring-2 ring-primary bg-accent/30"
+                  "project-drop-target w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-all",
+                  activeProjectId === 'none' ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50"
                 )}
               >
-                <div className="flex items-center"><Folder className="mr-2 h-4 w-4" />Sin Proyecto</div>
-                <span className="text-xs opacity-60">{prompts.filter(p => !p.projectId || p.projectId === 'none').length + links.filter(l => !l.projectId || l.projectId === 'none').length}</span>
+                <div className="flex items-center pointer-events-none"><Folder className="mr-2 h-4 w-4" />Sin Proyecto</div>
+                <span className="text-xs opacity-60 pointer-events-none">{prompts.filter(p => !p.projectId || p.projectId === 'none').length + links.filter(l => !l.projectId || l.projectId === 'none').length}</span>
               </button>
 
               {projects.map((project) => (
                 <button
                   key={project.id}
                   onClick={() => setActiveProjectId(project.id)}
-                  onDragOver={e => handleDragOverProject(e, project.id)}
-                  onDrop={e => handleDropOnProject(project.id, e)}
-                  onDragLeave={() => setDragOverProject(null)}
+                  data-project-id={project.id}
                   className={cn(
-                    "group w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-all",
-                    activeProjectId === project.id ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50",
-                    dragOverProject === project.id && "ring-2 ring-primary bg-accent/30"
+                    "project-drop-target group w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-all",
+                    activeProjectId === project.id ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50"
                   )}
                 >
-                  <div className="flex items-center truncate">
+                  <div className="flex items-center truncate pointer-events-none">
                     <Folder className="mr-2 h-4 w-4 shrink-0" />
                     <span className="truncate">{project.name}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Trash2 className="h-3 w-3 text-destructive opacity-0 group-hover:opacity-100" onClick={(e) => handleDeleteProject(project.id, e)} />
+                  <div className="flex items-center gap-2 pointer-events-none">
+                    <Trash2 className="h-3 w-3 text-destructive opacity-0 group-hover:opacity-100 pointer-events-auto" onClick={(e) => handleDeleteProject(project.id, e)} />
                   </div>
                 </button>
               ))}
@@ -526,6 +501,7 @@ export default function PromptPage({ user }: PromptPageProps) {
         </main>
       </div>
 
+      {/* Dialogs remain identical */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -545,7 +521,6 @@ export default function PromptPage({ user }: PromptPageProps) {
                     setPromptToDelete(null);
                     setDeleteDialogOpen(false);
                     toast({ title: "Prompt eliminado" });
-                    unblockInterface();
                   }, 150);
                 }
               }}
@@ -575,7 +550,6 @@ export default function PromptPage({ user }: PromptPageProps) {
                     setLinkToDelete(null);
                     setLinkDeleteDialogOpen(false);
                     toast({ title: "Enlace eliminado" });
-                    unblockInterface();
                   }, 150);
                 }
               }}

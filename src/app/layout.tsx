@@ -8,7 +8,6 @@ import { cn } from '@/lib/utils';
 import Script from 'next/script';
 import InstallPWABanner from '@/components/install-pwa-banner';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
-import MobileDndPolyfill from '@/components/mobile-dnd-polyfill';
 
 export const metadata: Metadata = {
   title: 'PromptCraft',
@@ -43,7 +42,6 @@ export default function RootLayout({
       </head>
       <body className="font-sans antialiased flex flex-col min-h-screen">
         <FirebaseClientProvider>
-          <MobileDndPolyfill />
           <div className="flex-grow">{children}</div>
           <InstallPWABanner />
           <Toaster />

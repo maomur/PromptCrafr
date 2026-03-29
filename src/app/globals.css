@@ -69,45 +69,36 @@
   }
 }
 
-/* OFFICIAL DRAG AND DROP STYLES */
-[draggable="true"] {
-  -webkit-user-select: none;
-  user-select: none;
-  -webkit-user-drag: element;
-  cursor: grab;
+/* SORTABLE JS STYLES */
+.sortable-ghost {
+  opacity: 0.3 !important;
+  background-color: hsl(var(--muted)) !important;
+  border: 2px dashed hsl(var(--primary)) !important;
 }
 
-/* Critical for mobile: Block native gestures on handles */
-.drag-handle {
-  touch-action: none !important;
-  -webkit-touch-callout: none !important;
-  -webkit-user-select: none !important;
-  user-select: none !important;
-  cursor: grab;
+.sortable-chosen {
+  transform: scale(1.02);
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1) !important;
   z-index: 50;
-  width: 44px;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+}
+
+.sortable-drag {
+  opacity: 0.9 !important;
+  cursor: grabbing !important;
+}
+
+/* Drag Handle behavior */
+.drag-handle {
+  cursor: grab;
+  touch-action: none;
 }
 
 .drag-handle:active {
   cursor: grabbing;
 }
 
-/* Styles for the polyfill ghost image */
-.dnd-poly-drag-image {
-  opacity: 0.8 !important;
-  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1) !important;
-  transform: scale(1.05) !important;
-  pointer-events: none !important;
-  z-index: 9999 !important;
-}
-
-/* Prevent text selection during drag */
-.dragging-active {
-  overflow: hidden !important;
-  user-select: none !important;
-  -webkit-user-select: none !important;
+/* Sidebar Drop Highlight */
+.project-drop-target.sortable-drag-over {
+  background-color: hsl(var(--primary) / 0.1) !important;
+  outline: 2px solid hsl(var(--primary)) !important;
 }

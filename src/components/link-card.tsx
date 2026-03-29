@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -11,10 +12,10 @@ import type { Link, Project } from '@/lib/definitions';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
-import { Link as LinkIcon, ExternalLink, Trash2, GripVertical, Eye, MoreVertical, FolderInput, ChevronUp, ChevronDown, Folder } from 'lucide-react';
+import { Link as LinkIcon, ExternalLink, Trash2, GripVertical, Eye, MoreVertical, FolderInput, Folder } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import {
   DropdownMenu,
@@ -34,45 +35,15 @@ interface LinkCardProps {
   onDelete: (id: string) => void;
   onEdit: (link: Link) => void;
   onMoveToProject: (linkId: string, projectId: string | null) => void;
-  onMoveUp?: (id: string) => void;
-  onMoveDown?: (id: string) => void;
 }
 
-export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToProject, onMoveUp, onMoveDown }: LinkCardProps) {
+export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToProject }: LinkCardProps) {
   const { toast } = useToast();
-  const cardRef = useRef<HTMLDivElement>(null);
 
   const project = useMemo(() => 
     projects.find(p => p.id === link.projectId),
     [projects, link.projectId]
   );
-
-  const handleDragStart = (e: React.DragEvent) => {
-    // SECURITY: Only allow drag if initiated from the handle
-    const target = e.target as HTMLElement;
-    if (!target.closest('.drag-handle')) {
-      e.preventDefault();
-      return;
-    }
-
-    e.dataTransfer.setData('itemId', link.id);
-    e.dataTransfer.setData('itemType', 'link');
-    e.dataTransfer.effectAllowed = 'move';
-    
-    if (cardRef.current) {
-      cardRef.current.style.opacity = '0.4';
-    }
-    
-    // Add global class to block scrolling during drag
-    document.body.classList.add('dragging-active');
-  };
-
-  const handleDragEnd = () => {
-    if (cardRef.current) {
-      cardRef.current.style.opacity = '1';
-    }
-    document.body.classList.remove('dragging-active');
-  };
 
   const handleCardClick = useCallback((event: React.MouseEvent) => {
     const target = event.target as HTMLElement;
@@ -94,16 +65,12 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
 
   return (
     <Card 
-      ref={cardRef}
-      draggable="true"
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
       onClick={handleCardClick}
       className="group flex flex-col h-full rounded-xl border-border/20 bg-card shadow-md transition-all duration-300 hover:shadow-lg relative overflow-hidden"
     >
-      {/* DRAG HANDLE: The only entry point for drag interaction on mobile */}
-      <div className="drag-handle absolute top-0 right-0 flex touch-none">
-        <GripVertical className="h-5 w-5 text-muted-foreground pointer-events-none" />
+      {/* DRAG HANDLE: Now passive for SortableJS */}
+      <div className="drag-handle absolute top-0 right-0 p-3 z-10">
+        <GripVertical className="h-5 w-5 text-muted-foreground opacity-50 group-hover:opacity-100 transition-opacity" />
       </div>
 
       <CardHeader className="pt-6 md:pt-10 space-y-4">
@@ -182,22 +149,6 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56" onClick={(e) => e.stopPropagation()}>
               <DropdownMenuLabel>Organizar</DropdownMenuLabel>
-              
-              {onMoveUp && (
-                <DropdownMenuItem onSelect={() => onMoveUp(link.id)}>
-                  <ChevronUp className="mr-2 h-4 w-4" />
-                  Subir posición
-                </DropdownMenuItem>
-              )}
-              
-              {onMoveDown && (
-                <DropdownMenuItem onSelect={() => onMoveDown(link.id)}>
-                  <ChevronDown className="mr-2 h-4 w-4" />
-                  Bajar posición
-                </DropdownMenuItem>
-              )}
-
-              <DropdownMenuSeparator />
               
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger>

@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -15,7 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { Video, Image, FileText, Sparkles, GripVertical, Folder } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useMemo } from 'react';
 
 interface PromptCardProps {
   prompt: Prompt;
@@ -23,8 +24,6 @@ interface PromptCardProps {
   onDelete: (id: string) => void;
   onEdit: (prompt: Prompt) => void;
   onMoveToProject: (promptId: string, projectId: string | null) => void;
-  onMoveUp?: (id: string) => void;
-  onMoveDown?: (id: string) => void;
 }
 
 const categoryIcons = {
@@ -46,44 +45,14 @@ export default function PromptCard({
   projects,
   onDelete, 
   onEdit, 
-  onMoveToProject,
-  onMoveUp,
-  onMoveDown
+  onMoveToProject
 }: PromptCardProps) {
   const { toast } = useToast();
-  const cardRef = useRef<HTMLDivElement>(null);
 
   const project = useMemo(() => 
     projects.find(p => p.id === prompt.projectId),
     [projects, prompt.projectId]
   );
-
-  const handleDragStart = (e: React.DragEvent) => {
-    // SECURITY: Only allow drag if initiated from the handle
-    const target = e.target as HTMLElement;
-    if (!target.closest('.drag-handle')) {
-      e.preventDefault();
-      return;
-    }
-
-    e.dataTransfer.setData('itemId', prompt.id);
-    e.dataTransfer.setData('itemType', 'prompt');
-    e.dataTransfer.effectAllowed = 'move';
-    
-    if (cardRef.current) {
-      cardRef.current.style.opacity = '0.4';
-    }
-    
-    // Add global class to block scrolling during drag
-    document.body.classList.add('dragging-active');
-  };
-
-  const handleDragEnd = () => {
-    if (cardRef.current) {
-      cardRef.current.style.opacity = '1';
-    }
-    document.body.classList.remove('dragging-active');
-  };
 
   const handleCardClick = useCallback((event: React.MouseEvent) => {
     const target = event.target as HTMLElement;
@@ -105,16 +74,12 @@ export default function PromptCard({
 
   return (
     <Card 
-      ref={cardRef}
-      draggable="true"
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
       onClick={handleCardClick}
       className="group flex h-full flex-col rounded-xl border-border/20 bg-card text-card-foreground shadow-md transition-all duration-300 hover:shadow-lg relative overflow-hidden"
     >
-      {/* DRAG HANDLE: The only entry point for drag interaction on mobile */}
-      <div className="drag-handle absolute top-0 right-0 flex touch-none">
-        <GripVertical className="h-5 w-5 text-muted-foreground pointer-events-none" />
+      {/* DRAG HANDLE: Now passive for SortableJS */}
+      <div className="drag-handle absolute top-0 right-0 p-3 z-10">
+        <GripVertical className="h-5 w-5 text-muted-foreground opacity-50 group-hover:opacity-100 transition-opacity" />
       </div>
 
       <CardHeader className="pt-6 md:pt-10 space-y-4">
@@ -159,8 +124,6 @@ export default function PromptCard({
             onDelete={onDelete} 
             onEdit={() => onEdit(prompt)}
             onMoveToProject={onMoveToProject}
-            onMoveUp={onMoveUp}
-            onMoveDown={onMoveDown}
           />
         </div>
       </CardFooter>
