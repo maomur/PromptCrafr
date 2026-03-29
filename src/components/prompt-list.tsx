@@ -30,12 +30,11 @@ export default function PromptList({
     if (!el) return;
 
     // Inicializamos SortableJS una sola vez para el contenedor
-    // SortableJS es capaz de gestionar hijos dinámicos sin necesidad de re-inicializarse
     const sortable = new Sortable(el, {
       animation: 150,
       handle: '.drag-handle',
       ghostClass: 'sortable-ghost',
-      forceFallback: true, // Crucial para estabilidad en móviles
+      forceFallback: true, // Crucial para móviles
       fallbackOnBody: true,
       delay: 150,
       delayOnTouchOnly: true,
@@ -54,7 +53,7 @@ export default function PromptList({
             const nextSibling = (item as any)._originalNextSibling;
             from.insertBefore(item, nextSibling || null);
           } catch (e) {
-            // Error silencioso si el nodo ya ha sido manipulado por React
+            // Ignorar errores silenciosamente
           }
         }
 
@@ -72,13 +71,13 @@ export default function PromptList({
         try {
           sortableRef.current.destroy();
         } catch (e) {
-          // Ignorar errores durante el desmontaje seguro
+          // Destrucción segura
         }
         sortableRef.current = null;
       }
     };
-    // No incluimos 'prompts' en las dependencias para evitar ciclos de destrucción/recreación
-    // innecesarios que causan bloqueos durante las eliminaciones.
+    // No incluimos 'prompts' en las dependencias para evitar ciclos de destrucción
+    // que causan bloqueos durante las eliminaciones de React.
   }, [onReorder]);
 
   if (prompts.length === 0) return null;

@@ -189,11 +189,11 @@ export default function PromptPage({ user }: PromptPageProps) {
   }, [user?.uid, firestore, activeProjectId, toast]);
 
   const handleReorderPrompts = useCallback((oldIndex: number, newIndex: number) => {
-    // Sincronización de orden opcional en el futuro
+    // Sincronización de orden futura aquí
   }, []);
 
   const handleReorderLinks = useCallback((oldIndex: number, newIndex: number) => {
-    // Sincronización de orden opcional en el futuro
+    // Sincronización de orden futura aquí
   }, []);
 
   // Filtrado optimizado
