@@ -26,9 +26,10 @@ export default function LinkList({
   const sortableRef = useRef<Sortable | null>(null);
 
   useEffect(() => {
-    if (!listRef.current) return;
+    const el = listRef.current;
+    if (!el) return;
 
-    const sortable = new Sortable(listRef.current, {
+    const sortable = new Sortable(el, {
       animation: 150,
       handle: '.drag-handle',
       ghostClass: 'sortable-ghost',
@@ -36,16 +37,18 @@ export default function LinkList({
       fallbackOnBody: true,
       delay: 150,
       delayOnTouchOnly: true,
+      onStart: (evt) => {
+        // Guardamos referencia para reversión
+        (evt.item as any)._originalNextSibling = evt.item.nextSibling;
+      },
       onEnd: (evt) => {
-        const { item, oldIndex, newIndex, from } = evt;
+        const { item, from, oldIndex, newIndex } = evt;
         
-        // REVERSIÓN DE DOM OBLIGATORIA: Devolvemos el nodo a su sitio original antes de que React lo vea.
-        if (from && item && oldIndex !== undefined) {
+        // Reversión física del DOM para estabilidad de React
+        if (from && item) {
           try {
-            const referenceNode = from.children[oldIndex];
-            if (referenceNode !== item) {
-              from.insertBefore(item, referenceNode);
-            }
+            const nextSibling = (item as any)._originalNextSibling;
+            from.insertBefore(item, nextSibling || null);
           } catch (e) {
             // Silencioso
           }

@@ -26,32 +26,38 @@ export default function PromptList({
   const sortableRef = useRef<Sortable | null>(null);
 
   useEffect(() => {
-    if (!listRef.current) return;
+    const el = listRef.current;
+    if (!el) return;
 
-    const sortable = new Sortable(listRef.current, {
+    // Instancia de SortableJS con técnica de reversión obligatoria
+    const sortable = new Sortable(el, {
       animation: 150,
       handle: '.drag-handle',
       ghostClass: 'sortable-ghost',
-      forceFallback: true,
+      forceFallback: true, // Crucial para móviles
       fallbackOnBody: true,
       delay: 150,
       delayOnTouchOnly: true,
+      onStart: (evt) => {
+        // Guardamos la referencia del hermano siguiente para la reversión exacta
+        (evt.item as any)._originalNextSibling = evt.item.nextSibling;
+      },
       onEnd: (evt) => {
-        const { item, oldIndex, newIndex, from } = evt;
+        const { item, from, oldIndex, newIndex } = evt;
         
-        // REVERSIÓN DE DOM OBLIGATORIA: Devolvemos el nodo a su sitio original antes de que React lo vea.
-        // Esto es CRÍTICO para evitar el error "removeChild" al borrar elementos.
-        if (from && item && oldIndex !== undefined) {
+        // REVERSIÓN DE DOM OBLIGATORIA: 
+        // Devolvemos el nodo a su sitio exacto ANTES de que React vea el cambio.
+        // Esto evita el error "Failed to execute 'removeChild' on 'Node'".
+        if (from && item) {
           try {
-            const referenceNode = from.children[oldIndex];
-            if (referenceNode !== item) {
-              from.insertBefore(item, referenceNode);
-            }
+            const nextSibling = (item as any)._originalNextSibling;
+            from.insertBefore(item, nextSibling || null);
           } catch (e) {
-            // Silencioso
+            // Error silencioso si el nodo ya no existe
           }
         }
 
+        // Notificamos el cambio de orden solo si las posiciones cambiaron realmente
         if (oldIndex !== undefined && newIndex !== undefined && oldIndex !== newIndex) {
           onReorder(oldIndex, newIndex);
         }
@@ -65,12 +71,12 @@ export default function PromptList({
         try {
           sortableRef.current.destroy();
         } catch (e) {
-          // Silencioso
+          // Ignorar errores durante el desmontaje
         }
         sortableRef.current = null;
       }
     };
-  }, [onReorder]); // Mantenemos dependencias mínimas para evitar re-inicializaciones costosas
+  }, [onReorder]);
 
   if (prompts.length === 0) return null;
 

@@ -63,6 +63,7 @@ export default function PromptPage({ user }: PromptPageProps) {
   const firestore = useFirestore();
   const auth = useAuth();
 
+  // Queries memoizadas para Firebase
   const projectsQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
     return collection(firestore, 'users', user.uid, 'projects');
@@ -78,6 +79,7 @@ export default function PromptPage({ user }: PromptPageProps) {
     return collection(firestore, 'users', user.uid, 'links');
   }, [firestore, user?.uid]);
 
+  // Suscripciones en tiempo real
   const { data: rawProjects, isLoading: projectsLoading } = useCollection<Project>(projectsQuery);
   const { data: rawPrompts, isLoading: promptsLoading } = useCollection<Prompt>(promptsQuery);
   const { data: rawLinks, isLoading: linksLoading } = useCollection<Link>(linksQuery);
@@ -86,6 +88,7 @@ export default function PromptPage({ user }: PromptPageProps) {
   const prompts = useMemo(() => rawPrompts || [], [rawPrompts]);
   const links = useMemo(() => rawLinks || [], [rawLinks]);
 
+  // Estados de UI
   const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
   const [isCreateLinkDialogOpen, setCreateLinkDialogOpen] = useState(false);
   const [isEditDialogOpen, setEditDialogOpen] = useState(false);
@@ -93,16 +96,18 @@ export default function PromptPage({ user }: PromptPageProps) {
   const [isNewProjectDialogOpen, setNewProjectDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isLinkDeleteDialogOpen, setLinkDeleteDialogOpen] = useState(false);
-  const [newProjectName, setNewProjectName] = useState('');
   
+  const [newProjectName, setNewProjectName] = useState('');
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
   const [selectedLink, setSelectedLink] = useState<Link | null>(null);
   const [promptToDelete, setPromptToDelete] = useState<Prompt | null>(null);
   const [linkToDelete, setLinkToDelete] = useState<Link | null>(null);
+  
   const [categoryFilter, setCategoryFilter] = useState<PromptCategory | 'Todos'>('Todos');
   const [activeProjectId, setActiveProjectId] = useState<string | 'all' | 'none'>('all');
 
-  const handleMoveToProject = useCallback((itemId: string, itemType: string, projectId: string | null) => {
+  // Handlers optimizados con useCallback
+  const handleMoveToProject = useCallback((itemId: string, itemType: 'prompt' | 'link', projectId: string | null) => {
     if (!firestore || !user?.uid) return;
     const collectionName = itemType === 'prompt' ? 'prompts' : 'links';
     const docRef = doc(firestore, 'users', user.uid, collectionName, itemId);
@@ -184,13 +189,14 @@ export default function PromptPage({ user }: PromptPageProps) {
   }, [user?.uid, firestore, activeProjectId, toast]);
 
   const handleReorderPrompts = useCallback((oldIndex: number, newIndex: number) => {
-    // Implementación futura: actualización de 'order' en Firestore
+    // Implementación futura opcional para persistir orden exacto en Firestore
   }, []);
 
   const handleReorderLinks = useCallback((oldIndex: number, newIndex: number) => {
-    // Implementación futura: actualización de 'order' en Firestore
+    // Implementación futura opcional para persistir orden exacto en Firestore
   }, []);
 
+  // Filtrado y ordenación
   const filteredPrompts = useMemo(() => {
     return prompts.filter(p => {
       const matchesProject = activeProjectId === 'all' || 
@@ -282,7 +288,7 @@ export default function PromptPage({ user }: PromptPageProps) {
           {projectsLoading || promptsLoading || linksLoading ? (
              <div className="flex flex-col items-center justify-center pt-20 gap-4">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">Cargando...</p>
+              <p className="text-sm text-muted-foreground">Cargando biblioteca...</p>
             </div>
           ) : (
             <div className="space-y-8">
@@ -336,6 +342,7 @@ export default function PromptPage({ user }: PromptPageProps) {
         </Dialog>
       </div>
 
+      {/* Diálogos de Edición y Alerta */}
       <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="sm:max-w-[625px]">
           <DialogHeader><DialogTitle>Editar Prompt</DialogTitle></DialogHeader>
@@ -348,16 +355,40 @@ export default function PromptPage({ user }: PromptPageProps) {
           {selectedLink && <LinkForm link={selectedLink} projects={projects} onSave={handleSaveLink} onClose={() => setEditLinkDialogOpen(false)} />}
         </DialogContent>
       </Dialog>
+      
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
-          <AlertDialogHeader><AlertDialogTitle>¿Eliminar prompt?</AlertDialogTitle><AlertDialogDescription>Se eliminará definitivamente "{promptToDelete?.title}".</AlertDialogDescription></AlertDialogHeader>
-          <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction className="bg-destructive" onClick={() => { if (promptToDelete) deleteDocumentNonBlocking(doc(firestore, 'users', user.uid, 'prompts', promptToDelete.id)); setDeleteDialogOpen(false); }}>Eliminar</AlertDialogAction></AlertDialogFooter>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar prompt?</AlertDialogTitle>
+            <AlertDialogDescription>Se eliminará definitivamente "{promptToDelete?.title}". Esta acción no se puede deshacer.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-white hover:bg-destructive/90" onClick={() => { 
+              if (promptToDelete && firestore && user?.uid) {
+                deleteDocumentNonBlocking(doc(firestore, 'users', user.uid, 'prompts', promptToDelete.id));
+                setDeleteDialogOpen(false);
+              }
+            }}>Eliminar</AlertDialogAction>
+          </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
       <AlertDialog open={isLinkDeleteDialogOpen} onOpenChange={setLinkDeleteDialogOpen}>
         <AlertDialogContent>
-          <AlertDialogHeader><AlertDialogTitle>¿Eliminar enlace?</AlertDialogTitle><AlertDialogDescription>Se eliminará definitivamente "{linkToDelete?.title || linkToDelete?.url}".</AlertDialogDescription></AlertDialogHeader>
-          <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction className="bg-destructive" onClick={() => { if (linkToDelete) deleteDocumentNonBlocking(doc(firestore, 'users', user.uid, 'links', linkToDelete.id)); setLinkDeleteDialogOpen(false); }}>Eliminar</AlertDialogAction></AlertDialogFooter>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar enlace?</AlertDialogTitle>
+            <AlertDialogDescription>Se eliminará definitivamente "{linkToDelete?.title || linkToDelete?.url}". Esta acción no se puede deshacer.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-white hover:bg-destructive/90" onClick={() => { 
+              if (linkToDelete && firestore && user?.uid) {
+                deleteDocumentNonBlocking(doc(firestore, 'users', user.uid, 'links', linkToDelete.id));
+                setLinkDeleteDialogOpen(false);
+              }
+            }}>Eliminar</AlertDialogAction>
+          </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </div>
