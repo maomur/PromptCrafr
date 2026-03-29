@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -71,7 +70,7 @@
 
 /* SORTABLE JS STYLES */
 .sortable-ghost {
-  opacity: 0.3 !important;
+  opacity: 0.2 !important;
   background-color: hsl(var(--muted)) !important;
   border: 2px dashed hsl(var(--primary)) !important;
 }
@@ -87,10 +86,20 @@
   cursor: grabbing !important;
 }
 
+/* Fallback class for forced emulation */
+.sortable-fallback {
+  opacity: 1 !important;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1) !important;
+  background-color: hsl(var(--card)) !important;
+  pointer-events: none;
+}
+
 /* Drag Handle behavior */
 .drag-handle {
   cursor: grab;
-  touch-action: none;
+  touch-action: none !important;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
 }
 
 .drag-handle:active {

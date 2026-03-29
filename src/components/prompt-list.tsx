@@ -35,6 +35,9 @@ export default function PromptList({
         dragClass: 'sortable-drag',
         group: 'shared-items',
         dataIdAttr: 'data-id',
+        forceFallback: true, // Crucial for mobile support
+        fallbackClass: 'sortable-fallback',
+        fallbackOnBody: true,
         delay: 150, // Mobile support: hold to drag
         delayOnTouchOnly: true,
         onEnd: (evt) => {
@@ -53,6 +56,7 @@ export default function PromptList({
             const projectId = to.getAttribute('data-project-id');
             if (draggedId) {
               onMoveToProject(draggedId, projectId === 'all' || projectId === 'none' ? null : projectId);
+              // In fallback mode, item might stay in DOM, remove it manually if it was added to sidebar
               if (item.parentNode === to) {
                 to.removeChild(item);
               }

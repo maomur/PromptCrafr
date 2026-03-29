@@ -116,10 +116,12 @@ export default function PromptPage({ user }: PromptPageProps) {
         sortables.push(new Sortable(target as HTMLElement, {
           group: 'shared-items',
           sort: false,
+          forceFallback: true,
           delay: 150,
           delayOnTouchOnly: true,
           onAdd: (evt) => {
-            // Handled in PromptList/LinkList onEnd
+            // SortableJS onAdd fires when an item is moved from one list to another.
+            // But we handle the logic in PromptList/LinkList onEnd for consistency.
           }
         }));
       });

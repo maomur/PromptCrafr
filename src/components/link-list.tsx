@@ -35,6 +35,9 @@ export default function LinkList({
         dragClass: 'sortable-drag',
         group: 'shared-items',
         dataIdAttr: 'data-id',
+        forceFallback: true, // Crucial for mobile support
+        fallbackClass: 'sortable-fallback',
+        fallbackOnBody: true,
         delay: 150, // Mobile support: hold to drag
         delayOnTouchOnly: true,
         onEnd: (evt) => {
