@@ -33,12 +33,16 @@ export default function PromptList({
         ghostClass: 'sortable-ghost',
         chosenClass: 'sortable-chosen',
         dragClass: 'sortable-drag',
-        group: 'shared-items',
+        group: {
+          name: 'shared-items',
+          pull: true,
+          put: true
+        },
         dataIdAttr: 'data-id',
-        forceFallback: true, // Crucial for mobile support
+        forceFallback: true,
         fallbackClass: 'sortable-fallback',
         fallbackOnBody: true,
-        delay: 150, // Mobile support: hold to drag
+        delay: 150,
         delayOnTouchOnly: true,
         onEnd: (evt) => {
           const { item, to, newIndex, oldIndex } = evt;
@@ -49,17 +53,6 @@ export default function PromptList({
             const targetId = targetItem?.getAttribute('data-id');
             if (draggedId && targetId) {
               onReorder(draggedId, targetId);
-            }
-          }
-          
-          if (to.classList.contains('project-drop-target')) {
-            const projectId = to.getAttribute('data-project-id');
-            if (draggedId) {
-              onMoveToProject(draggedId, projectId === 'all' || projectId === 'none' ? null : projectId);
-              // In fallback mode, item might stay in DOM, remove it manually if it was added to sidebar
-              if (item.parentNode === to) {
-                to.removeChild(item);
-              }
             }
           }
         },
@@ -81,7 +74,7 @@ export default function PromptList({
       className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
     >
       {prompts.map((prompt) => (
-        <div key={prompt.id} data-id={prompt.id} className="h-full">
+        <div key={prompt.id} data-id={prompt.id} data-type="prompt" className="h-full">
           <PromptCard 
             prompt={prompt} 
             projects={projects}

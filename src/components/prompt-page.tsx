@@ -85,7 +85,66 @@ export default function PromptPage({ user }: PromptPageProps) {
   const { data: rawPrompts, isLoading: promptsLoading } = useCollection<Prompt>(promptsQuery);
   const { data: rawLinks, isLoading: linksLoading } = useCollection<Link>(linksQuery);
 
-  // States
+  const projects = useMemo(() => rawProjects || [], [rawProjects]);
+  const prompts = useMemo(() => rawPrompts || [], [rawPrompts]);
+  const links = useMemo(() => rawLinks || [], [rawLinks]);
+
+  // Handler for moving items
+  const handleMoveToProject = useCallback((itemId: string, itemType: string, projectId: string | null) => {
+    if (!firestore || !user?.uid) return;
+    
+    const collectionName = itemType === 'prompt' ? 'prompts' : 'links';
+    const docRef = doc(firestore, 'users', user.uid, collectionName, itemId);
+    
+    updateDocumentNonBlocking(docRef, { 
+      projectId: projectId || null, 
+      ...(itemType === 'prompt' && { updatedAt: new Date().toISOString() })
+    });
+    
+    toast({ title: itemType === 'prompt' ? "Prompt organizado" : "Enlace organizado" });
+  }, [user?.uid, firestore, toast]);
+
+  // Initializing Project Drop targets with mobile support
+  useEffect(() => {
+    if (sidebarNavRef.current && !projectsLoading) {
+      const dropTargets = sidebarNavRef.current.querySelectorAll('.project-drop-target');
+      const sortables: Sortable[] = [];
+      
+      dropTargets.forEach((target) => {
+        sortables.push(new Sortable(target as HTMLElement, {
+          group: {
+            name: 'shared-items',
+            put: true
+          },
+          sort: false,
+          forceFallback: true,
+          delay: 150,
+          delayOnTouchOnly: true,
+          ghostClass: 'sortable-ghost',
+          dragClass: 'sortable-drag',
+          onAdd: (evt) => {
+            const { item, to } = evt;
+            const draggedId = item.getAttribute('data-id');
+            const itemType = item.getAttribute('data-type');
+            const projectId = to.getAttribute('data-project-id');
+
+            if (draggedId && itemType) {
+              const targetProjectId = projectId === 'all' || projectId === 'none' ? null : projectId;
+              handleMoveToProject(draggedId, itemType, targetProjectId);
+              
+              // Remove the DOM element immediately as it shouldn't be in the sidebar list
+              if (item.parentNode) {
+                item.parentNode.removeChild(item);
+              }
+            }
+          }
+        }));
+      });
+
+      return () => sortables.forEach(s => s.destroy());
+    }
+  }, [projectsLoading, projects, handleMoveToProject]);
+
   const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
   const [isCreateLinkDialogOpen, setCreateLinkDialogOpen] = useState(false);
   const [isEditDialogOpen, setEditDialogOpen] = useState(false);
@@ -101,36 +160,6 @@ export default function PromptPage({ user }: PromptPageProps) {
   const [linkToDelete, setLinkToDelete] = useState<Link | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<PromptCategory | 'Todos'>('Todos');
   const [activeProjectId, setActiveProjectId] = useState<string | 'all' | 'none'>('all');
-
-  const projects = useMemo(() => rawProjects || [], [rawProjects]);
-  const prompts = useMemo(() => rawPrompts || [], [rawPrompts]);
-  const links = useMemo(() => rawLinks || [], [rawLinks]);
-
-  // Initializing Project Drop targets with mobile support
-  useEffect(() => {
-    if (sidebarNavRef.current && !projectsLoading) {
-      const dropTargets = sidebarNavRef.current.querySelectorAll('.project-drop-target');
-      const sortables: Sortable[] = [];
-      
-      dropTargets.forEach((target) => {
-        sortables.push(new Sortable(target as HTMLElement, {
-          group: 'shared-items',
-          sort: false,
-          forceFallback: true,
-          delay: 150,
-          delayOnTouchOnly: true,
-          ghostClass: 'sortable-ghost',
-          dragClass: 'sortable-drag',
-          onAdd: (evt) => {
-            // SortableJS onAdd fires when an item is moved from one list to another.
-            // We'll rely on onEnd of the source lists to handle the logic.
-          }
-        }));
-      });
-
-      return () => sortables.forEach(s => s.destroy());
-    }
-  }, [projectsLoading, projects]);
 
   const handleSave = useCallback((promptData: {
     title: string;
@@ -257,22 +286,6 @@ export default function PromptPage({ user }: PromptPageProps) {
     if (activeProjectId === id) setActiveProjectId('all');
     toast({ title: "Proyecto eliminado" });
   }, [user?.uid, firestore, activeProjectId, toast]);
-
-  const handleMoveToProject = useCallback((itemId: string, itemType: string, projectId: string | null) => {
-    if (!firestore || !user?.uid) return;
-    
-    const isPrompt = prompts.some(p => p.id === itemId);
-    const isLink = links.some(l => l.id === itemId);
-    const collectionName = isPrompt ? 'prompts' : 'links';
-    const docRef = doc(firestore, 'users', user.uid, collectionName, itemId);
-    
-    updateDocumentNonBlocking(docRef, { 
-      projectId: projectId || null, 
-      ...(isPrompt && { updatedAt: new Date().toISOString() })
-    });
-    
-    toast({ title: isPrompt ? "Prompt organizado" : "Enlace organizado" });
-  }, [user?.uid, firestore, prompts, links, toast]);
 
   const handleReorder = useCallback((draggedId: string, targetId: string) => {
     if (!firestore || !user?.uid) return;
