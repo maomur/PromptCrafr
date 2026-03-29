@@ -1,13 +1,12 @@
-
 'use client';
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import type { Prompt, PromptCategory, Project, Link } from '@/lib/definitions';
 import { promptCategories } from '@/lib/definitions';
-import Header from '@/header';
-import PromptList from '@/prompt-list';
-import LinkList from '@/link-list';
-import EmptyState from '@/empty-state';
+import Header from '@/components/header';
+import PromptList from '@/components/prompt-list';
+import LinkList from '@/components/link-list';
+import EmptyState from '@/components/empty-state';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -38,8 +37,8 @@ import {
   Link as LinkIcon,
   Sparkles
 } from 'lucide-react';
-import PromptForm from '@/prompt-form';
-import LinkForm from '@/link-form';
+import PromptForm from '@/components/prompt-form';
+import LinkForm from '@/components/link-form';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -107,7 +106,7 @@ export default function PromptPage({ user }: PromptPageProps) {
   const prompts = useMemo(() => rawPrompts || [], [rawPrompts]);
   const links = useMemo(() => rawLinks || [], [rawLinks]);
 
-  // Initializing Project Drop targets
+  // Initializing Project Drop targets with mobile support
   useEffect(() => {
     if (sidebarNavRef.current && !projectsLoading) {
       const dropTargets = sidebarNavRef.current.querySelectorAll('.project-drop-target');
@@ -116,9 +115,11 @@ export default function PromptPage({ user }: PromptPageProps) {
       dropTargets.forEach((target) => {
         sortables.push(new Sortable(target as HTMLElement, {
           group: 'shared-items',
-          sort: false, // Don't sort inside the target
+          sort: false,
+          delay: 150,
+          delayOnTouchOnly: true,
           onAdd: (evt) => {
-            // Handled in PromptList/LinkList onEnd for better control
+            // Handled in PromptList/LinkList onEnd
           }
         }));
       });
@@ -256,7 +257,6 @@ export default function PromptPage({ user }: PromptPageProps) {
   const handleMoveToProject = useCallback((itemId: string, itemType: string, projectId: string | null) => {
     if (!firestore || !user?.uid) return;
     
-    // We determine the collection by checking both local lists
     const isPrompt = prompts.some(p => p.id === itemId);
     const collectionName = isPrompt ? 'prompts' : 'links';
     const docRef = doc(firestore, 'users', user.uid, collectionName, itemId);
@@ -501,7 +501,7 @@ export default function PromptPage({ user }: PromptPageProps) {
         </main>
       </div>
 
-      {/* Dialogs remain identical */}
+      {/* Dialogs */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

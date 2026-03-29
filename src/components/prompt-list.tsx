@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useRef } from 'react';
@@ -36,11 +35,12 @@ export default function PromptList({
         dragClass: 'sortable-drag',
         group: 'shared-items',
         dataIdAttr: 'data-id',
+        delay: 150, // Mobile support: hold to drag
+        delayOnTouchOnly: true,
         onEnd: (evt) => {
           const { item, to, newIndex, oldIndex } = evt;
           const draggedId = item.getAttribute('data-id');
           
-          // Case 1: Reordering within the same list
           if (to === listRef.current && oldIndex !== undefined && newIndex !== undefined && oldIndex !== newIndex) {
             const targetItem = listRef.current.children[newIndex] as HTMLElement;
             const targetId = targetItem?.getAttribute('data-id');
@@ -49,12 +49,10 @@ export default function PromptList({
             }
           }
           
-          // Case 2: Dropped onto a project button (handled by group matching)
           if (to.classList.contains('project-drop-target')) {
             const projectId = to.getAttribute('data-project-id');
             if (draggedId) {
               onMoveToProject(draggedId, projectId === 'all' || projectId === 'none' ? null : projectId);
-              // Important: Remove the item from the project list if SortableJS tried to move it
               if (item.parentNode === to) {
                 to.removeChild(item);
               }

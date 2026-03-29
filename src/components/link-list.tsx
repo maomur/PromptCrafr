@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useRef } from 'react';
@@ -36,6 +35,8 @@ export default function LinkList({
         dragClass: 'sortable-drag',
         group: 'shared-items',
         dataIdAttr: 'data-id',
+        delay: 150, // Mobile support: hold to drag
+        delayOnTouchOnly: true,
         onEnd: (evt) => {
           const { item, to, newIndex, oldIndex } = evt;
           const draggedId = item.getAttribute('data-id');
