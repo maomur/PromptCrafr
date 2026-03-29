@@ -105,13 +105,31 @@ export default function PromptPage({ user }: PromptPageProps) {
   const [categoryFilter, setCategoryFilter] = useState<PromptCategory | 'Todos'>('Todos');
   const [activeProjectId, setActiveProjectId] = useState<string | 'all' | 'none'>('all');
 
-  // EFECTO CRÍTICO: Limpieza de body para evitar bloqueos de Radix
+  /**
+   * EFECTO DE SEGURIDAD CRÍTICO:
+   * Forza la limpieza de los estilos del body aplicados por Radix UI/Shadcn.
+   * Esto previene que la aplicación se congele (pointer-events: none) si un diálogo 
+   * intenta devolver el foco a un elemento que ya ha sido eliminado del DOM.
+   */
   useEffect(() => {
-    if (!isDeleteDialogOpen && !isLinkDeleteDialogOpen && !isCreateDialogOpen && !isEditDialogOpen && !isCreateLinkDialogOpen && !isEditLinkDialogOpen) {
-      document.body.style.pointerEvents = 'auto';
-      document.body.style.overflow = 'auto';
+    const isAnyDialogOpen = 
+      isDeleteDialogOpen || 
+      isLinkDeleteDialogOpen || 
+      isCreateDialogOpen || 
+      isEditDialogOpen || 
+      isCreateLinkDialogOpen || 
+      isEditLinkDialogOpen || 
+      isNewProjectDialogOpen;
+
+    if (!isAnyDialogOpen) {
+      // Forzar desbloqueo de la interfaz con un pequeño retardo para asegurar que Radix terminó
+      const timer = setTimeout(() => {
+        document.body.style.pointerEvents = 'auto';
+        document.body.style.overflow = 'auto';
+      }, 50);
+      return () => clearTimeout(timer);
     }
-  }, [isDeleteDialogOpen, isLinkDeleteDialogOpen, isCreateDialogOpen, isEditDialogOpen, isCreateLinkDialogOpen, isEditLinkDialogOpen]);
+  }, [isDeleteDialogOpen, isLinkDeleteDialogOpen, isCreateDialogOpen, isEditDialogOpen, isCreateLinkDialogOpen, isEditLinkDialogOpen, isNewProjectDialogOpen]);
 
   const handleMoveToProject = useCallback((itemId: string, itemType: 'prompt' | 'link', projectId: string | null) => {
     if (!firestore || !user?.uid) return;
@@ -194,26 +212,32 @@ export default function PromptPage({ user }: PromptPageProps) {
     toast({ title: "Proyecto eliminado" });
   }, [user?.uid, firestore, activeProjectId, toast]);
 
-  // ELIMINACIÓN SEGURA CON DESACOPLAMIENTO DE UI
+  /**
+   * ELIMINACIÓN DESACOPLADA:
+   * Cerramos el diálogo primero y esperamos a que el DOM se asiente
+   * antes de eliminar de Firebase. Esto evita que Radix intente restaurar 
+   * el foco a un elemento inexistente.
+   */
   const executeDeletePrompt = () => {
     if (promptToDelete && firestore && user?.uid) {
-      const docRef = doc(firestore, 'users', user.uid, 'prompts', promptToDelete.id);
+      const docId = promptToDelete.id;
+      const docRef = doc(firestore, 'users', user.uid, 'prompts', docId);
       
-      // 1. Cerramos el diálogo primero para que Radix procese el desmontaje del overlay
       setDeleteDialogOpen(false);
       
-      // 2. Esperamos un tick para que la UI se limpie antes de cambiar el estado de Firebase
+      // Permitimos que el diálogo se desmonte completamente
       setTimeout(() => {
         deleteDocumentNonBlocking(docRef);
         setPromptToDelete(null);
         toast({ title: "Prompt eliminado" });
-      }, 50);
+      }, 150);
     }
   };
 
   const executeDeleteLink = () => {
     if (linkToDelete && firestore && user?.uid) {
-      const docRef = doc(firestore, 'users', user.uid, 'links', linkToDelete.id);
+      const docId = linkToDelete.id;
+      const docRef = doc(firestore, 'users', user.uid, 'links', docId);
       
       setLinkDeleteDialogOpen(false);
       
@@ -221,7 +245,7 @@ export default function PromptPage({ user }: PromptPageProps) {
         deleteDocumentNonBlocking(docRef);
         setLinkToDelete(null);
         toast({ title: "Enlace eliminado" });
-      }, 50);
+      }, 150);
     }
   };
 

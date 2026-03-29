@@ -37,6 +37,11 @@ const LinkList = memo(function LinkList({
       onEnd: (evt) => {
         const { oldIndex, newIndex, item, from } = evt;
         
+        /**
+         * REVERSIÓN ATÓMICA:
+         * Devolvemos el nodo a su posición original para que React gestione 
+         * la actualización de la lista sin colisiones de DOM.
+         */
         if (from && item) {
           try {
             const nextSibling = from.children[oldIndex!] || null;

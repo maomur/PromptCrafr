@@ -29,7 +29,7 @@ const PromptList = memo(function PromptList({
     const el = listRef.current;
     if (!el) return;
 
-    // Inicialización estática para evitar conflictos con React
+    // Inicialización de SortableJS con técnica de reversión de DOM para React
     const sortable = new Sortable(el, {
       animation: 150,
       handle: '.drag-handle',
@@ -38,8 +38,12 @@ const PromptList = memo(function PromptList({
       onEnd: (evt) => {
         const { oldIndex, newIndex, item, from } = evt;
         
-        // REVERSIÓN INMEDIATA: Sortable manipula el DOM real. 
-        // Devolvemos el nodo a su posición original para que React no falle al renderizar.
+        /**
+         * REVERSIÓN ATÓMICA:
+         * SortableJS manipula el DOM real. Devolvemos el nodo a su posición original
+         * antes de que React procese el cambio de estado. Esto evita errores de 
+         * desincronización de nodos (NotFoundError) al eliminar elementos.
+         */
         if (from && item) {
           try {
             const nextSibling = from.children[oldIndex!] || null;
@@ -48,7 +52,9 @@ const PromptList = memo(function PromptList({
             } else {
               from.appendChild(item);
             }
-          } catch (e) {}
+          } catch (e) {
+            // Error silencioso si el nodo ya no existe
+          }
         }
         
         if (oldIndex !== undefined && newIndex !== undefined && oldIndex !== newIndex) {
@@ -67,7 +73,7 @@ const PromptList = memo(function PromptList({
         sortableRef.current = null;
       }
     };
-  }, []); // Sin dependencias para que la instancia sea estable
+  }, []); // Dependencias vacías para mantener una instancia única y estable
 
   return (
     <div 
