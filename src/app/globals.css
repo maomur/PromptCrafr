@@ -110,4 +110,6 @@
 .project-drop-target.sortable-drag-over {
   background-color: hsl(var(--primary) / 0.1) !important;
   outline: 2px solid hsl(var(--primary)) !important;
+  transform: scale(1.05);
+  transition: all 0.2s ease;
 }

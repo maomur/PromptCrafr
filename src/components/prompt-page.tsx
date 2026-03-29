@@ -119,9 +119,11 @@ export default function PromptPage({ user }: PromptPageProps) {
           forceFallback: true,
           delay: 150,
           delayOnTouchOnly: true,
+          ghostClass: 'sortable-ghost',
+          dragClass: 'sortable-drag',
           onAdd: (evt) => {
             // SortableJS onAdd fires when an item is moved from one list to another.
-            // But we handle the logic in PromptList/LinkList onEnd for consistency.
+            // We'll rely on onEnd of the source lists to handle the logic.
           }
         }));
       });
@@ -260,6 +262,7 @@ export default function PromptPage({ user }: PromptPageProps) {
     if (!firestore || !user?.uid) return;
     
     const isPrompt = prompts.some(p => p.id === itemId);
+    const isLink = links.some(l => l.id === itemId);
     const collectionName = isPrompt ? 'prompts' : 'links';
     const docRef = doc(firestore, 'users', user.uid, collectionName, itemId);
     
@@ -269,7 +272,7 @@ export default function PromptPage({ user }: PromptPageProps) {
     });
     
     toast({ title: isPrompt ? "Prompt organizado" : "Enlace organizado" });
-  }, [user?.uid, firestore, prompts, toast]);
+  }, [user?.uid, firestore, prompts, links, toast]);
 
   const handleReorder = useCallback((draggedId: string, targetId: string) => {
     if (!firestore || !user?.uid) return;
