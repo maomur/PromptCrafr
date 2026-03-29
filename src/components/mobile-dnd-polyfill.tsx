@@ -15,12 +15,11 @@ export default function MobileDndPolyfill() {
     const initPolyfill = async () => {
       try {
         const { polyfill } = await import('mobile-drag-drop');
-        const { scrollBehaviourDragImageTranslateOverride } = await import('mobile-drag-drop/scroll-behaviour-drag-image-translate-override');
 
         // Initialize with holdToDrag to ensure touch scrolling still works
+        // This is the standard behavior for mobile organization (long press to move)
         polyfill({
-          dragImageTranslateOverride: scrollBehaviourDragImageTranslateOverride,
-          holdToDrag: 200, // Mimics OS "long press to move" behavior
+          holdToDrag: 200, 
         });
 
         console.log('Mobile DnD Polyfill initialized with Hold-to-Drag (200ms)');
