@@ -84,6 +84,7 @@
   border-left: 1px solid hsl(var(--border) / 0.4);
   border-bottom: 1px solid hsl(var(--border) / 0.4);
   transition: transform 0.2s ease, background-color 0.2s ease;
+  touch-action: none !important; /* Critical for mobile DND */
 }
 
 .drag-handle:active {
@@ -94,4 +95,14 @@
 
 [draggable="true"] {
   -webkit-user-drag: element;
+}
+
+/* Ensure dragging feedback is clear on mobile */
+.dragging-active .drag-handle {
+  cursor: grabbing;
+}
+
+body.dragging-active {
+  overflow: hidden !important; /* Prevent page scroll during drag */
+  touch-action: none;
 }

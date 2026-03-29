@@ -80,8 +80,8 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
       onClick={handleCardClick}
       className="group flex flex-col h-full rounded-xl border-border/20 bg-card shadow-md transition-all duration-300 hover:shadow-lg relative overflow-hidden"
     >
-      {/* Mango de arrastre visible solo en escritorio */}
-      <div className="drag-handle absolute top-0 right-0 hidden md:flex">
+      {/* Drag handle enabled for all devices with touch-action: none */}
+      <div className="drag-handle absolute top-0 right-0 flex touch-none">
         <GripVertical className="h-5 w-5 text-muted-foreground" />
       </div>
 

@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -90,8 +91,8 @@ export default function PromptCard({
       onClick={handleCardClick}
       className="group flex h-full flex-col rounded-xl border-border/20 bg-card text-card-foreground shadow-md transition-all duration-300 hover:shadow-lg relative overflow-hidden"
     >
-      {/* Mango de arrastre visible solo en escritorio para evitar conflictos en móvil */}
-      <div className="drag-handle absolute top-0 right-0 hidden md:flex">
+      {/* Drag handle enabled for all devices with touch-action: none */}
+      <div className="drag-handle absolute top-0 right-0 flex touch-none">
         <GripVertical className="h-5 w-5 text-muted-foreground" />
       </div>
 
