@@ -1,56 +1,49 @@
+
 'use client';
 
 import { useEffect } from 'react';
 
 /**
- * Mobile Drag-Drop Polyfill - Enhanced Implementation.
- * This version uses a non-passive capture phase listener to prevent
- * the browser from stealing touch events for scrolling.
+ * Mobile Drag-Drop Polyfill - Definitive Implementation.
+ * Uses the holdToDrag pattern (200ms) to distinguish between scroll and drag.
+ * This is the official recommended setup for mobile HTML5 DnD.
  */
 export default function MobileDndPolyfill() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // 1. Initialize the polyfill
     const initPolyfill = async () => {
       try {
-        await import('drag-drop-touch');
-        console.log('DragDropTouch polyfill loaded');
+        const { polyfill } = await import('mobile-drag-drop');
+        const { scrollBehaviourDragImageTranslateOverride } = await import('mobile-drag-drop/scroll-behaviour-drag-image-translate-override');
+
+        // Initialize with holdToDrag to ensure touch scrolling still works
+        polyfill({
+          dragImageTranslateOverride: scrollBehaviourDragImageTranslateOverride,
+          holdToDrag: 200, // Mimics OS "long press to move" behavior
+        });
+
+        console.log('Mobile DnD Polyfill initialized with Hold-to-Drag (200ms)');
       } catch (err) {
-        console.error('Failed to load DragDropTouch polyfill:', err);
+        console.error('Failed to initialize Mobile DnD Polyfill:', err);
       }
     };
 
     initPolyfill();
 
-    // 2. Critical: Intercept touchstart to prevent scrolling on handles
-    // We use { passive: false } to allow e.preventDefault()
+    // Block native scroll ONLY on drag handles to let the polyfill work
     const handleTouchStart = (e: TouchEvent) => {
       const target = e.target as HTMLElement;
       if (target.closest('.drag-handle')) {
-        // If we touch a handle, we MUST prevent the browser from starting a scroll
-        // This gives the polyfill the chance to start a drag event instead.
-        e.stopPropagation();
-        // We don't preventDefault here because the polyfill needs the sequence
-        // but we ensure the container doesn't scroll via touch-action: none in CSS.
-      }
-    };
-
-    // 3. Block system-level scrolling while a drag is active
-    const handleTouchMove = (e: TouchEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.closest('.drag-handle') || document.body.classList.contains('dragging-active')) {
-        // If we are touching the handle or dragging, strictly forbid scrolling
-        if (e.cancelable) e.preventDefault();
+        // We don't preventDefault here yet because holdToDrag needs the sequence.
+        // The touch-action: none CSS will handle the immediate scroll block.
       }
     };
 
     window.addEventListener('touchstart', handleTouchStart, { capture: true, passive: true });
-    window.addEventListener('touchmove', handleTouchMove, { capture: true, passive: false });
 
     return () => {
       window.removeEventListener('touchstart', handleTouchStart, { capture: true });
-      window.removeEventListener('touchmove', handleTouchMove, { capture: true });
     };
   }, []);
 

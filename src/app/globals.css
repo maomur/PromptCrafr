@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -68,42 +69,45 @@
   }
 }
 
-/* Specific styling for the drag handle */
-.drag-handle {
-  cursor: grab;
+/* OFFICIAL DRAG AND DROP STYLES */
+[draggable="true"] {
   -webkit-user-select: none;
   user-select: none;
+  -webkit-user-drag: element;
+  cursor: grab;
+}
+
+/* Critical for mobile: Block native gestures on handles */
+.drag-handle {
+  touch-action: none !important;
+  -webkit-touch-callout: none !important;
+  -webkit-user-select: none !important;
+  user-select: none !important;
+  cursor: grab;
+  z-index: 50;
   width: 44px;
   height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: hsl(var(--background) / 0.8);
-  backdrop-filter: blur(4px);
-  border-bottom-left-radius: 0.75rem;
-  z-index: 50;
-  
-  /* CRITICAL: Block native mobile behaviors */
-  touch-action: none !important;
-  -webkit-touch-callout: none !important;
-  -webkit-tap-highlight-color: transparent !important;
 }
 
 .drag-handle:active {
   cursor: grabbing;
 }
 
-/* Ensure draggable elements are visually identified */
-[draggable="true"] {
-  -webkit-user-drag: element;
-  user-select: none;
-  -webkit-user-select: none;
-  touch-action: auto;
+/* Styles for the polyfill ghost image */
+.dnd-poly-drag-image {
+  opacity: 0.8 !important;
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1) !important;
+  transform: scale(1.05) !important;
+  pointer-events: none !important;
+  z-index: 9999 !important;
 }
 
-/* Visual feedback for the dragging ghost element */
+/* Prevent text selection during drag */
 .dragging-active {
   overflow: hidden !important;
-  touch-action: none !important;
-  pointer-events: none !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
 }
