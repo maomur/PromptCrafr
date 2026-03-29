@@ -57,7 +57,7 @@ export default function AuthScreen() {
         <CardHeader className="space-y-1 flex flex-col items-center">
           <div className="mb-4 p-3 bg-primary/10 rounded-2xl">
             <Image 
-              src="https://www.pulseai.ws/logo192.png" 
+              src="https://www.pulseai.ws/logo193.png" 
               alt="Logo" 
               width={64} 
               height={64} 

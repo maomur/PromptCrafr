@@ -16,7 +16,7 @@ export default function Home() {
           <div className="relative">
             <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full scale-150 animate-pulse" />
             <Image 
-              src="https://www.pulseai.ws/logo192.png" 
+              src="https://www.pulseai.ws/logo193.png" 
               alt="PromptCraft Logo" 
               width={120} 
               height={120} 
