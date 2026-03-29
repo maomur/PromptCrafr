@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -104,13 +103,15 @@ export default function PromptCard({
               {project.name}
             </Badge>
           )}
-          <Badge 
-            variant="outline"
-            className={cn("flex items-center border-0 text-[11px] px-2.5 py-0 h-6 font-medium shrink-0", categoryColors[prompt.category])}
-          >
-            {categoryIcons[prompt.category]}
-            {prompt.category}
-          </Badge>
+          {prompt.category && (
+            <Badge 
+              variant="outline"
+              className={cn("flex items-center border-0 text-[11px] px-2.5 py-0 h-6 font-medium shrink-0", categoryColors[prompt.category])}
+            >
+              {categoryIcons[prompt.category]}
+              {prompt.category}
+            </Badge>
+          )}
         </div>
         
         <div className="space-y-1.5">

@@ -22,7 +22,7 @@ interface PromptFormProps {
     title: string;
     description: string;
     content: string;
-    category: PromptCategory;
+    category: PromptCategory | null;
     projectId: string | null;
   }, id?: string) => void;
   onClose: () => void;
@@ -34,7 +34,7 @@ export default function PromptForm({ prompt, projects = [], onSave, onClose }: P
   
   const [title, setTitle] = useState(prompt?.title || '');
   const [description, setDescription] = useState(prompt?.description || '');
-  const [category, setCategory] = useState<PromptCategory>(prompt?.category || 'Textos');
+  const [category, setCategory] = useState<PromptCategory | 'none'>(prompt?.category || 'none');
   const [projectId, setProjectId] = useState<string>(prompt?.projectId || 'none');
   const [content, setContent] = useState(prompt?.content || '');
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -59,7 +59,7 @@ export default function PromptForm({ prompt, projects = [], onSave, onClose }: P
         title: title.trim(), 
         description: description.trim(), 
         content: content.trim(), 
-        category: category,
+        category: category === 'none' ? null : (category as PromptCategory),
         projectId: projectId === 'none' ? null : projectId
       }, prompt?.id);
     } else {
@@ -115,12 +115,13 @@ export default function PromptForm({ prompt, projects = [], onSave, onClose }: P
       </div>
       
       <div className="space-y-2">
-          <Label htmlFor="category-select">Categoría</Label>
-          <Select value={category} onValueChange={(value) => setCategory(value as PromptCategory)} modal={false}>
+          <Label htmlFor="category-select">Categoría (Opcional)</Label>
+          <Select value={category} onValueChange={(value) => setCategory(value as PromptCategory | 'none')} modal={false}>
             <SelectTrigger id="category-select">
               <SelectValue placeholder="Selecciona una categoría" />
             </SelectTrigger>
             <SelectContent position="popper" sideOffset={4}>
+              <SelectItem value="none">Sin categoría</SelectItem>
               {promptCategories.map((cat) => (
                 <SelectItem key={cat} value={cat}>{cat}</SelectItem>
               ))}

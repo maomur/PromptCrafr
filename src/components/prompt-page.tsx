@@ -132,7 +132,7 @@ export default function PromptPage({ user }: PromptPageProps) {
     title: string;
     description: string;
     content: string;
-    category: PromptCategory;
+    category: PromptCategory | null;
     projectId: string | null;
   }, id?: string) => {
     if (!firestore || !user?.uid) return;
@@ -146,7 +146,7 @@ export default function PromptPage({ user }: PromptPageProps) {
         title: promptData.title,
         description: promptData.description,
         content: promptData.content,
-        category: promptData.category,
+        category: promptData.category || null,
         projectId: promptData.projectId || null,
         updatedAt: now
       });
@@ -165,7 +165,7 @@ export default function PromptPage({ user }: PromptPageProps) {
         title: promptData.title,
         description: promptData.description,
         content: promptData.content,
-        category: promptData.category,
+        category: promptData.category || null,
         projectId: promptData.projectId || null,
         order: maxOrder + 1
       };
@@ -183,7 +183,7 @@ export default function PromptPage({ user }: PromptPageProps) {
     projectId: string | null;
     title?: string;
     description?: string;
-    category?: PromptCategory;
+    category?: PromptCategory | null;
   }, id?: string) => {
     if (!firestore || !user?.uid) return;
     

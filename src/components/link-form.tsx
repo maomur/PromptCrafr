@@ -21,10 +21,10 @@ interface LinkFormProps {
   projects: Project[];
   onSave: (linkData: {
     url: string;
-    projectId: string;
+    projectId: string | null;
     title?: string;
     description?: string;
-    category: PromptCategory;
+    category?: PromptCategory | null;
   }, id?: string) => void;
   onClose: () => void;
 }
@@ -34,19 +34,19 @@ export default function LinkForm({ link, projects, onSave, onClose }: LinkFormPr
   const isEditMode = !!link;
   
   const [url, setUrl] = useState(link?.url || '');
-  const [projectId, setProjectId] = useState<string>(link?.projectId || projects[0]?.id || 'none');
+  const [projectId, setProjectId] = useState<string>(link?.projectId || 'none');
   const [title, setTitle] = useState(link?.title || '');
   const [description, setDescription] = useState(link?.description || '');
-  const [category, setCategory] = useState<PromptCategory>(link?.category || 'Textos');
+  const [category, setCategory] = useState<PromptCategory | 'none'>(link?.category || 'none');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!url.trim() || !projectId || projectId === 'none') {
+    if (!url.trim()) {
       toast({
         variant: 'destructive',
-        title: 'Campos incompletos',
-        description: 'La URL y el Proyecto son obligatorios.',
+        title: 'Campo incompleto',
+        description: 'La URL es obligatoria.',
       });
       return;
     }
@@ -54,10 +54,10 @@ export default function LinkForm({ link, projects, onSave, onClose }: LinkFormPr
     setIsSubmitting(true);
     onSave({
       url: url.trim(),
-      projectId,
+      projectId: projectId === 'none' ? null : projectId,
       title: title.trim() || undefined,
       description: description.trim() || undefined,
-      category: category,
+      category: category === 'none' ? null : (category as PromptCategory),
     }, link?.id);
   };
 
@@ -76,7 +76,7 @@ export default function LinkForm({ link, projects, onSave, onClose }: LinkFormPr
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="link-project-select">Asignar a Proyecto (Obligatorio)</Label>
+        <Label htmlFor="link-project-select">Asignar a Proyecto (Opcional)</Label>
         <Select value={projectId} onValueChange={setProjectId} modal={false}>
           <SelectTrigger id="link-project-select">
             <SelectValue placeholder="Selecciona un proyecto" />
@@ -101,12 +101,13 @@ export default function LinkForm({ link, projects, onSave, onClose }: LinkFormPr
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="link-category-select">Categoría</Label>
-          <Select value={category} onValueChange={(value) => setCategory(value as PromptCategory)} modal={false}>
+          <Label htmlFor="link-category-select">Categoría (Opcional)</Label>
+          <Select value={category} onValueChange={(value) => setCategory(value as PromptCategory | 'none')} modal={false}>
             <SelectTrigger id="link-category-select">
               <SelectValue placeholder="Selecciona una categoría" />
             </SelectTrigger>
             <SelectContent position="popper" sideOffset={4}>
+              <SelectItem value="none">Sin categoría</SelectItem>
               {promptCategories.map((cat) => (
                 <SelectItem key={cat} value={cat}>{cat}</SelectItem>
               ))}

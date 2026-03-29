@@ -28,7 +28,7 @@
         "ownerId": { "type": "string" },
         "order": { "type": "integer", "description": "The position of the prompt in the list." }
       },
-      "required": ["id", "title", "content", "category", "createdAt", "updatedAt", "ownerId"]
+      "required": ["id", "title", "content", "createdAt", "updatedAt", "ownerId"]
     },
     "Link": {
       "title": "Link",
@@ -45,7 +45,7 @@
         "ownerId": { "type": "string" },
         "order": { "type": "integer", "description": "The position of the link in the list." }
       },
-      "required": ["id", "url", "projectId", "createdAt", "ownerId"]
+      "required": ["id", "url", "createdAt", "ownerId"]
     }
   },
   "auth": {

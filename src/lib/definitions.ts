@@ -14,7 +14,7 @@ export type Prompt = {
   title: string;
   description: string;
   content: string;
-  category: PromptCategory;
+  category: PromptCategory | null;
   createdAt: string;
   updatedAt: string;
   ownerId: string;
@@ -28,7 +28,7 @@ export type Link = {
   projectId: string | null;
   title?: string;
   description?: string;
-  category?: PromptCategory;
+  category?: PromptCategory | null;
   createdAt: string;
   ownerId: string;
   order: number;
