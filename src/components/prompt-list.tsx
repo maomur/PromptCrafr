@@ -25,8 +25,8 @@ const PromptList = memo(function PromptList({
   const listRef = useRef<HTMLDivElement>(null);
   const sortableRef = useRef<Sortable | null>(null);
   const onReorderRef = useRef(onReorder);
+  const originalSiblingRef = useRef<Node | null>(null);
 
-  // Mantenemos la referencia del callback actualizada sin reiniciar el efecto
   useEffect(() => {
     onReorderRef.current = onReorder;
   }, [onReorder]);
@@ -35,20 +35,34 @@ const PromptList = memo(function PromptList({
     const el = listRef.current;
     if (!el) return;
 
-    // Inicialización única de SortableJS
     const sortable = new Sortable(el, {
       animation: 150,
       handle: '.drag-handle',
       ghostClass: 'sortable-ghost',
       forceFallback: true,
+      onStart: (evt) => {
+        // Guardamos la posición original exacta del elemento
+        originalSiblingRef.current = evt.item.nextSibling;
+      },
       onEnd: (evt) => {
-        const { oldIndex, newIndex } = evt;
+        const { oldIndex, newIndex, item, from } = evt;
         
-        // NOTA: No hacemos reversión manual del DOM aquí porque el contenedor 
-        // padre en PromptPage se recreará por completo mediante 'key' 
-        // si la estructura cambia, evitando conflictos con React.
+        // REVERSIÓN ATÓMICA: Devolvemos el nodo a su sitio original inmediatamente.
+        // Esto es VITAL para que React no pierda el rastro del DOM y lance el error NotFoundError.
+        if (from && item) {
+          try {
+            if (originalSiblingRef.current) {
+              from.insertBefore(item, originalSiblingRef.current);
+            } else {
+              from.appendChild(item);
+            }
+          } catch (e) {
+            // Error silencioso si el DOM ya cambió
+          }
+        }
         
         if (oldIndex !== undefined && newIndex !== undefined && oldIndex !== newIndex) {
+          // Disparamos el callback de reordenamiento después de estabilizar el DOM
           onReorderRef.current(oldIndex, newIndex);
         }
       },
@@ -60,13 +74,11 @@ const PromptList = memo(function PromptList({
       if (sortableRef.current) {
         try {
           sortableRef.current.destroy();
-        } catch (e) {
-          // Fallo silencioso si el DOM ya no existe
-        }
+        } catch (e) {}
         sortableRef.current = null;
       }
     };
-  }, []); // Dependencias vacías: solo se monta una vez
+  }, []);
 
   return (
     <div 

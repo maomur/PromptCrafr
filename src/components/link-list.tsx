@@ -25,6 +25,7 @@ const LinkList = memo(function LinkList({
   const listRef = useRef<HTMLDivElement>(null);
   const sortableRef = useRef<Sortable | null>(null);
   const onReorderRef = useRef(onReorder);
+  const originalSiblingRef = useRef<Node | null>(null);
 
   useEffect(() => {
     onReorderRef.current = onReorder;
@@ -39,8 +40,23 @@ const LinkList = memo(function LinkList({
       handle: '.drag-handle',
       ghostClass: 'sortable-ghost',
       forceFallback: true,
+      onStart: (evt) => {
+        originalSiblingRef.current = evt.item.nextSibling;
+      },
       onEnd: (evt) => {
-        const { oldIndex, newIndex } = evt;
+        const { oldIndex, newIndex, item, from } = evt;
+        
+        // REVERSIÓN ATÓMICA PARA REACT
+        if (from && item) {
+          try {
+            if (originalSiblingRef.current) {
+              from.insertBefore(item, originalSiblingRef.current);
+            } else {
+              from.appendChild(item);
+            }
+          } catch (e) {}
+        }
+
         if (oldIndex !== undefined && newIndex !== undefined && oldIndex !== newIndex) {
           onReorderRef.current(oldIndex, newIndex);
         }
@@ -53,9 +69,7 @@ const LinkList = memo(function LinkList({
       if (sortableRef.current) {
         try {
           sortableRef.current.destroy();
-        } catch (e) {
-          // Ignorar
-        }
+        } catch (e) {}
         sortableRef.current = null;
       }
     };

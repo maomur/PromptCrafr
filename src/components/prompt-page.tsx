@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import type { Prompt, PromptCategory, Project, Link } from '@/lib/definitions';
 import { promptCategories } from '@/lib/definitions';
 import Header from '@/components/header';
@@ -63,7 +63,10 @@ export default function PromptPage({ user }: PromptPageProps) {
   const firestore = useFirestore();
   const auth = useAuth();
 
-  // Queries memoizadas para Firebase
+  // Versión de datos para forzar remount en caso de discrepancias mayores (opcional pero seguro)
+  const [dataVersion, setDataVersion] = useState(0);
+
+  // Queries memoizadas
   const projectsQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
     return collection(firestore, 'users', user.uid, 'projects');
@@ -79,7 +82,6 @@ export default function PromptPage({ user }: PromptPageProps) {
     return collection(firestore, 'users', user.uid, 'links');
   }, [firestore, user?.uid]);
 
-  // Suscripciones en tiempo real
   const { data: rawProjects, isLoading: projectsLoading } = useCollection<Project>(projectsQuery);
   const { data: rawPrompts, isLoading: promptsLoading } = useCollection<Prompt>(promptsQuery);
   const { data: rawLinks, isLoading: linksLoading } = useCollection<Link>(linksQuery);
@@ -87,6 +89,11 @@ export default function PromptPage({ user }: PromptPageProps) {
   const projects = useMemo(() => rawProjects || [], [rawProjects]);
   const prompts = useMemo(() => rawPrompts || [], [rawPrompts]);
   const links = useMemo(() => rawLinks || [], [rawLinks]);
+
+  // Actualizar versión cuando cambian las colecciones para asegurar limpieza de DOM si SortableJS falla
+  useEffect(() => {
+    setDataVersion(v => v + 1);
+  }, [prompts.length, links.length]);
 
   // Estados de UI
   const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
@@ -106,7 +113,7 @@ export default function PromptPage({ user }: PromptPageProps) {
   const [categoryFilter, setCategoryFilter] = useState<PromptCategory | 'Todos'>('Todos');
   const [activeProjectId, setActiveProjectId] = useState<string | 'all' | 'none'>('all');
 
-  // Handlers estables
+  // HANDLERS SEGUROS
   const handleMoveToProject = useCallback((itemId: string, itemType: 'prompt' | 'link', projectId: string | null) => {
     if (!firestore || !user?.uid) return;
     const collectionName = itemType === 'prompt' ? 'prompts' : 'links';
@@ -188,12 +195,44 @@ export default function PromptPage({ user }: PromptPageProps) {
     toast({ title: "Proyecto eliminado" });
   }, [user?.uid, firestore, activeProjectId, toast]);
 
+  // ELIMINACIÓN SEGURA: Desacoplamos el cierre del diálogo de la acción de Firestore
+  const executeDeletePrompt = () => {
+    if (promptToDelete && firestore && user?.uid) {
+      const idToDelete = promptToDelete.id;
+      const docRef = doc(firestore, 'users', user.uid, 'prompts', idToDelete);
+      
+      setDeleteDialogOpen(false); // Cerramos UI primero
+      
+      // Ejecutamos en el siguiente tick para evitar que Radix intente enfocar un nodo eliminado
+      setTimeout(() => {
+        deleteDocumentNonBlocking(docRef);
+        setPromptToDelete(null);
+        toast({ title: "Prompt eliminado" });
+      }, 0);
+    }
+  };
+
+  const executeDeleteLink = () => {
+    if (linkToDelete && firestore && user?.uid) {
+      const idToDelete = linkToDelete.id;
+      const docRef = doc(firestore, 'users', user.uid, 'links', idToDelete);
+      
+      setLinkDeleteDialogOpen(false);
+      
+      setTimeout(() => {
+        deleteDocumentNonBlocking(docRef);
+        setLinkToDelete(null);
+        toast({ title: "Enlace eliminado" });
+      }, 0);
+    }
+  };
+
   const handleReorderPrompts = useCallback((oldIndex: number, newIndex: number) => {
-    // Implementación futura de sincronización de orden
+    // Sincronización de orden opcional
   }, []);
 
   const handleReorderLinks = useCallback((oldIndex: number, newIndex: number) => {
-    // Implementación futura de sincronización de orden
+    // Sincronización de orden opcional
   }, []);
 
   // Filtrado optimizado
@@ -299,9 +338,9 @@ export default function PromptPage({ user }: PromptPageProps) {
                       <h3 className="text-sm font-bold uppercase tracking-widest text-orange-600 flex items-center gap-2 px-1">
                         <LinkIcon className="h-4 w-4" /> Enlaces ({filteredLinks.length})
                       </h3>
-                      {/* Usar KEY dinámica basada en la longitud para forzar recreación total si hay cambios estructurales */}
+                      {/* La key compuesta por la versión asegura remount total ante cambios de datos */}
                       <LinkList 
-                        key={`link-list-${filteredLinks.length}`}
+                        key={`links-v${dataVersion}-${filteredLinks.length}`}
                         links={filteredLinks} 
                         projects={projects}
                         onDeleteLink={(id) => { const l = links.find(li => li.id === id); if (l) { setLinkToDelete(l); setLinkDeleteDialogOpen(true); } }} 
@@ -317,7 +356,7 @@ export default function PromptPage({ user }: PromptPageProps) {
                         <Sparkles className="h-4 w-4" /> Prompts ({filteredPrompts.length})
                       </h3>
                       <PromptList
-                        key={`prompt-list-${filteredPrompts.length}`}
+                        key={`prompts-v${dataVersion}-${filteredPrompts.length}`}
                         prompts={filteredPrompts} 
                         projects={projects}
                         onDeletePrompt={(id) => { const p = prompts.find(pr => pr.id === id); if (p) { setPromptToDelete(p); setDeleteDialogOpen(true); } }}
@@ -345,7 +384,6 @@ export default function PromptPage({ user }: PromptPageProps) {
         </Dialog>
       </div>
 
-      {/* Diálogos de Gestión */}
       <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="sm:max-w-[625px]">
           <DialogHeader><DialogTitle>Editar Prompt</DialogTitle></DialogHeader>
@@ -367,16 +405,12 @@ export default function PromptPage({ user }: PromptPageProps) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction className="bg-destructive text-white hover:bg-destructive/90" onClick={() => { 
-              if (promptToDelete && firestore && user?.uid) {
-                const idToDelete = promptToDelete.id;
-                // Primero cerramos el diálogo para asegurar que el foco se limpie
-                setDeleteDialogOpen(false);
-                // Luego disparamos la eliminación
-                deleteDocumentNonBlocking(doc(firestore, 'users', user.uid, 'prompts', idToDelete));
-                setPromptToDelete(null);
-              }
-            }}>Eliminar</AlertDialogAction>
+            <AlertDialogAction 
+              className="bg-destructive text-white hover:bg-destructive/90" 
+              onClick={executeDeletePrompt}
+            >
+              Eliminar
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -389,14 +423,12 @@ export default function PromptPage({ user }: PromptPageProps) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction className="bg-destructive text-white hover:bg-destructive/90" onClick={() => { 
-              if (linkToDelete && firestore && user?.uid) {
-                const idToDelete = linkToDelete.id;
-                setLinkDeleteDialogOpen(false);
-                deleteDocumentNonBlocking(doc(firestore, 'users', user.uid, 'links', idToDelete));
-                setLinkToDelete(null);
-              }
-            }}>Eliminar</AlertDialogAction>
+            <AlertDialogAction 
+              className="bg-destructive text-white hover:bg-destructive/90" 
+              onClick={executeDeleteLink}
+            >
+              Eliminar
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
