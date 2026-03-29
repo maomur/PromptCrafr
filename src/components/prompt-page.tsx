@@ -93,27 +93,31 @@ export default function PromptPage({ user }: PromptPageProps) {
   const [isEditDialogOpen, setEditDialogOpen] = useState(false);
   const [isEditLinkDialogOpen, setEditLinkDialogOpen] = useState(false);
   const [isNewProjectDialogOpen, setNewProjectDialogOpen] = useState(false);
+  
+  // Delete Confirmation States
   const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isLinkDeleteDialogOpen, setLinkDeleteDialogOpen] = useState(false);
+  const [isProjectDeleteDialogOpen, setIsProjectDeleteDialogOpen] = useState(false);
   
   const [newProjectName, setNewProjectName] = useState('');
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
   const [selectedLink, setSelectedLink] = useState<Link | null>(null);
   const [promptToDelete, setPromptToDelete] = useState<Prompt | null>(null);
   const [linkToDelete, setLinkToDelete] = useState<Link | null>(null);
+  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   
   const [categoryFilter, setCategoryFilter] = useState<PromptCategory | 'Todos'>('Todos');
   const [activeProjectId, setActiveProjectId] = useState<string | 'all' | 'none'>('all');
 
   /**
-   * LIMPIEZA AGRESIVA DE BLOQUEOS (Pointer-Events)
+   * LIMPIEZA DE BLOQUEOS (Pointer-Events)
    * Soluciona el problema de la aplicación congelada tras borrar un elemento.
-   * Radix UI a veces no limpia el body si el elemento que tenía el foco desaparece.
    */
   useEffect(() => {
     const isAnyDialogOpen = 
       isDeleteDialogOpen || 
       isLinkDeleteDialogOpen || 
+      isProjectDeleteDialogOpen ||
       isCreateDialogOpen || 
       isEditDialogOpen || 
       isCreateLinkDialogOpen || 
@@ -127,7 +131,6 @@ export default function PromptPage({ user }: PromptPageProps) {
         document.body.classList.remove('pointer-events-none');
       };
 
-      // Ejecutar inmediatamente y con varios retardos para asegurar el desbloqueo
       cleanup();
       const t1 = setTimeout(cleanup, 100);
       const t2 = setTimeout(cleanup, 500);
@@ -137,7 +140,7 @@ export default function PromptPage({ user }: PromptPageProps) {
         clearTimeout(t2);
       };
     }
-  }, [isDeleteDialogOpen, isLinkDeleteDialogOpen, isCreateDialogOpen, isEditDialogOpen, isCreateLinkDialogOpen, isEditLinkDialogOpen, isNewProjectDialogOpen]);
+  }, [isDeleteDialogOpen, isLinkDeleteDialogOpen, isProjectDeleteDialogOpen, isCreateDialogOpen, isEditDialogOpen, isCreateLinkDialogOpen, isEditLinkDialogOpen, isNewProjectDialogOpen]);
 
   const handleMoveToProject = useCallback((itemId: string, itemType: 'prompt' | 'link', projectId: string | null) => {
     if (!firestore || !user?.uid) return;
@@ -212,27 +215,20 @@ export default function PromptPage({ user }: PromptPageProps) {
     toast({ title: "Proyecto creado" });
   }, [newProjectName, user?.uid, firestore, toast]);
 
-  const handleDeleteProject = useCallback((id: string, e: React.MouseEvent) => {
+  const openDeleteProjectDialog = (project: Project, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!firestore || !user?.uid) return;
-    deleteDocumentNonBlocking(doc(firestore, 'users', user.uid, 'projects', id));
-    if (activeProjectId === id) setActiveProjectId('all');
-    toast({ title: "Proyecto eliminado" });
-  }, [user?.uid, firestore, activeProjectId, toast]);
+    setProjectToDelete(project);
+    setIsProjectDeleteDialogOpen(true);
+  };
 
   /**
-   * BORRADO DESACOPLADO (Definitivo)
-   * Cerramos el diálogo PRIMERO y esperamos a que Radix limpie el body y el foco.
-   * Solo después borramos de Firebase para evitar conflictos de "Trigger Missing".
+   * BORRADO DESACOPLADO
+   * Cerramos el diálogo PRIMERO y esperamos a que Radix limpie el body.
    */
   const executeDeletePrompt = () => {
     if (promptToDelete && firestore && user?.uid) {
-      const docId = promptToDelete.id;
-      const docRef = doc(firestore, 'users', user.uid, 'prompts', docId);
-      
+      const docRef = doc(firestore, 'users', user.uid, 'prompts', promptToDelete.id);
       setDeleteDialogOpen(false);
-      
-      // Esperar 150ms para que Radix termine su ciclo de vida y restaure el body
       setTimeout(() => {
         deleteDocumentNonBlocking(docRef);
         setPromptToDelete(null);
@@ -243,15 +239,25 @@ export default function PromptPage({ user }: PromptPageProps) {
 
   const executeDeleteLink = () => {
     if (linkToDelete && firestore && user?.uid) {
-      const docId = linkToDelete.id;
-      const docRef = doc(firestore, 'users', user.uid, 'links', docId);
-      
+      const docRef = doc(firestore, 'users', user.uid, 'links', linkToDelete.id);
       setLinkDeleteDialogOpen(false);
-      
       setTimeout(() => {
         deleteDocumentNonBlocking(docRef);
         setLinkToDelete(null);
         toast({ title: "Enlace eliminado" });
+      }, 150);
+    }
+  };
+
+  const executeDeleteProject = () => {
+    if (projectToDelete && firestore && user?.uid) {
+      const docRef = doc(firestore, 'users', user.uid, 'projects', projectToDelete.id);
+      setIsProjectDeleteDialogOpen(false);
+      setTimeout(() => {
+        deleteDocumentNonBlocking(docRef);
+        if (activeProjectId === projectToDelete.id) setActiveProjectId('all');
+        setProjectToDelete(null);
+        toast({ title: "Proyecto eliminado" });
       }, 150);
     }
   };
@@ -325,20 +331,46 @@ export default function PromptPage({ user }: PromptPageProps) {
             </div>
 
             <nav className="space-y-1">
-              <button onClick={() => setActiveProjectId('all')} className={cn("w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-all text-left", activeProjectId === 'all' ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50")}>
+              <button 
+                onClick={() => setActiveProjectId('all')} 
+                className={cn("w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-all text-left", activeProjectId === 'all' ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50")}
+              >
                 <div className="flex items-center"><Folders className="mr-2 h-4 w-4" />Todos</div>
-                <span className="text-xs opacity-60">{prompts.length + links.length}</span>
+                <span className="text-xs opacity-60 font-mono">{prompts.length + links.length}</span>
               </button>
-              <button onClick={() => setActiveProjectId('none')} className={cn("w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-all text-left", activeProjectId === 'none' ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50")}>
+              
+              <button 
+                onClick={() => setActiveProjectId('none')} 
+                className={cn("w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-all text-left", activeProjectId === 'none' ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50")}
+              >
                 <div className="flex items-center"><Folder className="mr-2 h-4 w-4" />Sin Proyecto</div>
-                <span className="text-xs opacity-60">{prompts.filter(p => !p.projectId || p.projectId === 'none').length + links.filter(l => !l.projectId || l.projectId === 'none').length}</span>
+                <span className="text-xs opacity-60 font-mono">
+                  {prompts.filter(p => !p.projectId || p.projectId === 'none').length + links.filter(l => !l.projectId || l.projectId === 'none').length}
+                </span>
               </button>
-              {projects.map((p) => (
-                <button key={p.id} onClick={() => setActiveProjectId(p.id)} className={cn("group w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-all text-left", activeProjectId === p.id ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50")}>
-                  <div className="flex items-center truncate"><Folder className="mr-2 h-4 w-4 shrink-0" /><span className="truncate">{p.name}</span></div>
-                  <Trash2 className="h-3 w-3 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => handleDeleteProject(p.id, e)} />
-                </button>
-              ))}
+
+              {projects.map((p) => {
+                const count = prompts.filter(pr => pr.projectId === p.id).length + links.filter(li => li.projectId === p.id).length;
+                return (
+                  <button 
+                    key={p.id} 
+                    onClick={() => setActiveProjectId(p.id)} 
+                    className={cn("group w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-all text-left", activeProjectId === p.id ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50")}
+                  >
+                    <div className="flex items-center truncate">
+                      <Folder className="mr-2 h-4 w-4 shrink-0" />
+                      <span className="truncate">{p.name}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs opacity-60 font-mono">{count}</span>
+                      <Trash2 
+                        className="h-3.5 w-3.5 text-destructive opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110" 
+                        onClick={(e) => openDeleteProjectDialog(p, e)} 
+                      />
+                    </div>
+                  </button>
+                );
+              })}
             </nav>
           </div>
         </aside>
@@ -416,7 +448,7 @@ export default function PromptPage({ user }: PromptPageProps) {
         </DialogContent>
       </Dialog>
       
-      {/* DIÁLOGOS DE BORRADO - DESACOPLADOS */}
+      {/* DIÁLOGOS DE BORRADO - REFORZADOS */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -448,6 +480,26 @@ export default function PromptPage({ user }: PromptPageProps) {
               onClick={executeDeleteLink}
             >
               Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={isProjectDeleteDialogOpen} onOpenChange={setIsProjectDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar proyecto?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se eliminará el proyecto "{projectToDelete?.name}". Los prompts y enlaces dentro de este proyecto NO se borrarán, pero dejarán de estar organizados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              className="bg-destructive text-white hover:bg-destructive/90" 
+              onClick={executeDeleteProject}
+            >
+              Eliminar Proyecto
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
