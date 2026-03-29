@@ -106,7 +106,7 @@ export default function PromptPage({ user }: PromptPageProps) {
   const [categoryFilter, setCategoryFilter] = useState<PromptCategory | 'Todos'>('Todos');
   const [activeProjectId, setActiveProjectId] = useState<string | 'all' | 'none'>('all');
 
-  // Handlers optimizados con useCallback
+  // Handlers optimizados
   const handleMoveToProject = useCallback((itemId: string, itemType: 'prompt' | 'link', projectId: string | null) => {
     if (!firestore || !user?.uid) return;
     const collectionName = itemType === 'prompt' ? 'prompts' : 'links';
@@ -189,14 +189,14 @@ export default function PromptPage({ user }: PromptPageProps) {
   }, [user?.uid, firestore, activeProjectId, toast]);
 
   const handleReorderPrompts = useCallback((oldIndex: number, newIndex: number) => {
-    // Implementación futura opcional para persistir orden exacto en Firestore
+    // Sincronización de orden opcional en el futuro
   }, []);
 
   const handleReorderLinks = useCallback((oldIndex: number, newIndex: number) => {
-    // Implementación futura opcional para persistir orden exacto en Firestore
+    // Sincronización de orden opcional en el futuro
   }, []);
 
-  // Filtrado y ordenación
+  // Filtrado optimizado
   const filteredPrompts = useMemo(() => {
     return prompts.filter(p => {
       const matchesProject = activeProjectId === 'all' || 
@@ -266,16 +266,16 @@ export default function PromptPage({ user }: PromptPageProps) {
             </div>
 
             <nav className="space-y-1">
-              <button onClick={() => setActiveProjectId('all')} className={cn("w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-all", activeProjectId === 'all' ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50")}>
+              <button onClick={() => setActiveProjectId('all')} className={cn("w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-all text-left", activeProjectId === 'all' ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50")}>
                 <div className="flex items-center"><Folders className="mr-2 h-4 w-4" />Todos</div>
                 <span className="text-xs opacity-60">{prompts.length + links.length}</span>
               </button>
-              <button onClick={() => setActiveProjectId('none')} className={cn("w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-all", activeProjectId === 'none' ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50")}>
+              <button onClick={() => setActiveProjectId('none')} className={cn("w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-all text-left", activeProjectId === 'none' ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50")}>
                 <div className="flex items-center"><Folder className="mr-2 h-4 w-4" />Sin Proyecto</div>
                 <span className="text-xs opacity-60">{prompts.filter(p => !p.projectId || p.projectId === 'none').length + links.filter(l => !l.projectId || l.projectId === 'none').length}</span>
               </button>
               {projects.map((p) => (
-                <button key={p.id} onClick={() => setActiveProjectId(p.id)} className={cn("group w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-all", activeProjectId === p.id ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50")}>
+                <button key={p.id} onClick={() => setActiveProjectId(p.id)} className={cn("group w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-all text-left", activeProjectId === p.id ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50")}>
                   <div className="flex items-center truncate"><Folder className="mr-2 h-4 w-4 shrink-0" /><span className="truncate">{p.name}</span></div>
                   <Trash2 className="h-3 w-3 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => handleDeleteProject(p.id, e)} />
                 </button>
@@ -342,7 +342,7 @@ export default function PromptPage({ user }: PromptPageProps) {
         </Dialog>
       </div>
 
-      {/* Diálogos de Edición y Alerta */}
+      {/* Diálogos de Gestión */}
       <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="sm:max-w-[625px]">
           <DialogHeader><DialogTitle>Editar Prompt</DialogTitle></DialogHeader>

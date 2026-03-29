@@ -29,31 +29,32 @@ export default function PromptList({
     const el = listRef.current;
     if (!el) return;
 
-    // Instancia de SortableJS con técnica de reversión obligatoria
+    // Inicializamos SortableJS una sola vez para el contenedor
+    // SortableJS es capaz de gestionar hijos dinámicos sin necesidad de re-inicializarse
     const sortable = new Sortable(el, {
       animation: 150,
       handle: '.drag-handle',
       ghostClass: 'sortable-ghost',
-      forceFallback: true, // Crucial para móviles
+      forceFallback: true, // Crucial para estabilidad en móviles
       fallbackOnBody: true,
       delay: 150,
       delayOnTouchOnly: true,
       onStart: (evt) => {
-        // Guardamos la referencia del hermano siguiente para la reversión exacta
+        // Capturamos el hermano siguiente original para la reversión exacta
         (evt.item as any)._originalNextSibling = evt.item.nextSibling;
       },
       onEnd: (evt) => {
         const { item, from, oldIndex, newIndex } = evt;
         
         // REVERSIÓN DE DOM OBLIGATORIA: 
-        // Devolvemos el nodo a su sitio exacto ANTES de que React vea el cambio.
-        // Esto evita el error "Failed to execute 'removeChild' on 'Node'".
+        // Devolvemos el nodo a su sitio exacto ANTES de que React vea el cambio de estado.
+        // Esto evita el error fatal "Failed to execute 'removeChild' on 'Node'".
         if (from && item) {
           try {
             const nextSibling = (item as any)._originalNextSibling;
             from.insertBefore(item, nextSibling || null);
           } catch (e) {
-            // Error silencioso si el nodo ya no existe
+            // Error silencioso si el nodo ya ha sido manipulado por React
           }
         }
 
@@ -71,11 +72,13 @@ export default function PromptList({
         try {
           sortableRef.current.destroy();
         } catch (e) {
-          // Ignorar errores durante el desmontaje
+          // Ignorar errores durante el desmontaje seguro
         }
         sortableRef.current = null;
       }
     };
+    // No incluimos 'prompts' en las dependencias para evitar ciclos de destrucción/recreación
+    // innecesarios que causan bloqueos durante las eliminaciones.
   }, [onReorder]);
 
   if (prompts.length === 0) return null;

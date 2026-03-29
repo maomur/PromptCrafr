@@ -38,19 +38,19 @@ export default function LinkList({
       delay: 150,
       delayOnTouchOnly: true,
       onStart: (evt) => {
-        // Guardamos referencia para reversión
+        // Captura de posición original para estabilidad de React
         (evt.item as any)._originalNextSibling = evt.item.nextSibling;
       },
       onEnd: (evt) => {
         const { item, from, oldIndex, newIndex } = evt;
         
-        // Reversión física del DOM para estabilidad de React
+        // Reversión física del DOM para coherencia absoluta
         if (from && item) {
           try {
             const nextSibling = (item as any)._originalNextSibling;
             from.insertBefore(item, nextSibling || null);
           } catch (e) {
-            // Silencioso
+            // Ignorar errores silenciosamente
           }
         }
 
@@ -67,11 +67,12 @@ export default function LinkList({
         try {
           sortableRef.current.destroy();
         } catch (e) {
-          // Silencioso
+          // Destrucción segura
         }
         sortableRef.current = null;
       }
     };
+    // Excluimos 'links' para evitar que la instancia se recree durante las eliminaciones
   }, [onReorder]);
 
   return (
