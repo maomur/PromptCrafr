@@ -141,9 +141,15 @@ export default function PromptPage({ user }: PromptPageProps) {
         }));
       });
 
-      return () => sortables.forEach(s => s.destroy());
+      return () => sortables.forEach(s => {
+        try {
+          s.destroy();
+        } catch (e) {
+          // Ignorar errores si el elemento ya no existe
+        }
+      });
     }
-  }, [projectsLoading, projects, handleMoveToProject]);
+  }, [projectsLoading, projects.length, handleMoveToProject]);
 
   const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
   const [isCreateLinkDialogOpen, setCreateLinkDialogOpen] = useState(false);

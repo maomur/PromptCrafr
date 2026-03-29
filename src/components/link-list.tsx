@@ -26,43 +26,52 @@ export default function LinkList({
   const sortableRef = useRef<Sortable | null>(null);
 
   useEffect(() => {
-    if (listRef.current && links.length > 0) {
-      sortableRef.current = new Sortable(listRef.current, {
-        animation: 150,
-        handle: '.drag-handle',
-        ghostClass: 'sortable-ghost',
-        chosenClass: 'sortable-chosen',
-        dragClass: 'sortable-drag',
-        group: {
-          name: 'shared-items',
-          pull: true,
-          put: true
-        },
-        dataIdAttr: 'data-id',
-        forceFallback: true,
-        fallbackClass: 'sortable-fallback',
-        fallbackOnBody: true,
-        delay: 150,
-        delayOnTouchOnly: true,
-        onEnd: (evt) => {
-          const { item, to, newIndex, oldIndex } = evt;
-          const draggedId = item.getAttribute('data-id');
-          
-          if (to === listRef.current && oldIndex !== undefined && newIndex !== undefined && oldIndex !== newIndex) {
-            const targetItem = listRef.current.children[newIndex] as HTMLElement;
-            const targetId = targetItem?.getAttribute('data-id');
-            if (draggedId && targetId) {
-              onReorder(draggedId, targetId);
-            }
-          }
-        },
-      });
+    if (!listRef.current || links.length === 0) {
+      if (sortableRef.current) {
+        sortableRef.current.destroy();
+        sortableRef.current = null;
+      }
+      return;
     }
 
+    sortableRef.current = new Sortable(listRef.current, {
+      animation: 150,
+      handle: '.drag-handle',
+      ghostClass: 'sortable-ghost',
+      chosenClass: 'sortable-chosen',
+      dragClass: 'sortable-drag',
+      group: {
+        name: 'shared-items',
+        pull: true,
+        put: true
+      },
+      dataIdAttr: 'data-id',
+      forceFallback: true,
+      fallbackClass: 'sortable-fallback',
+      fallbackOnBody: true,
+      delay: 150,
+      delayOnTouchOnly: true,
+      onEnd: (evt) => {
+        const { item, to, newIndex, oldIndex } = evt;
+        const draggedId = item.getAttribute('data-id');
+        
+        if (to === listRef.current && oldIndex !== undefined && newIndex !== undefined && oldIndex !== newIndex) {
+          const targetItem = listRef.current.children[newIndex] as HTMLElement;
+          const targetId = targetItem?.getAttribute('data-id');
+          if (draggedId && targetId) {
+            onReorder(draggedId, targetId);
+          }
+        }
+      },
+    });
+
     return () => {
-      sortableRef.current?.destroy();
+      if (sortableRef.current) {
+        sortableRef.current.destroy();
+        sortableRef.current = null;
+      }
     };
-  }, [links, onReorder, onMoveToProject]);
+  }, [links.length, onReorder, onMoveToProject]);
 
   return (
     <div 
