@@ -20,29 +20,36 @@ export default function MobileDndPolyfill() {
         // Initialize the polyfill
         polyfill({
           dragImageTranslateOverride: scrollBehaviourDragImageTranslateOverride,
-          holdToDrag: 0, // No delay when using drag-handle with touch-action: none
+          holdToDrag: 0, // Instant drag on handles
           dragImageCenterOnPointer: true,
         });
 
-        // Global interceptor for touchstart to prevent default scroll when touching a drag handle
+        // CRITICAL: Non-passive touchstart listener to block scroll on handles
         const handleTouchStart = (e: TouchEvent) => {
           const target = e.target as HTMLElement;
-          if (target.closest('.drag-handle')) {
-            // Check if the touch is cancelable before preventing default
+          const handle = target.closest('.drag-handle');
+          
+          if (handle) {
+            // Check if we can prevent default (essential for drag to start)
             if (e.cancelable) {
-              // We don't preventDefault here to let the polyfill work, 
-              // but we signal the UI to stay ready
+              // We don't preventDefault yet to let the polyfill detect it,
+              // but we mark the body to help the global move listener
               document.body.classList.add('dnd-active');
             }
           }
         };
 
         const handleTouchMove = (e: TouchEvent) => {
-          if (document.body.classList.contains('dnd-active') || document.body.classList.contains('dragging-active')) {
+          if (document.body.classList.contains('dragging-active') || document.body.classList.contains('dnd-active')) {
+            // Prevent scrolling while dragging
             if (e.cancelable) {
               e.preventDefault();
             }
           }
+        };
+
+        const handleDragStart = () => {
+          document.body.classList.add('dragging-active');
         };
 
         const handleDragEnd = () => {
@@ -50,10 +57,7 @@ export default function MobileDndPolyfill() {
           document.body.classList.remove('dnd-active');
         };
 
-        const handleDragStart = () => {
-          document.body.classList.add('dragging-active');
-        };
-
+        // Add listeners directly to window with passive: false to allow preventDefault
         window.addEventListener('touchstart', handleTouchStart, { passive: true });
         window.addEventListener('touchmove', handleTouchMove, { passive: false });
         window.addEventListener('dragstart', handleDragStart);
