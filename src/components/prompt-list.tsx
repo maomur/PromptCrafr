@@ -40,6 +40,7 @@ export default function PromptList({
         const { item, newIndex, oldIndex, from } = evt;
         
         // REVERSIÓN DE DOM OBLIGATORIA: Devolvemos el nodo a su sitio antes de que React lo vea.
+        // Esto es CRÍTICO para evitar el error "removeChild" al borrar elementos.
         if (from && item && oldIndex !== undefined && newIndex !== undefined) {
           try {
             const children = Array.from(from.children);
@@ -49,7 +50,7 @@ export default function PromptList({
               from.appendChild(item);
             }
           } catch (e) {
-            // Silencioso
+            // Error silencioso para no bloquear la ejecución
           }
         }
 

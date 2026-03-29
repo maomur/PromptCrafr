@@ -9,7 +9,7 @@ interface LinkListProps {
   links: Link[];
   projects: Project[];
   onDeleteLink: (id: string) => void;
-  onEditLink: (link) => void;
+  onEditLink: (link: Link) => void;
   onReorder: (oldIndex: number, newIndex: number) => void;
   onMoveToProject: (linkId: string, projectId: string | null) => void;
 }
@@ -39,7 +39,7 @@ export default function LinkList({
       onEnd: (evt) => {
         const { item, newIndex, oldIndex, from } = evt;
         
-        // REVERSIÓN DE DOM OBLIGATORIA
+        // REVERSIÓN DE DOM OBLIGATORIA: Devolvemos el nodo a su sitio antes de que React lo vea.
         if (from && item && oldIndex !== undefined && newIndex !== undefined) {
           try {
             const children = Array.from(from.children);
