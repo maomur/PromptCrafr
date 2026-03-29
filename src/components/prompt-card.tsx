@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -74,17 +73,20 @@ export default function PromptCard({
     if (cardRef.current) {
       cardRef.current.style.opacity = '0.4';
     }
+    
+    // Add global class to block scrolling during drag
+    document.body.classList.add('dragging-active');
   };
 
   const handleDragEnd = () => {
     if (cardRef.current) {
       cardRef.current.style.opacity = '1';
     }
+    document.body.classList.remove('dragging-active');
   };
 
   const handleCardClick = useCallback((event: React.MouseEvent) => {
     const target = event.target as HTMLElement;
-    // Don't copy if clicking interactive elements
     if (
       target.closest('button') || 
       target.closest('.drag-handle') || 
@@ -104,7 +106,7 @@ export default function PromptCard({
   return (
     <Card 
       ref={cardRef}
-      draggable={true}
+      draggable="true"
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onClick={handleCardClick}
@@ -112,7 +114,7 @@ export default function PromptCard({
     >
       {/* DRAG HANDLE: The only entry point for drag interaction on mobile */}
       <div className="drag-handle absolute top-0 right-0 flex touch-none">
-        <GripVertical className="h-5 w-5 text-muted-foreground" />
+        <GripVertical className="h-5 w-5 text-muted-foreground pointer-events-none" />
       </div>
 
       <CardHeader className="pt-6 md:pt-10 space-y-4">
