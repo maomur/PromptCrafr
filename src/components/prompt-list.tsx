@@ -28,20 +28,18 @@ export default function PromptList({
   useEffect(() => {
     if (!listRef.current) return;
 
-    // Inicialización de SortableJS con modo de emulación (forceFallback) para máxima estabilidad en móviles
     const sortable = new Sortable(listRef.current, {
       animation: 150,
       handle: '.drag-handle',
       ghostClass: 'sortable-ghost',
       forceFallback: true,
       fallbackOnBody: true,
-      delay: 150, // Retraso para permitir scroll táctil
+      delay: 150,
       delayOnTouchOnly: true,
       onEnd: (evt) => {
         const { item, newIndex, oldIndex, from } = evt;
         
         // REVERSIÓN DE DOM OBLIGATORIA: Devolvemos el nodo a su sitio antes de que React lo vea.
-        // Esto evita el error "Failed to execute 'removeChild' on 'Node'"
         if (from && item && oldIndex !== undefined && newIndex !== undefined) {
           try {
             const children = Array.from(from.children);
@@ -51,7 +49,7 @@ export default function PromptList({
               from.appendChild(item);
             }
           } catch (e) {
-            // Error silencioso: el DOM se restaurará en el siguiente renderizado de React
+            // Silencioso
           }
         }
 
@@ -68,12 +66,12 @@ export default function PromptList({
         try {
           sortableRef.current.destroy();
         } catch (e) {
-          // Ignorar si el nodo ya no existe
+          // Silencioso
         }
         sortableRef.current = null;
       }
     };
-  }, [onReorder]); 
+  }, [onReorder]);
 
   if (prompts.length === 0) return null;
 

@@ -184,7 +184,7 @@ export default function PromptPage({ user }: PromptPageProps) {
   }, [user?.uid, firestore, activeProjectId, toast]);
 
   const handleReorderPrompts = useCallback((oldIndex: number, newIndex: number) => {
-    // Implementación futura de persistencia de orden
+    // Implementación futura
   }, []);
 
   const handleReorderLinks = useCallback((oldIndex: number, newIndex: number) => {

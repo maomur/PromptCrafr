@@ -9,7 +9,7 @@ interface LinkListProps {
   links: Link[];
   projects: Project[];
   onDeleteLink: (id: string) => void;
-  onEditLink: (link: Link) => void;
+  onEditLink: (link) => void;
   onReorder: (oldIndex: number, newIndex: number) => void;
   onMoveToProject: (linkId: string, projectId: string | null) => void;
 }
