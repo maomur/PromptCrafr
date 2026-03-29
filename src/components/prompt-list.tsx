@@ -24,46 +24,35 @@ const PromptList = memo(function PromptList({
 }: PromptListProps) {
   const listRef = useRef<HTMLDivElement>(null);
   const sortableRef = useRef<Sortable | null>(null);
-  const onReorderRef = useRef(onReorder);
-  const originalSiblingRef = useRef<Node | null>(null);
-
-  useEffect(() => {
-    onReorderRef.current = onReorder;
-  }, [onReorder]);
 
   useEffect(() => {
     const el = listRef.current;
     if (!el) return;
 
+    // Inicialización estática para evitar conflictos con React
     const sortable = new Sortable(el, {
       animation: 150,
       handle: '.drag-handle',
       ghostClass: 'sortable-ghost',
       forceFallback: true,
-      onStart: (evt) => {
-        // Guardamos la posición original exacta del elemento
-        originalSiblingRef.current = evt.item.nextSibling;
-      },
       onEnd: (evt) => {
         const { oldIndex, newIndex, item, from } = evt;
         
-        // REVERSIÓN ATÓMICA: Devolvemos el nodo a su sitio original inmediatamente.
-        // Esto es VITAL para que React no pierda el rastro del DOM y lance el error NotFoundError.
+        // REVERSIÓN INMEDIATA: Sortable manipula el DOM real. 
+        // Devolvemos el nodo a su posición original para que React no falle al renderizar.
         if (from && item) {
           try {
-            if (originalSiblingRef.current) {
-              from.insertBefore(item, originalSiblingRef.current);
+            const nextSibling = from.children[oldIndex!] || null;
+            if (nextSibling) {
+              from.insertBefore(item, nextSibling);
             } else {
               from.appendChild(item);
             }
-          } catch (e) {
-            // Error silencioso si el DOM ya cambió
-          }
+          } catch (e) {}
         }
         
         if (oldIndex !== undefined && newIndex !== undefined && oldIndex !== newIndex) {
-          // Disparamos el callback de reordenamiento después de estabilizar el DOM
-          onReorderRef.current(oldIndex, newIndex);
+          onReorder(oldIndex, newIndex);
         }
       },
     });
@@ -78,7 +67,7 @@ const PromptList = memo(function PromptList({
         sortableRef.current = null;
       }
     };
-  }, []);
+  }, []); // Sin dependencias para que la instancia sea estable
 
   return (
     <div 
