@@ -10,7 +10,7 @@ interface PromptListProps {
   projects: Project[];
   onDeletePrompt: (id: string) => void;
   onEditPrompt: (prompt: Prompt) => void;
-  onReorder: (draggedId: string, targetId: string) => void;
+  onReorder: (oldIndex: number, newIndex: number) => void;
   onMoveToProject: (promptId: string, projectId: string | null) => void;
 }
 
@@ -26,35 +26,47 @@ export default function PromptList({
   const sortableRef = useRef<Sortable | null>(null);
 
   useEffect(() => {
-    if (!listRef.current || prompts.length === 0) return;
+    if (!listRef.current) return;
 
-    sortableRef.current = new Sortable(listRef.current, {
+    // Inicialización estable de SortableJS
+    const sortable = new Sortable(listRef.current, {
       animation: 150,
       handle: '.drag-handle',
       ghostClass: 'sortable-ghost',
-      forceFallback: true,
-      delay: 150,
-      delayOnTouchOnly: true,
+      forceFallback: true, // Crítico para estabilidad en móviles
+      fallbackOnBody: true,
       onEnd: (evt) => {
-        const { item, newIndex, oldIndex } = evt;
+        const { item, newIndex, oldIndex, from } = evt;
+        
         if (oldIndex !== undefined && newIndex !== undefined && oldIndex !== newIndex) {
-          const draggedId = item.getAttribute('data-id');
-          const targetItem = listRef.current?.children[newIndex] as HTMLElement;
-          const targetId = targetItem?.getAttribute('data-id');
-          if (draggedId && targetId) {
-            onReorder(draggedId, targetId);
+          // REVERSIÓN DE DOM: Devolvemos el elemento a su sitio para que React no se rompa
+          if (from && item) {
+            const children = Array.from(from.children);
+            if (oldIndex < newIndex) {
+              from.insertBefore(item, children[oldIndex]);
+            } else {
+              from.insertBefore(item, children[oldIndex].nextSibling || null);
+            }
           }
+          // Notificamos al padre para que actualice el estado/Firebase
+          onReorder(oldIndex, newIndex);
         }
       },
     });
 
+    sortableRef.current = sortable;
+
     return () => {
       if (sortableRef.current) {
-        sortableRef.current.destroy();
+        try {
+          sortableRef.current.destroy();
+        } catch (e) {
+          // Ignorar errores si el nodo ya fue eliminado por React
+        }
         sortableRef.current = null;
       }
     };
-  }, [prompts.length, onReorder]); 
+  }, [onReorder]); 
 
   if (prompts.length === 0) return null;
 

@@ -10,7 +10,7 @@ interface LinkListProps {
   projects: Project[];
   onDeleteLink: (id: string) => void;
   onEditLink: (link: Link) => void;
-  onReorder: (draggedId: string, targetId: string) => void;
+  onReorder: (oldIndex: number, newIndex: number) => void;
   onMoveToProject: (linkId: string, projectId: string | null) => void;
 }
 
@@ -26,35 +26,44 @@ export default function LinkList({
   const sortableRef = useRef<Sortable | null>(null);
 
   useEffect(() => {
-    if (!listRef.current || links.length === 0) return;
+    if (!listRef.current) return;
 
-    sortableRef.current = new Sortable(listRef.current, {
+    const sortable = new Sortable(listRef.current, {
       animation: 150,
       handle: '.drag-handle',
       ghostClass: 'sortable-ghost',
       forceFallback: true,
-      delay: 150,
-      delayOnTouchOnly: true,
+      fallbackOnBody: true,
       onEnd: (evt) => {
-        const { item, newIndex, oldIndex } = evt;
+        const { item, newIndex, oldIndex, from } = evt;
         if (oldIndex !== undefined && newIndex !== undefined && oldIndex !== newIndex) {
-          const draggedId = item.getAttribute('data-id');
-          const targetItem = listRef.current?.children[newIndex] as HTMLElement;
-          const targetId = targetItem?.getAttribute('data-id');
-          if (draggedId && targetId) {
-            onReorder(draggedId, targetId);
+          // Reversión de DOM inmediata
+          if (from && item) {
+            const children = Array.from(from.children);
+            if (oldIndex < newIndex) {
+              from.insertBefore(item, children[oldIndex]);
+            } else {
+              from.insertBefore(item, children[oldIndex].nextSibling || null);
+            }
           }
+          onReorder(oldIndex, newIndex);
         }
       },
     });
 
+    sortableRef.current = sortable;
+
     return () => {
       if (sortableRef.current) {
-        sortableRef.current.destroy();
+        try {
+          sortableRef.current.destroy();
+        } catch (e) {
+          // Silencioso si falla
+        }
         sortableRef.current = null;
       }
     };
-  }, [links.length, onReorder]);
+  }, [onReorder]);
 
   return (
     <div 

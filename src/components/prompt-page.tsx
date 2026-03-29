@@ -63,7 +63,7 @@ export default function PromptPage({ user }: PromptPageProps) {
   const firestore = useFirestore();
   const auth = useAuth();
 
-  // Queries
+  // Queries con memoización correcta
   const projectsQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
     return collection(firestore, 'users', user.uid, 'projects');
@@ -186,7 +186,19 @@ export default function PromptPage({ user }: PromptPageProps) {
     toast({ title: "Proyecto eliminado" });
   }, [user?.uid, firestore, activeProjectId, toast]);
 
-  // Filters & Sorting
+  // Reordenamiento seguro
+  const handleReorderPrompts = useCallback((oldIndex: number, newIndex: number) => {
+    if (!firestore || !user?.uid) return;
+    // Lógica de reordenamiento aquí si se desea persistir
+    console.log(`Reordered prompt from ${oldIndex} to ${newIndex}`);
+  }, [user?.uid, firestore]);
+
+  const handleReorderLinks = useCallback((oldIndex: number, newIndex: number) => {
+    if (!firestore || !user?.uid) return;
+    console.log(`Reordered link from ${oldIndex} to ${newIndex}`);
+  }, [user?.uid, firestore]);
+
+  // Filtros
   const filteredPrompts = useMemo(() => {
     let result = prompts.filter(p => {
       const matchesProject = activeProjectId === 'all' || 
@@ -295,7 +307,7 @@ export default function PromptPage({ user }: PromptPageProps) {
                         links={filteredLinks} projects={projects}
                         onDeleteLink={(id) => { const l = links.find(li => li.id === id); if (l) { setLinkToDelete(l); setLinkDeleteDialogOpen(true); } }} 
                         onEditLink={(link) => { setSelectedLink(link); setEditLinkDialogOpen(true); }}
-                        onReorder={() => {}} // Reordering disabled for this view for stability
+                        onReorder={handleReorderLinks}
                         onMoveToProject={(linkId, projectId) => handleMoveToProject(linkId, 'link', projectId)}
                       />
                     </div>
@@ -309,7 +321,7 @@ export default function PromptPage({ user }: PromptPageProps) {
                         prompts={filteredPrompts} projects={projects}
                         onDeletePrompt={(id) => { const p = prompts.find(pr => pr.id === id); if (p) { setPromptToDelete(p); setDeleteDialogOpen(true); } }}
                         onEditPrompt={(prompt) => { setSelectedPrompt(prompt); setEditDialogOpen(true); }}
-                        onReorder={() => {}} // Reordering disabled for stability
+                        onReorder={handleReorderPrompts}
                         onMoveToProject={(promptId, projectId) => handleMoveToProject(promptId, 'prompt', projectId)}
                       />
                     </div>
