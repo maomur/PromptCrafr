@@ -49,11 +49,17 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
   );
 
   const handleDragStart = (e: React.DragEvent) => {
+    // SECURITY: Only allow drag if initiated from the handle
+    const target = e.target as HTMLElement;
+    if (!target.closest('.drag-handle')) {
+      e.preventDefault();
+      return;
+    }
+
     e.dataTransfer.setData('itemId', link.id);
     e.dataTransfer.setData('itemType', 'link');
     e.dataTransfer.effectAllowed = 'move';
     
-    // Visual feedback for dragging
     if (cardRef.current) {
       cardRef.current.style.opacity = '0.4';
     }
@@ -92,7 +98,7 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
       onClick={handleCardClick}
       className="group flex flex-col h-full rounded-xl border-border/20 bg-card shadow-md transition-all duration-300 hover:shadow-lg relative overflow-hidden"
     >
-      {/* Drag handle enabled for all devices with touch-action: none */}
+      {/* DRAG HANDLE: The only entry point for drag interaction on mobile */}
       <div className="drag-handle absolute top-0 right-0 flex touch-none">
         <GripVertical className="h-5 w-5 text-muted-foreground" />
       </div>

@@ -69,54 +69,53 @@
   }
 }
 
+/* Specific styling for the drag handle */
 .drag-handle {
   cursor: grab;
   -webkit-user-select: none;
   user-select: none;
-  width: 48px; /* Increased hit area for mobile */
+  width: 48px; /* High hit area for thumbs */
   height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: hsl(var(--background) / 0.9);
+  background-color: hsl(var(--background) / 0.8);
   backdrop-filter: blur(4px);
   border-bottom-left-radius: 0.75rem;
   border-left: 1px solid hsl(var(--border) / 0.4);
   border-bottom: 1px solid hsl(var(--border) / 0.4);
   transition: transform 0.2s ease, background-color 0.2s ease;
-  touch-action: none !important; /* Critical: block native scroll on the handle */
+  touch-action: none !important; /* Block native scroll on this area */
   -webkit-touch-callout: none !important;
-  -webkit-user-drag: none !important;
   z-index: 20;
-}
-
-.drag-handle svg {
-  pointer-events: none !important; /* Icons should not steal the touch event */
 }
 
 .drag-handle:active {
   cursor: grabbing;
-  transform: scale(1.1);
+  transform: scale(1.15);
   background-color: hsl(var(--primary) / 0.1);
 }
 
-[draggable="true"] {
-  -webkit-user-drag: element;
-  user-select: none;
-  -webkit-user-select: none;
-}
-
-/* Mobile DND Polyfill styles */
+/* Polyfill Drag Image Styling */
 .dnd-poly-drag-image {
   opacity: 0.8 !important;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.3);
   transform: scale(0.95);
   pointer-events: none !important;
   z-index: 9999 !important;
+  border-radius: var(--radius);
+  background: hsl(var(--card));
+  will-change: transform;
 }
 
 body.dragging-active {
   overflow: hidden !important;
   touch-action: none !important;
   -webkit-overflow-scrolling: auto !important;
+}
+
+[draggable="true"] {
+  -webkit-user-drag: element;
+  user-select: none;
+  -webkit-user-select: none;
 }
