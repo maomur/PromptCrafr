@@ -37,16 +37,14 @@ export default function LinkList({
       delay: 150,
       delayOnTouchOnly: true,
       onEnd: (evt) => {
-        const { item, newIndex, oldIndex, from } = evt;
+        const { item, oldIndex, newIndex, from } = evt;
         
-        // REVERSIÓN DE DOM OBLIGATORIA: Devolvemos el nodo a su sitio antes de que React lo vea.
-        if (from && item && oldIndex !== undefined && newIndex !== undefined) {
+        // REVERSIÓN DE DOM OBLIGATORIA: Devolvemos el nodo a su sitio original antes de que React lo vea.
+        if (from && item && oldIndex !== undefined) {
           try {
-            const children = Array.from(from.children);
-            if (oldIndex < children.length) {
-              from.insertBefore(item, from.children[oldIndex + (oldIndex < newIndex ? 1 : 0)] || null);
-            } else {
-              from.appendChild(item);
+            const referenceNode = from.children[oldIndex];
+            if (referenceNode !== item) {
+              from.insertBefore(item, referenceNode);
             }
           } catch (e) {
             // Silencioso

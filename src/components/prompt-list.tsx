@@ -37,20 +37,18 @@ export default function PromptList({
       delay: 150,
       delayOnTouchOnly: true,
       onEnd: (evt) => {
-        const { item, newIndex, oldIndex, from } = evt;
+        const { item, oldIndex, newIndex, from } = evt;
         
-        // REVERSIÓN DE DOM OBLIGATORIA: Devolvemos el nodo a su sitio antes de que React lo vea.
+        // REVERSIÓN DE DOM OBLIGATORIA: Devolvemos el nodo a su sitio original antes de que React lo vea.
         // Esto es CRÍTICO para evitar el error "removeChild" al borrar elementos.
-        if (from && item && oldIndex !== undefined && newIndex !== undefined) {
+        if (from && item && oldIndex !== undefined) {
           try {
-            const children = Array.from(from.children);
-            if (oldIndex < children.length) {
-              from.insertBefore(item, from.children[oldIndex + (oldIndex < newIndex ? 1 : 0)] || null);
-            } else {
-              from.appendChild(item);
+            const referenceNode = from.children[oldIndex];
+            if (referenceNode !== item) {
+              from.insertBefore(item, referenceNode);
             }
           } catch (e) {
-            // Error silencioso para no bloquear la ejecución
+            // Silencioso
           }
         }
 
@@ -72,7 +70,7 @@ export default function PromptList({
         sortableRef.current = null;
       }
     };
-  }, [onReorder]);
+  }, [onReorder]); // Mantenemos dependencias mínimas para evitar re-inicializaciones costosas
 
   if (prompts.length === 0) return null;
 

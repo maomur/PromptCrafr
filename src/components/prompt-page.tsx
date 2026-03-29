@@ -184,33 +184,31 @@ export default function PromptPage({ user }: PromptPageProps) {
   }, [user?.uid, firestore, activeProjectId, toast]);
 
   const handleReorderPrompts = useCallback((oldIndex: number, newIndex: number) => {
-    // Implementación futura o gestión de orden local
+    // Implementación futura: actualización de 'order' en Firestore
   }, []);
 
   const handleReorderLinks = useCallback((oldIndex: number, newIndex: number) => {
-    // Implementación futura o gestión de orden local
+    // Implementación futura: actualización de 'order' en Firestore
   }, []);
 
   const filteredPrompts = useMemo(() => {
-    let result = prompts.filter(p => {
+    return prompts.filter(p => {
       const matchesProject = activeProjectId === 'all' || 
                            (activeProjectId === 'none' && (!p.projectId || p.projectId === 'none')) ||
                            p.projectId === activeProjectId;
       const matchesCategory = categoryFilter === 'Todos' || p.category === categoryFilter;
       return matchesProject && matchesCategory;
-    });
-    return result.sort((a, b) => (b.order || 0) - (a.order || 0));
+    }).sort((a, b) => (b.order || 0) - (a.order || 0));
   }, [prompts, activeProjectId, categoryFilter]);
 
   const filteredLinks = useMemo(() => {
-    let result = links.filter(l => {
+    return links.filter(l => {
       const matchesProject = activeProjectId === 'all' || 
                            (activeProjectId === 'none' && (!l.projectId || l.projectId === 'none')) ||
                            l.projectId === activeProjectId;
       const matchesCategory = categoryFilter === 'Todos' || l.category === categoryFilter;
       return matchesProject && matchesCategory;
-    });
-    return result.sort((a, b) => (b.order || 0) - (a.order || 0));
+    }).sort((a, b) => (b.order || 0) - (a.order || 0));
   }, [links, activeProjectId, categoryFilter]);
 
   return (
