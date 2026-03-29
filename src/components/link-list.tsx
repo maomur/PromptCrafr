@@ -24,8 +24,8 @@ const LinkList = memo(function LinkList({
 }: LinkListProps) {
   const listRef = useRef<HTMLDivElement>(null);
   const sortableRef = useRef<Sortable | null>(null);
-
   const onReorderRef = useRef(onReorder);
+
   useEffect(() => {
     onReorderRef.current = onReorder;
   }, [onReorder]);
@@ -34,37 +34,15 @@ const LinkList = memo(function LinkList({
     const el = listRef.current;
     if (!el) return;
 
-    // Inicialización estática para máxima estabilidad y evitar colisiones con React
     const sortable = new Sortable(el, {
       animation: 150,
       handle: '.drag-handle',
       ghostClass: 'sortable-ghost',
       forceFallback: true,
-      fallbackOnBody: true,
-      delay: 150,
-      delayOnTouchOnly: true,
-      onStart: (evt) => {
-        // Guardamos la posición original para la reversión atómica
-        (evt.item as any)._originalNextSibling = evt.item.nextSibling;
-      },
       onEnd: (evt) => {
-        const { item, from, oldIndex, newIndex } = evt;
-        
-        // REVERSIÓN ATÓMICA: Restauramos el DOM físico inmediatamente.
-        // Esto asegura que React no encuentre discrepancias al eliminar o actualizar.
-        if (from && item) {
-          try {
-            const nextSibling = (item as any)._originalNextSibling;
-            from.insertBefore(item, nextSibling || null);
-          } catch (e) {
-            // Reversión silenciosa
-          }
-        }
-
+        const { oldIndex, newIndex } = evt;
         if (oldIndex !== undefined && newIndex !== undefined && oldIndex !== newIndex) {
-          setTimeout(() => {
-            onReorderRef.current(oldIndex, newIndex);
-          }, 0);
+          onReorderRef.current(oldIndex, newIndex);
         }
       },
     });
@@ -74,16 +52,14 @@ const LinkList = memo(function LinkList({
     return () => {
       if (sortableRef.current) {
         try {
-          if (el && document.contains(el)) {
-            sortableRef.current.destroy();
-          }
+          sortableRef.current.destroy();
         } catch (e) {
-          // ignore
+          // Ignorar
         }
         sortableRef.current = null;
       }
     };
-  }, []); // Dependencias vacías para evitar reinicios durante cambios de datos
+  }, []);
 
   return (
     <div 

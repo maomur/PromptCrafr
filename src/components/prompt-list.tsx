@@ -24,10 +24,9 @@ const PromptList = memo(function PromptList({
 }: PromptListProps) {
   const listRef = useRef<HTMLDivElement>(null);
   const sortableRef = useRef<Sortable | null>(null);
-  
-  // Usamos una ref para el callback de reordenamiento para evitar que el useEffect dependa de él.
-  // Esto mantiene la instancia de SortableJS estable incluso si la función cambia.
   const onReorderRef = useRef(onReorder);
+
+  // Mantenemos la referencia del callback actualizada sin reiniciar el efecto
   useEffect(() => {
     onReorderRef.current = onReorder;
   }, [onReorder]);
@@ -36,39 +35,21 @@ const PromptList = memo(function PromptList({
     const el = listRef.current;
     if (!el) return;
 
-    // Inicialización estática de SortableJS. 
-    // Las dependencias vacías [] son cruciales para evitar conflictos de DOM con React.
+    // Inicialización única de SortableJS
     const sortable = new Sortable(el, {
       animation: 150,
       handle: '.drag-handle',
       ghostClass: 'sortable-ghost',
       forceFallback: true,
-      fallbackOnBody: true,
-      delay: 150,
-      delayOnTouchOnly: true,
-      onStart: (evt) => {
-        // Guardamos la posición original exacta para la reversión atómica
-        (evt.item as any)._originalNextSibling = evt.item.nextSibling;
-      },
       onEnd: (evt) => {
-        const { item, from, oldIndex, newIndex } = evt;
+        const { oldIndex, newIndex } = evt;
         
-        // REVERSIÓN ATÓMICA: Devolvemos el nodo a su sitio original inmediatamente.
-        // Esto previene el error 'removeChild' de React al mantener el DOM coherente.
-        if (from && item) {
-          try {
-            const nextSibling = (item as any)._originalNextSibling;
-            from.insertBefore(item, nextSibling || null);
-          } catch (e) {
-            // Ignorar errores si el nodo ya ha sido manipulado por un borrado concurrente
-          }
-        }
-
-        // Ejecutamos la lógica de negocio (cambio de orden en DB) tras restaurar el DOM
+        // NOTA: No hacemos reversión manual del DOM aquí porque el contenedor 
+        // padre en PromptPage se recreará por completo mediante 'key' 
+        // si la estructura cambia, evitando conflictos con React.
+        
         if (oldIndex !== undefined && newIndex !== undefined && oldIndex !== newIndex) {
-          setTimeout(() => {
-            onReorderRef.current(oldIndex, newIndex);
-          }, 0);
+          onReorderRef.current(oldIndex, newIndex);
         }
       },
     });
@@ -76,21 +57,16 @@ const PromptList = memo(function PromptList({
     sortableRef.current = sortable;
 
     return () => {
-      // Limpieza defensiva
       if (sortableRef.current) {
         try {
-          if (el && document.contains(el)) {
-            sortableRef.current.destroy();
-          }
+          sortableRef.current.destroy();
         } catch (e) {
-          // Ignorar errores de destrucción si el DOM ya ha sido modificado por React
+          // Fallo silencioso si el DOM ya no existe
         }
         sortableRef.current = null;
       }
     };
-  }, []); // Dependencias vacías para máxima estabilidad
-
-  if (prompts.length === 0) return null;
+  }, []); // Dependencias vacías: solo se monta una vez
 
   return (
     <div 

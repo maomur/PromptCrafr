@@ -16,18 +16,24 @@ import { FirestorePermissionError } from '@/firebase/errors';
  * Utility to recursively remove undefined values from an object.
  * Firestore throws a synchronous error if it encounters undefined.
  */
-function cleanData(obj: any): any {
+function cleanData(obj: any, depth = 0): any {
+  // Evitar recursión infinita en casos extremos
+  if (depth > 10) return null;
   if (obj === null || typeof obj !== 'object') return obj;
   
   if (obj instanceof Date) return obj.toISOString();
   
+  // Si es un objeto complejo (tipo Timestamp de Firebase), devolverlo o convertirlo
+  if (obj.constructor && obj.constructor.name !== 'Object' && obj.constructor.name !== 'Array') {
+    return obj; 
+  }
+
   const newObj: any = Array.isArray(obj) ? [] : {};
   for (const key in obj) {
     if (Object.prototype.hasOwnProperty.call(obj, key)) {
       const value = obj[key];
-      // Importante: No dejar campos como undefined. Convertir a null o ignorar.
       if (value !== undefined) {
-        newObj[key] = cleanData(value);
+        newObj[key] = cleanData(value, depth + 1);
       } else {
         newObj[key] = null;
       }

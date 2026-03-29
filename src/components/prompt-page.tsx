@@ -189,11 +189,11 @@ export default function PromptPage({ user }: PromptPageProps) {
   }, [user?.uid, firestore, activeProjectId, toast]);
 
   const handleReorderPrompts = useCallback((oldIndex: number, newIndex: number) => {
-    // Sincronización de orden futura aquí
+    // Implementación futura de sincronización de orden
   }, []);
 
   const handleReorderLinks = useCallback((oldIndex: number, newIndex: number) => {
-    // Sincronización de orden futura aquí
+    // Implementación futura de sincronización de orden
   }, []);
 
   // Filtrado optimizado
@@ -299,7 +299,9 @@ export default function PromptPage({ user }: PromptPageProps) {
                       <h3 className="text-sm font-bold uppercase tracking-widest text-orange-600 flex items-center gap-2 px-1">
                         <LinkIcon className="h-4 w-4" /> Enlaces ({filteredLinks.length})
                       </h3>
+                      {/* Usar KEY dinámica basada en la longitud para forzar recreación total si hay cambios estructurales */}
                       <LinkList 
+                        key={`link-list-${filteredLinks.length}`}
                         links={filteredLinks} 
                         projects={projects}
                         onDeleteLink={(id) => { const l = links.find(li => li.id === id); if (l) { setLinkToDelete(l); setLinkDeleteDialogOpen(true); } }} 
@@ -315,6 +317,7 @@ export default function PromptPage({ user }: PromptPageProps) {
                         <Sparkles className="h-4 w-4" /> Prompts ({filteredPrompts.length})
                       </h3>
                       <PromptList
+                        key={`prompt-list-${filteredPrompts.length}`}
                         prompts={filteredPrompts} 
                         projects={projects}
                         onDeletePrompt={(id) => { const p = prompts.find(pr => pr.id === id); if (p) { setPromptToDelete(p); setDeleteDialogOpen(true); } }}
@@ -366,8 +369,12 @@ export default function PromptPage({ user }: PromptPageProps) {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction className="bg-destructive text-white hover:bg-destructive/90" onClick={() => { 
               if (promptToDelete && firestore && user?.uid) {
-                deleteDocumentNonBlocking(doc(firestore, 'users', user.uid, 'prompts', promptToDelete.id));
+                const idToDelete = promptToDelete.id;
+                // Primero cerramos el diálogo para asegurar que el foco se limpie
                 setDeleteDialogOpen(false);
+                // Luego disparamos la eliminación
+                deleteDocumentNonBlocking(doc(firestore, 'users', user.uid, 'prompts', idToDelete));
+                setPromptToDelete(null);
               }
             }}>Eliminar</AlertDialogAction>
           </AlertDialogFooter>
@@ -384,8 +391,10 @@ export default function PromptPage({ user }: PromptPageProps) {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction className="bg-destructive text-white hover:bg-destructive/90" onClick={() => { 
               if (linkToDelete && firestore && user?.uid) {
-                deleteDocumentNonBlocking(doc(firestore, 'users', user.uid, 'links', linkToDelete.id));
+                const idToDelete = linkToDelete.id;
                 setLinkDeleteDialogOpen(false);
+                deleteDocumentNonBlocking(doc(firestore, 'users', user.uid, 'links', idToDelete));
+                setLinkToDelete(null);
               }
             }}>Eliminar</AlertDialogAction>
           </AlertDialogFooter>
