@@ -34,7 +34,7 @@ const LinkList = memo(function LinkList({
     const el = listRef.current;
     if (!el) return;
 
-    // Inicialización estática para máxima estabilidad
+    // Inicialización estática para máxima estabilidad y evitar colisiones con React
     const sortable = new Sortable(el, {
       animation: 150,
       handle: '.drag-handle',
@@ -44,17 +44,20 @@ const LinkList = memo(function LinkList({
       delay: 150,
       delayOnTouchOnly: true,
       onStart: (evt) => {
+        // Guardamos la posición original para la reversión atómica
         (evt.item as any)._originalNextSibling = evt.item.nextSibling;
       },
       onEnd: (evt) => {
         const { item, from, oldIndex, newIndex } = evt;
         
+        // REVERSIÓN ATÓMICA: Restauramos el DOM físico inmediatamente.
+        // Esto asegura que React no encuentre discrepancias al eliminar o actualizar.
         if (from && item) {
           try {
             const nextSibling = (item as any)._originalNextSibling;
             from.insertBefore(item, nextSibling || null);
           } catch (e) {
-            // Ignorar errores de manipulación de DOM
+            // Reversión silenciosa
           }
         }
 
@@ -80,8 +83,7 @@ const LinkList = memo(function LinkList({
         sortableRef.current = null;
       }
     };
-    // Dependencias vacías para evitar reinicios conflictivos al borrar datos
-  }, []);
+  }, []); // Dependencias vacías para evitar reinicios durante cambios de datos
 
   return (
     <div 

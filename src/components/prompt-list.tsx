@@ -25,8 +25,8 @@ const PromptList = memo(function PromptList({
   const listRef = useRef<HTMLDivElement>(null);
   const sortableRef = useRef<Sortable | null>(null);
   
-  // Mantenemos el callback en una ref para que SortableJS siempre use la lógica más reciente
-  // sin necesidad de reiniciar el efecto de arrastre cuando los datos cambian.
+  // Usamos una ref para el callback de reordenamiento para evitar que el useEffect dependa de él.
+  // Esto mantiene la instancia de SortableJS estable incluso si la función cambia.
   const onReorderRef = useRef(onReorder);
   useEffect(() => {
     onReorderRef.current = onReorder;
@@ -36,8 +36,8 @@ const PromptList = memo(function PromptList({
     const el = listRef.current;
     if (!el) return;
 
-    // Inicializamos SortableJS de forma estática. 
-    // No dependemos de 'prompts' para evitar destruir/crear la instancia al borrar items.
+    // Inicialización estática de SortableJS. 
+    // Las dependencias vacías [] son cruciales para evitar conflictos de DOM con React.
     const sortable = new Sortable(el, {
       animation: 150,
       handle: '.drag-handle',
@@ -47,24 +47,24 @@ const PromptList = memo(function PromptList({
       delay: 150,
       delayOnTouchOnly: true,
       onStart: (evt) => {
-        // Guardamos la posición original para la reversión atómica
+        // Guardamos la posición original exacta para la reversión atómica
         (evt.item as any)._originalNextSibling = evt.item.nextSibling;
       },
       onEnd: (evt) => {
         const { item, from, oldIndex, newIndex } = evt;
         
-        // REVERSIÓN ATÓMICA: Devolvemos el nodo a su sitio ANTES de que React se de cuenta.
-        // Esto es lo que previene el error 'removeChild' y la congelación de la app.
+        // REVERSIÓN ATÓMICA: Devolvemos el nodo a su sitio original inmediatamente.
+        // Esto previene el error 'removeChild' de React al mantener el DOM coherente.
         if (from && item) {
           try {
             const nextSibling = (item as any)._originalNextSibling;
             from.insertBefore(item, nextSibling || null);
           } catch (e) {
-            // Reversión silenciosa si el nodo ya no es hijo (e.g. durante un borrado rápido)
+            // Ignorar errores si el nodo ya ha sido manipulado por un borrado concurrente
           }
         }
 
-        // Ejecutamos la lógica de negocio después de restaurar el DOM físico
+        // Ejecutamos la lógica de negocio (cambio de orden en DB) tras restaurar el DOM
         if (oldIndex !== undefined && newIndex !== undefined && oldIndex !== newIndex) {
           setTimeout(() => {
             onReorderRef.current(oldIndex, newIndex);
@@ -76,7 +76,7 @@ const PromptList = memo(function PromptList({
     sortableRef.current = sortable;
 
     return () => {
-      // Limpieza defensiva: solo intentamos destruir si el elemento sigue en el documento
+      // Limpieza defensiva
       if (sortableRef.current) {
         try {
           if (el && document.contains(el)) {
@@ -88,9 +88,7 @@ const PromptList = memo(function PromptList({
         sortableRef.current = null;
       }
     };
-    // El array de dependencias vacío es CLAVE: el sistema de arrastre es independiente de los datos
-    // y React gestionará las actualizaciones de la lista de forma natural.
-  }, []);
+  }, []); // Dependencias vacías para máxima estabilidad
 
   if (prompts.length === 0) return null;
 
