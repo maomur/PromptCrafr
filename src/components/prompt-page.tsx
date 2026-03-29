@@ -106,7 +106,7 @@ export default function PromptPage({ user }: PromptPageProps) {
   const [categoryFilter, setCategoryFilter] = useState<PromptCategory | 'Todos'>('Todos');
   const [activeProjectId, setActiveProjectId] = useState<string | 'all' | 'none'>('all');
 
-  // Handlers estables para evitar reinicializaciones de SortableJS
+  // Handlers estables
   const handleMoveToProject = useCallback((itemId: string, itemType: 'prompt' | 'link', projectId: string | null) => {
     if (!firestore || !user?.uid) return;
     const collectionName = itemType === 'prompt' ? 'prompts' : 'links';

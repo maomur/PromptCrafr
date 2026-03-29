@@ -25,7 +25,6 @@ const LinkList = memo(function LinkList({
   const listRef = useRef<HTMLDivElement>(null);
   const sortableRef = useRef<Sortable | null>(null);
 
-  // Mantenemos el callback actualizado sin recrear el effect
   const onReorderRef = useRef(onReorder);
   useEffect(() => {
     onReorderRef.current = onReorder;
@@ -35,6 +34,7 @@ const LinkList = memo(function LinkList({
     const el = listRef.current;
     if (!el) return;
 
+    // Inicialización estática para máxima estabilidad
     const sortable = new Sortable(el, {
       animation: 150,
       handle: '.drag-handle',
@@ -54,7 +54,7 @@ const LinkList = memo(function LinkList({
             const nextSibling = (item as any)._originalNextSibling;
             from.insertBefore(item, nextSibling || null);
           } catch (e) {
-            // Reversión silenciosa
+            // Ignorar errores de manipulación de DOM
           }
         }
 
@@ -80,6 +80,7 @@ const LinkList = memo(function LinkList({
         sortableRef.current = null;
       }
     };
+    // Dependencias vacías para evitar reinicios conflictivos al borrar datos
   }, []);
 
   return (

@@ -25,7 +25,8 @@ const PromptList = memo(function PromptList({
   const listRef = useRef<HTMLDivElement>(null);
   const sortableRef = useRef<Sortable | null>(null);
   
-  // Usamos una ref para el callback para mantener el useEffect estable
+  // Mantenemos el callback en una ref para que SortableJS siempre use la lógica más reciente
+  // sin necesidad de reiniciar el efecto de arrastre cuando los datos cambian.
   const onReorderRef = useRef(onReorder);
   useEffect(() => {
     onReorderRef.current = onReorder;
@@ -35,6 +36,8 @@ const PromptList = memo(function PromptList({
     const el = listRef.current;
     if (!el) return;
 
+    // Inicializamos SortableJS de forma estática. 
+    // No dependemos de 'prompts' para evitar destruir/crear la instancia al borrar items.
     const sortable = new Sortable(el, {
       animation: 150,
       handle: '.drag-handle',
@@ -44,25 +47,25 @@ const PromptList = memo(function PromptList({
       delay: 150,
       delayOnTouchOnly: true,
       onStart: (evt) => {
-        // Almacenamos la posición original exacta para la reversión
+        // Guardamos la posición original para la reversión atómica
         (evt.item as any)._originalNextSibling = evt.item.nextSibling;
       },
       onEnd: (evt) => {
         const { item, from, oldIndex, newIndex } = evt;
         
-        // REVERSIÓN ATÓMICA: Devolvemos el nodo a su sitio ANTES de cualquier cambio de estado
+        // REVERSIÓN ATÓMICA: Devolvemos el nodo a su sitio ANTES de que React se de cuenta.
+        // Esto es lo que previene el error 'removeChild' y la congelación de la app.
         if (from && item) {
           try {
             const nextSibling = (item as any)._originalNextSibling;
             from.insertBefore(item, nextSibling || null);
           } catch (e) {
-            // Ignorar errores de manipulación de DOM si el nodo ya no existe
+            // Reversión silenciosa si el nodo ya no es hijo (e.g. durante un borrado rápido)
           }
         }
 
-        // Ejecutamos la lógica de negocio después de restaurar el DOM
+        // Ejecutamos la lógica de negocio después de restaurar el DOM físico
         if (oldIndex !== undefined && newIndex !== undefined && oldIndex !== newIndex) {
-          // Usamos setTimeout para asegurar que React procese el cambio en un nuevo ciclo
           setTimeout(() => {
             onReorderRef.current(oldIndex, newIndex);
           }, 0);
@@ -73,19 +76,20 @@ const PromptList = memo(function PromptList({
     sortableRef.current = sortable;
 
     return () => {
+      // Limpieza defensiva: solo intentamos destruir si el elemento sigue en el documento
       if (sortableRef.current) {
         try {
-          // Limpieza segura: solo si el elemento sigue en el DOM
           if (el && document.contains(el)) {
             sortableRef.current.destroy();
           }
         } catch (e) {
-          // ignore
+          // Ignorar errores de destrucción si el DOM ya ha sido modificado por React
         }
         sortableRef.current = null;
       }
     };
-    // Dependencias mínimas para evitar reinicializaciones costosas
+    // El array de dependencias vacío es CLAVE: el sistema de arrastre es independiente de los datos
+    // y React gestionará las actualizaciones de la lista de forma natural.
   }, []);
 
   if (prompts.length === 0) return null;
