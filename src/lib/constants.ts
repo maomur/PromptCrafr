@@ -20,3 +20,12 @@ export const APP_ICONS = {
 
 /** Valor que usan los <Select> para representar «sin asignar». */
 export const NO_SELECTION = 'none';
+
+/**
+ * Grupos de SortableJS que se pueden arrastrar por la aplicación.
+ *
+ * Vive aquí, y no en una feature, porque lo necesitan tanto quien arrastra
+ * (las rejillas de recursos) como quien recibe (las carpetas), y hacer que una
+ * feature dependa de la otra sólo por esta lista crearía un ciclo.
+ */
+export const DRAGGABLE_GROUPS = ['prompts', 'links'] as const;

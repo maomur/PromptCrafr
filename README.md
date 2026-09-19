@@ -53,16 +53,41 @@ ruta relativa fuera de los componentes de shadcn.
 `src/styles/`; `manifest.ts` e `icon.svg` se quedan porque son convenciones de
 metadatos del App Router y Next.js los busca exactamente ahí.
 
+### Desviaciones conscientes del estándar
+
+Cuatro cosas no encajan literalmente en el documento de arquitectura. Están
+aquí para que se discutan, no para que se descubran:
+
+| Qué | Por qué |
+| --- | --- |
+| `lib/` guarda utilidades, no sólo clientes | El único «cliente» es `db.ts`. El resto (`utils`, `dates`, `clipboard`, `id`, `forms`, `broadcast`, `constants`) son transversales, y `@/lib/utils` es además obligatorio para shadcn/ui, que el propio documento cita. |
+| `components/layout/` | El documento sólo define `components/ui/` para lo atómico. La cabecera y el pie no son atómicos ni pertenecen a una feature. |
+| `src/hooks/` | Contiene únicamente `use-toast`, que viene con shadcn/ui y lo usan todas las features. |
+| `src/styles/` | La alternativa era dejar `globals.css` en `app/`, que la regla 1 reserva para enrutado. Una de las dos reglas tenía que ceder. |
+
+Las features crean sólo las subcarpetas que necesitan: `pwa` no tiene
+`services/` porque no tiene lógica de negocio, y `backup` no tiene `hooks/`
+porque su estado cabe en el componente.
+
 ### Sentido de las dependencias
 
 ```
-app  ──►  features/library  ──►  features/folders  ──►  lib
-                  └─────────►  features/backup ──────►  lib
+app  ──►  features/library  ──►  features/folders
+              │                        │
+              └──►  features/backup    │
+                         │             │
+                         ▼             ▼
+                    components/ui  ·  lib
 ```
 
-`library` conoce a `folders`, nunca al revés: por eso «borrar una carpeta
+`library` conoce a `folders`, **nunca al revés**: por eso «borrar una carpeta
 recoloca sus prompts» vive en `library/services/mutations.ts` y no en la
-feature de carpetas, que no sabe qué es un prompt. Así no hay ciclos.
+feature de carpetas, que no sabe qué es un prompt.
+
+Lo que ambas necesitan no se importa de la otra, sino de abajo: `DropTarget`
+está en `components/ui` y no sabe qué se le suelta —quien lo usa declara los
+grupos que admite— y la lista de esos grupos está en `lib/constants.ts`.
+Cuando una pieza compartida vive dentro de una feature, aparece un ciclo.
 
 ### Sobre los Server Components
 
@@ -133,7 +158,7 @@ derivan el pintado, las opciones de ubicación y las reglas de movimiento.
 
 En la base conviven dos almacenes, `projects` para el primer nivel y `folders`
 para los de abajo, pero **la interfaz no lo sabe**:
-[`features/folders/tree.ts`](src/features/folders/tree.ts) monta un árbol
+[`folders/services/tree.ts`](src/features/folders/services/tree.ts) monta un árbol
 único y concentra filtrado, contadores, migas de pan y reglas de profundidad.
 
 `projectId` está **desnormalizado** en cada descendiente: repetir la raíz
@@ -154,8 +179,8 @@ sitio: las filas de la barra lateral y las tarjetas de carpeta son destinos
 válidos, y se insinúan mientras dura el arrastre.
 
 SortableJS sólo sabe mover cosas entre listas, así que cada destino es
-[una lista más](src/features/library/components/drop-target.tsx), vacía y no
-ordenable, que anuncia su ubicación en `data-drop-target`. El nodo vuelve
+[una lista más](src/components/ui/drop-target.tsx), vacía y no ordenable, que
+anuncia su ubicación en `data-drop-target`. El nodo vuelve
 siempre a su posición original y es React quien repinta.
 
 Arrastrar no es accesible con teclado, así que cada tarjeta mantiene
@@ -180,7 +205,7 @@ silenciosos.
 
 | Fichero                                                              | Qué protege                                          |
 | -------------------------------------------------------------------- | ---------------------------------------------------- |
-| [`folders/tree.test.ts`](src/features/folders/tree.test.ts)           | Filtros, contadores acumulados y límite de niveles    |
+| [`folders/services/tree.test.ts`](src/features/folders/services/tree.test.ts)           | Filtros, contadores acumulados y límite de niveles    |
 | [`library/services/mutations.test.ts`](src/features/library/services/mutations.test.ts) | Cada operación: qué estado deja y qué escribe |
 | [`backup/services/backup.test.ts`](src/features/backup/services/backup.test.ts) | Importación tolerante de archivos ajenos    |
 | [`lib/db.test.ts`](src/lib/db.test.ts)                                | Que lo guardado se vuelve a leer                      |

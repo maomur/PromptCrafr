@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { CSV_HEADERS, csvFileName, promptsToCsv, toCsv } from '@/features/library/services/csv';
 import { type Folder, type Project } from '@/features/folders/types';
 import { type Prompt } from '@/features/library/types';
-import { buildTree } from '@/features/folders/tree';
+import { buildTree } from '@/features/folders/services/tree';
 
 const tree = buildTree(
   [{ id: 'trabajo', name: 'Trabajo', createdAt: '' }] as Project[],

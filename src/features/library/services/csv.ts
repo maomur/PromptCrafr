@@ -1,6 +1,6 @@
 import { format, parseISO } from 'date-fns';
 import { type Prompt } from '@/features/library/types';
-import { pathTo, type TreeNode } from '@/features/folders/tree';
+import { pathTo, type TreeNode } from '@/features/folders/services/tree';
 
 /**
  * Exportación a CSV.

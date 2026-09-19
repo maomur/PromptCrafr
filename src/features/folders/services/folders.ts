@@ -1,6 +1,6 @@
 import { newId } from '@/lib/id';
 import type { Folder, FolderInput, Location, Project } from '@/features/folders/types';
-import { subtreeFolderIds, type ParentRef, type TreeNode } from '@/features/folders/tree';
+import { subtreeFolderIds, type ParentRef, type TreeNode } from '@/features/folders/services/tree';
 
 /**
  * Construcción y borrado de los registros de la jerarquía.

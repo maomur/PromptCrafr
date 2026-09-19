@@ -24,7 +24,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { type Location } from '@/features/folders/types';
-import { flatten, nodeLocation, type TreeNode } from '@/features/folders/tree';
+import { flatten, nodeLocation, type TreeNode } from '@/features/folders/services/tree';
 
 interface ItemActionsProps {
   /** Nombre del recurso en singular, para las etiquetas accesibles. */

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import type { TreeNode } from '@/features/folders/tree';
+import type { TreeNode } from '@/features/folders/services/tree';
 
 /**
  * Qué ramas del árbol están desplegadas.

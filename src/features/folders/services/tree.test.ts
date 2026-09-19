@@ -11,7 +11,7 @@ import {
   parentOptions,
   pathTo,
   subtreeFolderIds,
-} from '@/features/folders/tree';
+} from '@/features/folders/services/tree';
 
 const project = (id: string, name: string): Project => ({
   id,

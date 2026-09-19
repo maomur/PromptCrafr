@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/select';
 import { Folder as FolderIcon, Folders } from 'lucide-react';
 import { NO_SELECTION } from '@/lib/constants';
-import { flatten, type TreeNode } from '@/features/folders/tree';
+import { flatten, type TreeNode } from '@/features/folders/services/tree';
 
 interface LocationSelectProps {
   tree: TreeNode[];

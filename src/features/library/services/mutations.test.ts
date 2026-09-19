@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { buildTree, findNode } from '@/features/folders/tree';
+import { buildTree, findNode } from '@/features/folders/services/tree';
 import type { Folder, Project } from '@/features/folders/types';
 import type { LibraryState, Link, Prompt } from '@/features/library/types';
 import {

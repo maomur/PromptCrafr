@@ -8,7 +8,7 @@ import { ExternalLink, Folder as FolderIcon, GripVertical, Link as LinkIcon } fr
 import ItemActions from '@/features/library/components/item-actions';
 import { type Location } from '@/features/folders/types';
 import { type Link } from '@/features/library/types';
-import { findNode, type TreeNode } from '@/features/folders/tree';
+import { findNode, type TreeNode } from '@/features/folders/services/tree';
 import { copyToClipboard } from '@/lib/clipboard';
 import { formatRelativeDate } from '@/lib/dates';
 import { useToast } from '@/hooks/use-toast';

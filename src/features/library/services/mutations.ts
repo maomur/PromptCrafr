@@ -8,7 +8,7 @@ import {
   planFolderRemoval,
   planProjectRemoval,
 } from '@/features/folders/services/folders';
-import { decodeParent, type TreeNode } from '@/features/folders/tree';
+import { decodeParent, type TreeNode } from '@/features/folders/services/tree';
 import type { FolderInput, Location } from '@/features/folders/types';
 import { assignOrders, moveItem, nextOrder, type Sortable } from '@/features/library/services/ordering';
 import type {

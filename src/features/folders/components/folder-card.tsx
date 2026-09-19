@@ -10,8 +10,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import DropTarget from '@/features/library/components/drop-target';
-import type { TreeNode } from '@/features/folders/tree';
+import DropTarget from '@/components/ui/drop-target';
+import { DRAGGABLE_GROUPS } from '@/lib/constants';
+import type { TreeNode } from '@/features/folders/services/tree';
 
 interface FolderCardProps {
   node: TreeNode;
@@ -32,7 +33,7 @@ interface FolderCardProps {
  */
 export default function FolderCard({ node, count, onOpen, onEdit, onDelete }: FolderCardProps) {
   return (
-    <DropTarget location={node.key} className="h-full">
+    <DropTarget accepts={DRAGGABLE_GROUPS} location={node.key} className="h-full">
       <Card
         onClick={(event) => {
           if ((event.target as HTMLElement).closest('button, [role="menuitem"], [role="menu"]')) {

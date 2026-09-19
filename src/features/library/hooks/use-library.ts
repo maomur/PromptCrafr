@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { announceChange, onExternalChange } from '@/lib/broadcast';
 import { applyOperations, clearEverything, readEverything } from '@/lib/db';
-import { buildTree, countTree } from '@/features/folders/tree';
+import { buildTree, countTree } from '@/features/folders/services/tree';
 import type { Folder, FolderInput, Location, Project } from '@/features/folders/types';
 import * as mutations from '@/features/library/services/mutations';
 import type { ItemKind } from '@/features/library/services/mutations';

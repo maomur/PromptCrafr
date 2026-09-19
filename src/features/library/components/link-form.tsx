@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import LocationSelect from '@/features/folders/components/location-select';
-import { decodeLocation, type TreeNode } from '@/features/folders/tree';
+import { decodeLocation, type TreeNode } from '@/features/folders/services/tree';
 import { encodeLocation } from '@/features/folders/types';
 import { type Link, type LinkInput, promptCategories } from '@/features/library/types';
 import { NO_SELECTION } from '@/lib/constants';

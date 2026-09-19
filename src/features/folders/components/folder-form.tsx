@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/select';
 import { type FolderInput, MAX_DEPTH } from '@/features/folders/types';
 import { NO_SELECTION } from '@/lib/constants';
-import { parentOptions, type TreeNode } from '@/features/folders/tree';
+import { parentOptions, type TreeNode } from '@/features/folders/services/tree';
 import { type FolderFormValues, folderFormSchema } from '@/features/folders/schemas';
 
 interface FolderFormProps {

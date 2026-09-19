@@ -2,7 +2,7 @@
 
 import { ChevronRight, Folders } from 'lucide-react';
 import { type LibraryFilter } from '@/features/folders/types';
-import type { TreeNode } from '@/features/folders/tree';
+import type { TreeNode } from '@/features/folders/services/tree';
 import { cn } from '@/lib/utils';
 
 interface BreadcrumbNavProps {

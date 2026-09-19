@@ -20,11 +20,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import DropTarget from '@/features/library/components/drop-target';
+import DropTarget from '@/components/ui/drop-target';
+import { DRAGGABLE_GROUPS } from '@/lib/constants';
 import { type LibraryFilter, filterKey } from '@/features/folders/types';
 import { NO_SELECTION } from '@/lib/constants';
 import { useExpandedNodes } from '@/features/folders/hooks/use-expanded-nodes';
-import { canHaveChildren, type TreeNode } from '@/features/folders/tree';
+import { canHaveChildren, type TreeNode } from '@/features/folders/services/tree';
 import { cn } from '@/lib/utils';
 
 interface ProjectSidebarProps {
@@ -92,7 +93,7 @@ export default function ProjectSidebar({
         open={open && hasChildren}
         onOpenChange={(value) => setExpanded(node.key, value)}
       >
-        <DropTarget location={node.key} className="group/row flex items-center gap-0.5">
+        <DropTarget accepts={DRAGGABLE_GROUPS} location={node.key} className="group/row flex items-center gap-0.5">
           {hasChildren ? (
             <CollapsibleTrigger asChild>
               <Button variant="ghost" size="icon" className={cn(CHEVRON_SLOT, 'h-8 hover:bg-accent')}>
@@ -207,7 +208,7 @@ export default function ProjectSidebar({
           <div className={MENU_SLOT} />
         </div>
 
-        <DropTarget location={NO_SELECTION} className="flex items-center gap-0.5">
+        <DropTarget accepts={DRAGGABLE_GROUPS} location={NO_SELECTION} className="flex items-center gap-0.5">
           <div className={CHEVRON_SLOT} />
           <button
             type="button"
