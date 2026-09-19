@@ -24,6 +24,7 @@ interface LibraryContentProps {
   onDeletePrompt: (prompt: Prompt) => void;
   onEditLink: (link: Link) => void;
   onDeleteLink: (link: Link) => void;
+  onUse: (kind: ItemKind, id: string) => void;
   onMoveTo: (kind: ItemKind, id: string, location: Location) => void;
   onDropOnTarget: (kind: ItemKind, id: string, location: string) => void;
   onReorder: (kind: ItemKind, visible: Sortable[], from: number, to: number) => void;
@@ -46,6 +47,7 @@ export default function LibraryContent({
   onDeletePrompt,
   onEditLink,
   onDeleteLink,
+  onUse,
   onMoveTo,
   onDropOnTarget,
   onReorder,
@@ -97,6 +99,7 @@ export default function LibraryContent({
                   tree={tree}
                   onEdit={onEditLink}
                   onDelete={onDeleteLink}
+                  onUse={() => onUse('link', item.id)}
                   onMoveTo={(location) => onMoveTo('link', item.id, location)}
                   onMoveUp={step('link', links, index, -1)}
                 onMoveDown={step('link', links, index, 1)}
@@ -122,6 +125,7 @@ export default function LibraryContent({
                   tree={tree}
                   onEdit={onEditPrompt}
                   onDelete={onDeletePrompt}
+                  onUse={() => onUse('prompt', item.id)}
                   onMoveTo={(location) => onMoveTo('prompt', item.id, location)}
                   onMoveUp={step('prompt', prompts, index, -1)}
                 onMoveDown={step('prompt', prompts, index, 1)}

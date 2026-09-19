@@ -5,6 +5,7 @@ import {
   Folder as FolderIcon,
   FolderOpen,
   FolderPlus,
+  Flame,
   Folders,
   MoreHorizontal,
   Pencil,
@@ -195,7 +196,24 @@ export default function ProjectSidebar({
       </div>
 
       <nav className="space-y-1">
-        {/* «Todos» no es una ubicación, así que no admite que le suelten nada. */}
+        {/* Ni «Más usados» ni «Todos» son ubicaciones: no admiten soltar. */}
+        <div className="flex items-center gap-0.5">
+          <div className={CHEVRON_SLOT} />
+          <button
+            type="button"
+            onClick={() => onSelect({ type: 'most-used' })}
+            className={rowClass(activeKey === 'most-used', 1)}
+            aria-current={activeKey === 'most-used' ? 'true' : undefined}
+          >
+            <span className="flex items-center">
+              <Flame className="mr-2 h-4 w-4" />
+              Más usados
+            </span>
+            <Count value={counts['most-used'] ?? 0} />
+          </button>
+          <div className={MENU_SLOT} />
+        </div>
+
         <div className="flex items-center gap-0.5">
           <div className={CHEVRON_SLOT} />
           <button

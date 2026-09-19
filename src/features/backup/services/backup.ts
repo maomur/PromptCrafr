@@ -62,6 +62,11 @@ function asCategory(value: unknown): PromptCategory | null {
   return promptCategories.includes(value as PromptCategory) ? (value as PromptCategory) : null;
 }
 
+/** Cuenta de usos: entera y no negativa, o cero. */
+function asCount(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
+}
+
 function asOrder(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
@@ -245,6 +250,8 @@ export function parseBackup(raw: unknown): ImportResult {
         createdAt: asDate(item.createdAt),
         updatedAt: asDate(item.updatedAt ?? item.createdAt),
         order: asOrder(item.order, index + 1),
+        useCount: asCount(item.useCount),
+        lastUsedAt: asString(item.lastUsedAt) ?? undefined,
         ...location(item),
       },
     ];

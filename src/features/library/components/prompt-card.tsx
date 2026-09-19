@@ -3,7 +3,15 @@
 import { useCallback, useMemo } from 'react';
 import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { FileText, Folder as FolderIcon, GripVertical, Image as ImageIcon, Sparkles, Video } from 'lucide-react';
+import {
+  FileText,
+  Flame,
+  Folder as FolderIcon,
+  GripVertical,
+  Image as ImageIcon,
+  Sparkles,
+  Video,
+} from 'lucide-react';
 import ItemActions from '@/features/library/components/item-actions';
 import { type Location } from '@/features/folders/types';
 import { type Prompt } from '@/features/library/types';
@@ -18,6 +26,8 @@ interface PromptCardProps {
   tree: TreeNode[];
   onDelete: (prompt: Prompt) => void;
   onEdit: (prompt: Prompt) => void;
+  /** Apunta que se ha copiado, que es lo que cuenta como usarlo. */
+  onUse: () => void;
   onMoveTo: (location: Location) => void;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
@@ -42,6 +52,7 @@ export default function PromptCard({
   tree,
   onDelete,
   onEdit,
+  onUse,
   onMoveTo,
   onMoveUp,
   onMoveDown,
@@ -57,6 +68,7 @@ export default function PromptCard({
 
   const copyContent = useCallback(async () => {
     const copied = await copyToClipboard(prompt.content);
+    if (copied) onUse();
     toast(
       copied
         ? { title: 'Prompt copiado', description: 'El contenido está en tu portapapeles.' }
@@ -66,7 +78,7 @@ export default function PromptCard({
             description: 'Tu navegador ha bloqueado el acceso al portapapeles.',
           }
     );
-  }, [prompt.content, toast]);
+  }, [prompt.content, onUse, toast]);
 
   // Un clic en cualquier zona "muerta" de la tarjeta copia el prompt. Los
   // controles interactivos y el asa de arrastre quedan excluidos.
@@ -126,7 +138,17 @@ export default function PromptCard({
       <div className="flex-grow" />
 
       <CardFooter className="flex items-center justify-between pb-4 pt-0 text-[10px] text-muted-foreground">
-        <span className="opacity-70">{formatRelativeDate(prompt.createdAt)}</span>
+        <span className="flex items-center gap-2 opacity-70">
+          {formatRelativeDate(prompt.createdAt)}
+          {/* Sólo aparece si se ha usado: un «0 usos» en todas las tarjetas
+              sería ruido en una biblioteca recién estrenada. */}
+          {!!prompt.useCount && (
+            <span className="flex items-center gap-1" title={`Copiado ${prompt.useCount} veces`}>
+              <Flame className="h-3 w-3" />
+              {prompt.useCount}
+            </span>
+          )}
+        </span>
         <ItemActions
           label="prompt"
           tree={tree}

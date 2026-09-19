@@ -218,6 +218,21 @@ fallaba en silencio y la tarjeta se quedaba huérfana dentro del destino.
 Arrastrar no es accesible con teclado, así que cada tarjeta mantiene
 «Subir/Bajar posición», «Mover a» y «Eliminar» en su menú.
 
+## Los más usados
+
+La aplicación **abre por los diez prompts más usados**, no por la biblioteca
+entera. «Usar» un prompt es **copiarlo**: es lo que se hace con él, y la única
+señal de uso que tiene sentido contar. Cada copia incrementa `useCount`, que
+viaja en las copias de seguridad y en el CSV.
+
+El desempate es por lo más reciente. Importa: una biblioteca recién estrenada
+tiene todo a cero y, sin él, la vista enseñaría diez prompts al azar. Los
+prompts anteriores a esta función empiezan también en cero, así que al
+principio se verán los diez últimos.
+
+La vista es de prompts: los enlaces no son algo que se «use» de esa manera.
+«Todos» sigue mostrando la biblioteca completa.
+
 ## Buscar y exportar
 
 El buscador filtra por título, descripción y **contenido**, sin tildes y sin

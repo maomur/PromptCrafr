@@ -148,6 +148,12 @@ export function useLibrary() {
     [apply]
   );
 
+  /** Apunta que un recurso se ha copiado, que es lo que cuenta como usarlo. */
+  const registerUse = useCallback(
+    (kind: ItemKind, id: string) => apply((current) => mutations.registerUse(current, kind, id)),
+    [apply]
+  );
+
   /**
    * Sustituye la biblioteca entera por la de una copia importada.
    *
@@ -184,6 +190,7 @@ export function useLibrary() {
     deleteItem,
     moveTo,
     reorder,
+    registerUse,
     replaceAll,
   };
 }

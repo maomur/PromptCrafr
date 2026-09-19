@@ -8,6 +8,19 @@ import type { Link, Prompt, PromptCategory } from '@/features/library/types';
 
 export const ALL_CATEGORIES = 'Todos';
 
+/** Cuántos recursos enseña la vista de «más usados». */
+export const MOST_USED_LIMIT = 10;
+
+/**
+ * Ordena por uso, y entre los que se han usado igual, por lo más reciente.
+ *
+ * El desempate importa: una biblioteca recién estrenada tiene todo a cero, y
+ * sin él la vista mostraría diez prompts al azar.
+ */
+function porUso(a: { useCount?: number; order: number }, b: { useCount?: number; order: number }) {
+  return (b.useCount ?? 0) - (a.useCount ?? 0) || (b.order ?? 0) - (a.order ?? 0);
+}
+
 export type CategoryFilter = PromptCategory | typeof ALL_CATEGORIES;
 
 /** Ubicación de un recurso, tolerando documentos antiguos sin `folderId`. */
@@ -23,7 +36,8 @@ export function locationOf(item: { projectId: string | null; folderId?: string |
  * mezclarlo con diálogos y menús, que son otro asunto.
  */
 export function useLibraryView(tree: TreeNode[], prompts: Prompt[], links: Link[]) {
-  const [filter, setFilter] = useState<LibraryFilter>({ type: 'all' });
+  // La aplicación abre por los más usados, no por la biblioteca entera.
+  const [filter, setFilter] = useState<LibraryFilter>({ type: 'most-used' });
   const [category, setCategory] = useState<CategoryFilter>(ALL_CATEGORIES);
   const [query, setQuery] = useState('');
 
@@ -77,13 +91,18 @@ export function useLibraryView(tree: TreeNode[], prompts: Prompt[], links: Link[
     [filter, folderScope, category, terms]
   );
 
-  const visiblePrompts = useMemo(
-    () => prompts.filter((p) => matches(p, promptHaystacks)),
-    [prompts, matches, promptHaystacks]
-  );
+  const esMasUsados = filter.type === 'most-used';
+
+  const visiblePrompts = useMemo(() => {
+    const encajan = prompts.filter((p) => matches(p, promptHaystacks));
+    // En «más usados» el orden lo manda el uso, y sólo entran los primeros.
+    return esMasUsados ? encajan.slice().sort(porUso).slice(0, MOST_USED_LIMIT) : encajan;
+  }, [prompts, matches, promptHaystacks, esMasUsados]);
+
+  // Esa vista es de prompts: los enlaces no son algo que se «use» así.
   const visibleLinks = useMemo(
-    () => links.filter((l) => matches(l, linkHaystacks)),
-    [links, matches, linkHaystacks]
+    () => (esMasUsados ? [] : links.filter((l) => matches(l, linkHaystacks))),
+    [links, matches, linkHaystacks, esMasUsados]
   );
 
   /** Subcarpetas directas del nodo abierto, que se muestran como tarjetas. */
@@ -114,6 +133,7 @@ export function useLibraryView(tree: TreeNode[], prompts: Prompt[], links: Link[
     visibleFolders,
     breadcrumb,
     clearFilters,
+    isMostUsed: esMasUsados,
     isEmpty: visiblePrompts.length === 0 && visibleLinks.length === 0 && visibleFolders.length === 0,
   };
 }

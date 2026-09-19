@@ -22,6 +22,16 @@ export type Prompt = {
   category: PromptCategory | null;
   createdAt: string;
   updatedAt: string;
+  /**
+   * Veces que se ha copiado al portapapeles.
+   *
+   * Copiar es lo que significa usar un prompt aquí, así que es la única
+   * señal de uso que tiene sentido contar. Los recursos anteriores a esta
+   * función no la traen y valen cero.
+   */
+  useCount?: number;
+  /** Última vez que se copió, para desempatar entre los que se usan igual. */
+  lastUsedAt?: string;
   projectId: string | null;
   /** Carpeta dentro del proyecto, o null si está suelto en él. */
   folderId?: string | null;
@@ -40,6 +50,9 @@ export type Link = {
   category?: PromptCategory | null;
   createdAt: string;
   updatedAt?: string;
+  /** Veces que se ha copiado la URL. */
+  useCount?: number;
+  lastUsedAt?: string;
   /** Posición en la lista. Mayor = más arriba. */
   order: number;
 };

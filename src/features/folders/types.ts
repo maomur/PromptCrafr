@@ -88,6 +88,8 @@ export type FolderInput = {
  * desplegado por donde toca.
  */
 export type LibraryFilter =
+  /** Los más copiados. Es la vista con la que arranca la aplicación. */
+  | { type: 'most-used' }
   | { type: 'all' }
   | { type: 'unassigned' }
   | { type: 'project'; projectId: string }
@@ -118,6 +120,9 @@ export function matchesFilter(
   folderScope?: ReadonlySet<string>
 ): boolean {
   switch (filter.type) {
+    // «Más usados» no filtra por ubicación: la selección de los primeros la
+    // hace la vista, que es quien sabe cuántos mostrar.
+    case 'most-used':
     case 'all':
       return true;
     // Los valores antiguos usaban la cadena "none" en lugar de null.

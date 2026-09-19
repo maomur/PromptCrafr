@@ -332,6 +332,30 @@ export function reorder(
   return { state: { ...state, [store]: items } as LibraryState, operations };
 }
 
+/**
+ * Apunta que un recurso se ha usado.
+ *
+ * Usar un prompt es copiarlo: es lo que se hace con él. La cuenta alimenta la
+ * vista de «más usados», que es con la que arranca la aplicación.
+ */
+export function registerUse(state: LibraryState, kind: ItemKind, id: string): Mutation {
+  const store = storeFor(kind);
+  const items = kind === 'prompt' ? state.prompts : state.links;
+  const current = items.find((item) => item.id === id);
+  if (!current) return unchanged(state);
+
+  const updated = {
+    ...current,
+    useCount: (current.useCount ?? 0) + 1,
+    lastUsedAt: new Date().toISOString(),
+  };
+
+  return {
+    state: { ...state, [store]: items.map((item) => (item.id === id ? updated : item)) } as LibraryState,
+    operations: [{ type: 'put', store, value: updated }],
+  };
+}
+
 /** Reemplaza la biblioteca entera. Lo usa la importación de una copia. */
 export function replaceAll(next: LibraryState): Mutation {
   const operations: DbOperation[] = [

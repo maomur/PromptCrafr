@@ -78,7 +78,8 @@ describe('promptsToCsv', () => {
   it('aguanta un prompt sin fecha en lugar de reventar', () => {
     const csv = promptsToCsv([prompt({ createdAt: '', updatedAt: 'no-es-una-fecha' })], tree);
 
-    expect(csv.split('\r\n')[1]).toMatch(/,,$/);
+    // Las dos fechas quedan vacías; detrás va ya la columna de usos.
+    expect(csv.split('\r\n')[1]).toMatch(/,,0$/);
   });
 
   it('no rompe la fila aunque el contenido tenga saltos y comillas', () => {
@@ -93,5 +94,18 @@ describe('promptsToCsv', () => {
 describe('csvFileName', () => {
   it('lleva la fecha para no pisar exportaciones anteriores', () => {
     expect(csvFileName(new Date('2026-09-19T12:00:00'))).toBe('promptcraft-prompts-2026-09-19.csv');
+  });
+});
+
+describe('columna de usos', () => {
+  it('escribe cuántas veces se ha copiado', () => {
+    const csv = promptsToCsv([prompt({ useCount: 7 })], tree);
+
+    expect(csv.split('\r\n')[0].endsWith('Usos')).toBe(true);
+    expect(csv.split('\r\n')[1].endsWith(',7')).toBe(true);
+  });
+
+  it('un prompt que nunca se ha usado sale con cero', () => {
+    expect(promptsToCsv([prompt({})], tree).split('\r\n')[1].endsWith(',0')).toBe(true);
   });
 });

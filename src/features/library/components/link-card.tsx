@@ -18,6 +18,8 @@ interface LinkCardProps {
   tree: TreeNode[];
   onDelete: (link: Link) => void;
   onEdit: (link: Link) => void;
+  /** Apunta que se ha copiado, que es lo que cuenta como usarlo. */
+  onUse: () => void;
   onMoveTo: (location: Location) => void;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
@@ -38,6 +40,7 @@ export default function LinkCard({
   tree,
   onDelete,
   onEdit,
+  onUse,
   onMoveTo,
   onMoveUp,
   onMoveDown,
@@ -53,6 +56,7 @@ export default function LinkCard({
 
   const copyUrl = useCallback(async () => {
     const copied = await copyToClipboard(link.url);
+    if (copied) onUse();
     toast(
       copied
         ? { title: 'Enlace copiado', description: 'La URL está en tu portapapeles.' }
@@ -62,7 +66,7 @@ export default function LinkCard({
             description: 'Tu navegador ha bloqueado el acceso al portapapeles.',
           }
     );
-  }, [link.url, toast]);
+  }, [link.url, onUse, toast]);
 
   const handleCardClick = useCallback(
     (event: React.MouseEvent) => {

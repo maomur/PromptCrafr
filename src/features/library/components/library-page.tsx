@@ -19,7 +19,13 @@ import LibraryContent from '@/features/library/components/library-content';
 import LibraryToolbar from '@/features/library/components/library-toolbar';
 import StorageAlert from '@/features/library/components/storage-alert';
 import { useLibrary } from '@/features/library/hooks/use-library';
-import { ALL_CATEGORIES, locationOf, useLibraryView, type CategoryFilter } from '@/features/library/hooks/use-library-view';
+import {
+  ALL_CATEGORIES,
+  MOST_USED_LIMIT,
+  locationOf,
+  useLibraryView,
+  type CategoryFilter,
+} from '@/features/library/hooks/use-library-view';
 import { csvFileName, downloadCsv, promptsToCsv } from '@/features/library/services/csv';
 import type { ItemKind } from '@/features/library/services/mutations';
 import type { Sortable } from '@/features/library/services/ordering';
@@ -40,6 +46,9 @@ export default function LibraryPage() {
   const library = useLibrary();
   const { tree, counts, prompts, links } = library;
   const view = useLibraryView(tree, prompts, links);
+
+  // La barra lateral muestra cuántos caben en la vista de más usados.
+  const countsConMasUsados = { ...counts, 'most-used': Math.min(prompts.length, MOST_USED_LIMIT) };
 
   const [folderRequest, setFolderRequest] = useState<FolderRequest | null>(null);
   const [deletion, setDeletion] = useState<Deletion | null>(null);
@@ -159,7 +168,7 @@ export default function LibraryPage() {
       <div className="flex flex-col gap-8 md:flex-row">
         <FolderTreeSidebar
           tree={tree}
-          counts={counts}
+          counts={countsConMasUsados}
           activeFilter={view.filter}
           onSelect={view.setFilter}
           onCreateRoot={() => setFolderRequest({ mode: 'create', parent: NO_SELECTION })}
@@ -196,6 +205,7 @@ export default function LibraryPage() {
           ) : view.isEmpty ? (
             <EmptyState
               isFiltered={prompts.length + links.length > 0}
+              isMostUsed={view.isMostUsed}
               searchQuery={view.query}
               onCreatePrompt={() => setCreating('prompt')}
               onClearFilters={view.clearFilters}
@@ -214,6 +224,7 @@ export default function LibraryPage() {
               onDeletePrompt={(item) => setDeletion({ kind: 'prompt', item })}
               onEditLink={setEditingLink}
               onDeleteLink={(item) => setDeletion({ kind: 'link', item })}
+              onUse={library.registerUse}
               onMoveTo={moveTo}
               onDropOnTarget={dropOnTarget}
               onReorder={reorder}

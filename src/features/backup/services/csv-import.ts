@@ -211,6 +211,8 @@ export function parseCsvBackup(text: string): ImportResult {
       updatedAt: toIso(at(cells, CSV_HEADERS[6])),
       // El CSV sale ordenado de arriba abajo; conservamos ese orden.
       order: body.length - index,
+      // La columna es nueva: los CSV anteriores no la traen y valen cero.
+      useCount: Math.max(0, Number.parseInt(at(cells, CSV_HEADERS[7]) ?? '0', 10) || 0),
       ...tree.resolve(at(cells, CSV_HEADERS[4]) ?? ''),
     });
   });

@@ -10,6 +10,7 @@ import {
   emptyLibrary,
   moveTo,
   reorder,
+  registerUse,
   savePrompt,
   updateNode,
 } from '@/features/library/services/mutations';
@@ -218,5 +219,36 @@ describe('reorder', () => {
 describe('estado vacío', () => {
   it('arranca sin nada', () => {
     expect(emptyLibrary).toEqual({ projects: [], folders: [], prompts: [], links: [] });
+  });
+});
+
+describe('registerUse', () => {
+  it('cuenta la primera vez que se copia', () => {
+    const { state: next, operations } = registerUse(state, 'prompt', 'A');
+    const a = next.prompts.find((p) => p.id === 'A')!;
+
+    expect(a.useCount).toBe(1);
+    expect(a.lastUsedAt).toBeTruthy();
+    expect(operations).toEqual([expect.objectContaining({ type: 'put', store: 'prompts' })]);
+  });
+
+  it('suma sobre lo que ya había', () => {
+    const conUsos = { ...state, prompts: state.prompts.map((p) => ({ ...p, useCount: 4 })) };
+
+    expect(registerUse(conUsos, 'prompt', 'A').state.prompts.find((p) => p.id === 'A')?.useCount).toBe(5);
+  });
+
+  it('no toca a los demás', () => {
+    const { state: next } = registerUse(state, 'prompt', 'A');
+
+    expect(next.prompts.find((p) => p.id === 'B')?.useCount).toBeUndefined();
+  });
+
+  it('también cuenta para los enlaces', () => {
+    expect(registerUse(state, 'link', 'L').state.links[0].useCount).toBe(1);
+  });
+
+  it('no escribe nada si el recurso ya no existe', () => {
+    expect(registerUse(state, 'prompt', 'fantasma').operations).toEqual([]);
   });
 });

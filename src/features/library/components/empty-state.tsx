@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 interface EmptyStateProps {
   /** `true` si la biblioteca tiene contenido pero los filtros activos lo ocultan. */
   isFiltered: boolean;
+  /** `true` si se está mirando la vista de los más usados. */
+  isMostUsed?: boolean;
   /** Texto buscado, si lo hay, para poder citarlo en el mensaje. */
   searchQuery: string;
   onCreatePrompt: () => void;
@@ -14,6 +16,7 @@ interface EmptyStateProps {
 
 export default function EmptyState({
   isFiltered,
+  isMostUsed = false,
   searchQuery,
   onCreatePrompt,
   onClearFilters,
@@ -30,14 +33,18 @@ export default function EmptyState({
       </div>
 
       <h2 className="text-2xl font-semibold">
-        {isSearching
+        {isMostUsed && !isSearching
+          ? 'Todavía no has usado ningún prompt'
+          : isSearching
           ? `Sin resultados para «${searchQuery.trim()}»`
           : isFiltered
             ? 'Ningún recurso coincide'
             : 'Tu biblioteca está vacía'}
       </h2>
       <p className="mx-auto mt-2 max-w-md text-muted-foreground">
-        {isSearching
+        {isMostUsed && !isSearching
+          ? 'Aquí aparecerán los diez que más copies. Mientras tanto, mira «Todos».'
+          : isSearching
           ? 'No hay ningún prompt ni enlace con ese texto en su título, descripción o contenido.'
           : isFiltered
             ? 'No hay prompts ni enlaces que encajen con los filtros activos. Prueba a quitarlos para ver todo lo que tienes guardado.'

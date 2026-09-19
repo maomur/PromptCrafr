@@ -47,6 +47,7 @@ export const CSV_HEADERS = [
   'Carpeta',
   'Creado',
   'Actualizado',
+  'Usos',
 ] as const;
 
 /** Arma la tabla completa, cabecera incluida. */
@@ -61,6 +62,7 @@ export function promptsToCsv(prompts: Prompt[], tree: TreeNode[]): string {
       locationLabel(prompt, tree),
       formatDate(prompt.createdAt),
       formatDate(prompt.updatedAt),
+      String(prompt.useCount ?? 0),
     ]),
   ];
 
