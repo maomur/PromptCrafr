@@ -3,7 +3,6 @@ import { GeistMono } from 'geist/font/mono';
 import { GeistSans } from 'geist/font/sans';
 import '@/styles/globals.css';
 
-import AppFooter from '@/components/layout/app-footer';
 import { Toaster } from '@/components/ui/toaster';
 import InstallBanner from '@/features/pwa/components/install-banner';
 import ServiceWorkerRegistrar from '@/features/pwa/components/service-worker-registrar';
@@ -35,7 +34,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body className="flex min-h-screen flex-col font-sans antialiased">
         <div className="flex-grow">{children}</div>
         <InstallBanner />
-        <AppFooter />
         <Toaster />
         <ServiceWorkerRegistrar />
       </body>

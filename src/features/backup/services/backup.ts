@@ -1,4 +1,5 @@
 import { BACKUP_VERSION, type Backup, type ImportResult } from '@/features/backup/types';
+import { looksLikeCsv, parseCsvBackup } from '@/features/backup/services/csv-import';
 import { MAX_DEPTH } from '@/features/folders/types';
 import type { Folder, Project } from '@/features/folders/types';
 import { promptCategories, type LibraryState, type Link, type Prompt, type PromptCategory } from '@/features/library/types';
@@ -264,13 +265,31 @@ export function parseBackup(raw: unknown): ImportResult {
   };
 }
 
-/** Lee y valida un fichero elegido por el usuario. */
+/**
+ * Lee un fichero elegido por el usuario, sea una copia en JSON o el CSV que
+ * exporta la propia aplicación.
+ *
+ * Decide por el contenido y no por la extensión: un archivo renombrado a mano
+ * no debería dejar al usuario sin poder recuperar lo suyo.
+ */
 export async function readBackupFile(file: File): Promise<ImportResult> {
+  const text = await file.text();
+
+  if (looksLikeCsv(text)) {
+    try {
+      return parseCsvBackup(text);
+    } catch (cause) {
+      throw new ImportError(cause instanceof Error ? cause.message : 'No se ha podido leer el CSV.');
+    }
+  }
+
   let raw: unknown;
   try {
-    raw = JSON.parse(await file.text());
+    raw = JSON.parse(text);
   } catch {
-    throw new ImportError('El archivo no es un JSON válido.');
+    throw new ImportError(
+      'El archivo no es una copia en JSON ni el CSV que exporta esta aplicación.'
+    );
   }
   return parseBackup(raw);
 }

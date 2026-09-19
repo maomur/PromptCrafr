@@ -1,6 +1,7 @@
 'use client';
 
 import { useForm } from 'react-hook-form';
+import { useSingleSubmit } from '@/hooks/use-single-submit';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Folder as FolderIcon, Folders } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -72,7 +73,7 @@ export default function FolderForm({
 
   const options = parentOptions(tree, moving);
 
-  const handleSubmit = (values: FolderFormValues) => {
+  const guardar = (values: FolderFormValues) => {
     onSave({
       name: values.name,
       description: values.description || null,
@@ -81,9 +82,11 @@ export default function FolderForm({
     onClose();
   };
 
+  const { submit, isSubmitting } = useSingleSubmit(guardar);
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(submit)} className="space-y-4">
         <FormField
           control={form.control}
           name="name"
@@ -173,7 +176,11 @@ export default function FolderForm({
           <Button type="button" variant="outline" onClick={onClose}>
             Cancelar
           </Button>
-          <Button type="submit" className="bg-violet-600 text-white hover:bg-violet-700">
+          <Button
+            type="submit"
+            disabled={isSubmitting}
+            className="bg-violet-600 text-white hover:bg-violet-700"
+          >
             {submitLabel}
           </Button>
         </div>

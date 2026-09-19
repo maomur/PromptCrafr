@@ -120,7 +120,7 @@ export default function BackupMenu({ state, onImport }: BackupMenuProps) {
           <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={() => inputRef.current?.click()}>
             <Upload className="mr-2 h-4 w-4" />
-            Importar desde un archivo
+            Importar (JSON o CSV)
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -128,7 +128,7 @@ export default function BackupMenu({ state, onImport }: BackupMenuProps) {
       <input
         ref={inputRef}
         type="file"
-        accept="application/json,.json"
+        accept="application/json,.json,text/csv,.csv"
         className="hidden"
         onChange={(event) => {
           void handleFile(event.target.files?.[0]);
@@ -147,6 +147,12 @@ export default function BackupMenu({ state, onImport }: BackupMenuProps) {
               {pending?.state.links.length ?? 0} enlaces y{' '}
               {(pending?.state.projects.length ?? 0) + (pending?.state.folders.length ?? 0)}{' '}
               carpetas. Lo que tengas ahora se borrará y quedará sólo el contenido del archivo.
+              {/* Un CSV sólo trae prompts: conviene decirlo antes de reemplazar. */}
+              {pending?.state.links.length === 0 && pending.state.prompts.length > 0 && (
+                <span className="mt-2 block">
+                  Si vienes de un CSV, ten en cuenta que ese formato no incluye enlaces.
+                </span>
+              )}
               {/* Importar puede cambiar los datos; se avisa antes, no después. */}
               {!!pending?.discarded && (
                 <span className="mt-2 block text-destructive">

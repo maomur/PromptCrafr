@@ -1,6 +1,7 @@
 'use client';
 
 import { useForm } from 'react-hook-form';
+import { useSingleSubmit } from '@/hooks/use-single-submit';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -54,7 +55,7 @@ export default function LinkForm({ link, tree, onSave, onClose }: LinkFormProps)
     },
   });
 
-  const handleSubmit = (values: LinkFormValues) => {
+  const guardar = (values: LinkFormValues) => {
     onSave(
       {
         url: normalizeUrl(values.url),
@@ -70,9 +71,11 @@ export default function LinkForm({ link, tree, onSave, onClose }: LinkFormProps)
     onClose();
   };
 
+  const { submit, isSubmitting } = useSingleSubmit(guardar);
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(submit)} className="space-y-4">
         <FormField
           control={form.control}
           name="url"
@@ -175,10 +178,10 @@ export default function LinkForm({ link, tree, onSave, onClose }: LinkFormProps)
           </Button>
           <Button
             type="submit"
-            disabled={form.formState.isSubmitting}
+            disabled={isSubmitting}
             className="border-none bg-orange-500 text-white hover:bg-orange-600"
           >
-            {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {isEditMode ? 'Guardar cambios' : 'Guardar enlace'}
           </Button>
         </div>

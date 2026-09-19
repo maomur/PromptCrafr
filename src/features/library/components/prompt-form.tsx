@@ -1,6 +1,7 @@
 'use client';
 
 import { useForm } from 'react-hook-form';
+import { useSingleSubmit } from '@/hooks/use-single-submit';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -53,7 +54,7 @@ export default function PromptForm({ prompt, tree, onSave, onClose }: PromptForm
     },
   });
 
-  const handleSubmit = (values: PromptFormValues) => {
+  const guardar = (values: PromptFormValues) => {
     onSave(
       {
         title: values.title,
@@ -67,9 +68,11 @@ export default function PromptForm({ prompt, tree, onSave, onClose }: PromptForm
     onClose();
   };
 
+  const { submit, isSubmitting } = useSingleSubmit(guardar);
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(submit)} className="space-y-4">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <FormField
             control={form.control}
@@ -166,8 +169,8 @@ export default function PromptForm({ prompt, tree, onSave, onClose }: PromptForm
           <Button type="button" variant="outline" onClick={onClose}>
             Cancelar
           </Button>
-          <Button type="submit" disabled={form.formState.isSubmitting}>
-            {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {isEditMode ? 'Guardar cambios' : 'Crear prompt'}
           </Button>
         </div>

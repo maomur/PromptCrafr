@@ -159,6 +159,14 @@ contenido dentro.
 Los dos últimos ajustes cambian los datos, así que se cuentan y **se avisan
 en el diálogo antes de confirmar**, no después.
 
+También acepta el **CSV que exporta la propia aplicación**
+([`backup/services/csv-import.ts`](src/features/backup/services/csv-import.ts)):
+ofrecer «descargar CSV» y admitir sólo JSON al volver dejaba al usuario con un
+archivo que la aplicación no sabía leer. La jerarquía se reconstruye desde la
+columna de ruta («Trabajo / Nómina / Recibos»). Un CSV trae menos que una
+copia en JSON —ni enlaces, ni descripciones de carpeta—, y el diálogo lo
+advierte. El formato se detecta por el contenido, no por la extensión.
+
 Reemplazar la biblioteca ocurre en **una única transacción**: vaciar y volver
 a escribir por separado abría una ventana en la que un fallo dejaba al usuario
 sin los datos viejos y sin los nuevos.
@@ -221,6 +229,7 @@ silenciosos.
 | [`folders/services/tree.test.ts`](src/features/folders/services/tree.test.ts)           | Filtros, contadores acumulados y límite de niveles    |
 | [`library/services/mutations.test.ts`](src/features/library/services/mutations.test.ts) | Cada operación: qué estado deja y qué escribe |
 | [`backup/services/backup.test.ts`](src/features/backup/services/backup.test.ts) | Importación tolerante de archivos ajenos    |
+| [`backup/services/csv-import.test.ts`](src/features/backup/services/csv-import.test.ts) | Lectura del CSV y su ida y vuelta completa |
 | [`lib/db.test.ts`](src/lib/db.test.ts)                                | Que lo guardado se vuelve a leer                      |
 | [`library/services/ordering.test.ts`](src/features/library/services/ordering.test.ts) | Reparto de posiciones al reordenar    |
 | [`library/services/csv.test.ts`](src/features/library/services/csv.test.ts) | Escapado del CSV                                |
