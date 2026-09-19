@@ -262,6 +262,24 @@ móvil con poca RAM podría ir justo. Si se llega ahí, la solución es mostrar
 los resultados por tandas; hacerlo antes de necesitarlo complicaría el
 arrastrar y soltar sin ganar nada.
 
+## Navegadores comprobados
+
+| Motor                 | Resultado                                                    |
+| --------------------- | ------------------------------------------------------------ |
+| Chrome                | Todo correcto, incluido sin conexión y con dos pestañas       |
+| WebKit 26.6 (Safari)  | Todo correcto: IndexedDB persiste, `:has()`, `BroadcastChannel`, `crypto.randomUUID` |
+
+La aplicación se apoya en `:has()` para resaltar el destino al arrastrar, en
+`BroadcastChannel` para avisar entre pestañas y en `crypto.randomUUID` para los
+identificadores. Los tres existen en WebKit actual; `randomUUID` tiene además
+plan B en [`lib/id.ts`](src/lib/id.ts) para contextos no seguros.
+
+Si el navegador **no deja usar IndexedDB** —ventana privada, almacenamiento
+bloqueado— o **falla al escribir**, la aplicación no finge que funciona: sale
+un cartel permanente avisando de que lo escrito se perderá al recargar y
+recomendando descargar una copia. Ambos caminos están verificados en
+navegador, no sólo en los tests.
+
 ## Límites que conviene conocer
 
 - **Los datos viven en un solo navegador.** Lo que guardes en el portátil no
