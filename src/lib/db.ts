@@ -62,6 +62,41 @@ export async function readEverything(): Promise<Record<StoreName, unknown[]>> {
   return Object.fromEntries(entries) as Record<StoreName, unknown[]>;
 }
 
+/**
+ * Ejecuta el cuerpo de una transacción, cancelándola si algo revienta.
+ *
+ * `put` puede fallar de forma síncrona —por ejemplo, con un valor que el
+ * clonado estructurado no sabe copiar— y entonces no queda ninguna petición
+ * en error que impida confirmar. Sin este `abort`, la transacción se
+ * confirmaba con las operaciones que sí habían pasado: media escritura, que
+ * es justo lo que una transacción debería evitar.
+ */
+/**
+ * Lanza una petición sin esperar su resultado.
+ *
+ * `idb` envuelve cada petición en una promesa. Si la transacción se cancela y
+ * nadie las mira, quedan rechazos sin manejar: en el navegador aparecen como
+ * «Uncaught (in promise)» y en Node tumban el proceso. El resultado de cada
+ * petición no interesa —lo que importa es si la transacción entera confirma—,
+ * pero el rechazo hay que recogerlo.
+ */
+function issue(request: unknown): void {
+  const promise = request as Promise<unknown> | undefined;
+  if (promise && typeof promise.catch === 'function') promise.catch(() => undefined);
+}
+
+function run(tx: { abort: () => void; done: Promise<unknown> }, body: () => void): void {
+  try {
+    body();
+  } catch (cause) {
+    tx.abort();
+    // El abort rechaza `tx.done`; lo silenciamos para que no quede una
+    // promesa sin manejar y propagamos el error de verdad.
+    tx.done.catch(() => undefined);
+    throw cause;
+  }
+}
+
 /** Aplica un conjunto de operaciones en una única transacción. */
 export async function applyOperations(operations: DbOperation[]): Promise<void> {
   if (operations.length === 0) return;
@@ -71,19 +106,33 @@ export async function applyOperations(operations: DbOperation[]): Promise<void> 
   const stores = [...new Set(operations.map((operation) => operation.store))];
   const tx = db.transaction(stores, 'readwrite');
 
-  for (const operation of operations) {
-    const store = tx.objectStore(operation.store);
-    if (operation.type === 'put') store.put(operation.value);
-    else store.delete(operation.id);
-  }
+  run(tx, () => {
+    for (const operation of operations) {
+      const store = tx.objectStore(operation.store);
+      issue(operation.type === 'put' ? store.put(operation.value) : store.delete(operation.id));
+    }
+  });
 
   await tx.done;
 }
 
-/** Vacía la biblioteca. Lo usa la importación al reemplazar los datos. */
-export async function clearEverything(): Promise<void> {
+/**
+ * Reemplaza la biblioteca entera en una sola transacción.
+ *
+ * Vaciar y volver a escribir por separado abría una ventana fatal: si la
+ * segunda operación fallaba —por cuota, por ejemplo— el usuario se quedaba sin
+ * los datos viejos y sin los nuevos. Aquí, o entra todo o no se toca nada.
+ */
+export async function replaceEverything(operations: DbOperation[]): Promise<void> {
   const db = await openLibraryDb();
   const tx = db.transaction(STORES, 'readwrite');
-  for (const store of STORES) tx.objectStore(store).clear();
+
+  run(tx, () => {
+    for (const store of STORES) issue(tx.objectStore(store).clear());
+    for (const operation of operations) {
+      if (operation.type === 'put') issue(tx.objectStore(operation.store).put(operation.value));
+    }
+  });
+
   await tx.done;
 }

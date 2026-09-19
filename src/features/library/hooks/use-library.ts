@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { announceChange, onExternalChange } from '@/lib/broadcast';
-import { applyOperations, clearEverything, readEverything } from '@/lib/db';
+import { applyOperations, readEverything, replaceEverything } from '@/lib/db';
 import { buildTree, countTree } from '@/features/folders/services/tree';
 import type { Folder, FolderInput, Location, Project } from '@/features/folders/types';
 import * as mutations from '@/features/library/services/mutations';
@@ -148,14 +148,23 @@ export function useLibrary() {
     [apply]
   );
 
-  /** Sustituye la biblioteca entera por la de una copia importada. */
-  const replaceAll = useCallback(
-    async (next: LibraryState) => {
-      await clearEverything();
-      apply(() => mutations.replaceAll(next));
-    },
-    [apply]
-  );
+  /**
+   * Sustituye la biblioteca entera por la de una copia importada.
+   *
+   * No pasa por `apply` a propósito: aquí la escritura tiene que confirmarse
+   * antes de dar la importación por buena, y si falla hay que decirlo en vez
+   * de dejar la pantalla mostrando datos que ya no están en disco.
+   */
+  const replaceAll = useCallback(async (next: LibraryState) => {
+    const { operations } = mutations.replaceAll(next);
+
+    await replaceEverything(operations);
+
+    stateRef.current = next;
+    setState(next);
+    setError(null);
+    announceChange();
+  }, []);
 
   return {
     projects,

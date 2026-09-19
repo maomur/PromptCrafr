@@ -1,5 +1,5 @@
 import type { Folder, Project } from '@/features/folders/types';
-import type { Link, Prompt } from '@/features/library/types';
+import type { LibraryState, Link, Prompt } from '@/features/library/types';
 
 /**
  * Formato del archivo de copia de seguridad.
@@ -17,4 +17,19 @@ export type Backup = {
   folders: Folder[];
   prompts: Prompt[];
   links: Link[];
+};
+
+/**
+ * Lo que sale de leer un archivo, con lo que hubo que ajustar.
+ *
+ * Importar puede cambiar los datos —descartar repetidos, subir carpetas de
+ * nivel—, y eso hay que poder decírselo al usuario antes de que confirme, no
+ * después.
+ */
+export type ImportResult = {
+  state: LibraryState;
+  /** Registros descartados por repetir identificador. */
+  discarded: number;
+  /** Carpetas reenganchadas por exceder el límite de profundidad. */
+  flattened: number;
 };

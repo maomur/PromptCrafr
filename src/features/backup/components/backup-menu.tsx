@@ -21,7 +21,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { MAX_DEPTH } from '@/features/folders/types';
 import { useToast } from '@/hooks/use-toast';
+import type { ImportResult } from '@/features/backup/types';
 import type { LibraryState } from '@/features/library/types';
 import {
   backupFileName,
@@ -46,7 +48,7 @@ interface BackupMenuProps {
 export default function BackupMenu({ state, onImport }: BackupMenuProps) {
   const { toast } = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
-  const [pending, setPending] = useState<LibraryState | null>(null);
+  const [pending, setPending] = useState<ImportResult | null>(null);
 
   const total =
     state.projects.length + state.folders.length + state.prompts.length + state.links.length;
@@ -78,11 +80,25 @@ export default function BackupMenu({ state, onImport }: BackupMenuProps) {
   const confirmImport = async () => {
     if (!pending) return;
 
+    const { state } = pending;
     const imported =
-      pending.projects.length + pending.folders.length + pending.prompts.length + pending.links.length;
+      state.projects.length + state.folders.length + state.prompts.length + state.links.length;
 
-    await onImport(pending);
-    setPending(null);
+    try {
+      await onImport(state);
+    } catch {
+      // La escritura es atómica: si falla, la biblioteca anterior sigue
+      // intacta y hay que decirlo en lugar de dar la importación por buena.
+      toast({
+        variant: 'destructive',
+        title: 'No se ha podido importar',
+        description: 'Tu biblioteca anterior sigue intacta. Comprueba el espacio disponible.',
+      });
+      return;
+    } finally {
+      setPending(null);
+    }
+
     toast({ title: 'Biblioteca importada', description: `${imported} elementos restaurados.` });
   };
 
@@ -127,10 +143,22 @@ export default function BackupMenu({ state, onImport }: BackupMenuProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>¿Reemplazar la biblioteca?</AlertDialogTitle>
             <AlertDialogDescription>
-              El archivo contiene {pending?.prompts.length ?? 0} prompts,{' '}
-              {pending?.links.length ?? 0} enlaces y{' '}
-              {(pending?.projects.length ?? 0) + (pending?.folders.length ?? 0)} carpetas. Lo que
-              tengas ahora se borrará y quedará sólo el contenido del archivo.
+              El archivo contiene {pending?.state.prompts.length ?? 0} prompts,{' '}
+              {pending?.state.links.length ?? 0} enlaces y{' '}
+              {(pending?.state.projects.length ?? 0) + (pending?.state.folders.length ?? 0)}{' '}
+              carpetas. Lo que tengas ahora se borrará y quedará sólo el contenido del archivo.
+              {/* Importar puede cambiar los datos; se avisa antes, no después. */}
+              {!!pending?.discarded && (
+                <span className="mt-2 block text-destructive">
+                  Se descartarán {pending.discarded} registros que repiten identificador.
+                </span>
+              )}
+              {!!pending?.flattened && (
+                <span className="mt-2 block text-destructive">
+                  {pending.flattened} carpetas subirán de nivel: el archivo tiene más de{' '}
+                  {MAX_DEPTH} niveles.
+                </span>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

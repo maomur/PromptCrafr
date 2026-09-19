@@ -145,10 +145,20 @@ otro navegador o de recuperarla si se borran los datos del sitio. El menú está
 a la vista en la cabecera, no escondido en unos ajustes.
 
 La importación es deliberadamente tolerante
-([`backup/services/backup.ts`](src/features/backup/services/backup.ts)):
-descarta lo que no tenga identificador, ignora los campos que sobren y
-recoloca lo que apunte a una carpeta inexistente, en vez de rechazar el
-archivo entero.
+([`backup/services/backup.ts`](src/features/backup/services/backup.ts)) en
+lugar de rechazar el archivo entero: descarta lo que no tenga identificador o
+contenido, ignora los campos que sobren, recoloca lo que apunte a una carpeta
+inexistente, **descarta los identificadores repetidos** —la base indexa por
+`id`, así que se pisarían al guardar— y **sube de nivel las carpetas que
+excedan los 3 niveles**, que de otro modo desaparecerían del árbol con su
+contenido dentro.
+
+Los dos últimos ajustes cambian los datos, así que se cuentan y **se avisan
+en el diálogo antes de confirmar**, no después.
+
+Reemplazar la biblioteca ocurre en **una única transacción**: vaciar y volver
+a escribir por separado abría una ventana en la que un fallo dejaba al usuario
+sin los datos viejos y sin los nuevos.
 
 ## Carpetas
 
@@ -220,6 +230,10 @@ silenciosos.
 - **Borrar los datos del sitio borra la biblioteca.** No hay copia en ningún
   servidor.
 - **Sin contraseña.** Quien use el equipo ve los prompts.
+- **Si el navegador no deja guardar** (ventana privada, almacenamiento
+  bloqueado, cuota agotada), la aplicación lo avisa con un cartel permanente
+  en lugar de aparentar que funciona. Sin él, los prompts se veían en pantalla
+  y desaparecían al recargar.
 
 ---
 

@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { applyOperations, clearEverything, readAll, readEverything } from '@/lib/db';
+import { applyOperations, readAll, readEverything, replaceEverything } from '@/lib/db';
 
 /**
  * Pruebas contra una IndexedDB simulada.
@@ -11,7 +11,7 @@ import { applyOperations, clearEverything, readAll, readEverything } from '@/lib
  */
 
 beforeEach(async () => {
-  await clearEverything();
+  await replaceEverything([]);
 });
 
 describe('applyOperations', () => {
@@ -61,15 +61,40 @@ describe('readEverything', () => {
   });
 });
 
-describe('clearEverything', () => {
-  it('vacía la biblioteca entera', async () => {
+describe('replaceEverything', () => {
+  it('vacía la biblioteca cuando no se le da nada', async () => {
     await applyOperations([
       { type: 'put', store: 'prompts', value: { id: 'a' } as never },
       { type: 'put', store: 'projects', value: { id: 'p' } as never },
     ]);
 
-    await clearEverything();
+    await replaceEverything([]);
 
     expect(await readEverything()).toEqual({ projects: [], folders: [], prompts: [], links: [] });
+  });
+
+  it('sustituye lo viejo por lo nuevo sin dejar restos', async () => {
+    await applyOperations([{ type: 'put', store: 'prompts', value: { id: 'viejo' } as never }]);
+
+    await replaceEverything([
+      { type: 'put', store: 'prompts', value: { id: 'nuevo' } as never },
+      { type: 'put', store: 'projects', value: { id: 'p' } as never },
+    ]);
+
+    const todo = await readEverything();
+    expect(todo.prompts).toEqual([{ id: 'nuevo' }]);
+    expect(todo.projects).toEqual([{ id: 'p' }]);
+  });
+
+  it('vaciar y escribir ocurren en la misma transacción', async () => {
+    await applyOperations([{ type: 'put', store: 'prompts', value: { id: 'previo' } as never }]);
+
+    // Un valor que el clonado estructurado rechaza hace fallar la transacción
+    // entera; lo que había antes debe seguir intacto.
+    await expect(
+      replaceEverything([{ type: 'put', store: 'prompts', value: { id: 'malo', fn: () => {} } as never }])
+    ).rejects.toThrow();
+
+    expect(await readAll('prompts')).toEqual([{ id: 'previo' }]);
   });
 });

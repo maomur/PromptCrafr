@@ -16,6 +16,7 @@ import EmptyState from '@/features/library/components/empty-state';
 import ItemDialogs from '@/features/library/components/item-dialogs';
 import LibraryContent from '@/features/library/components/library-content';
 import LibraryToolbar from '@/features/library/components/library-toolbar';
+import StorageAlert from '@/features/library/components/storage-alert';
 import { useLibrary } from '@/features/library/hooks/use-library';
 import { ALL_CATEGORIES, locationOf, useLibraryView, type CategoryFilter } from '@/features/library/hooks/use-library-view';
 import { csvFileName, downloadCsv, promptsToCsv } from '@/features/library/services/csv';
@@ -157,6 +158,8 @@ export default function LibraryPage() {
         />
 
         <main className="flex-1 pb-24">
+          <StorageAlert error={library.error} />
+
           {!library.isLoading && (
             <LibraryToolbar
               query={view.query}

@@ -1,4 +1,5 @@
-import { BACKUP_VERSION, type Backup } from '@/features/backup/types';
+import { BACKUP_VERSION, type Backup, type ImportResult } from '@/features/backup/types';
+import { MAX_DEPTH } from '@/features/folders/types';
 import type { Folder, Project } from '@/features/folders/types';
 import { promptCategories, type LibraryState, type Link, type Prompt, type PromptCategory } from '@/features/library/types';
 
@@ -64,19 +65,76 @@ const records = (items: unknown[]): Raw[] =>
   items.filter((item): item is Raw => typeof item === 'object' && item !== null);
 
 /**
+ * Descarta los registros que repiten identificador, quedándose con el primero.
+ *
+ * La base indexa por `id`: dos registros con el mismo se pisan al guardar y el
+ * usuario pierde uno sin enterarse. Además React protestaría por las claves
+ * repetidas. Mejor descartarlos aquí y poder contarlos.
+ */
+function dedupe<T extends { id: string }>(items: T[]): { unique: T[]; dropped: number } {
+  const vistos = new Set<string>();
+  const unique = items.filter((item) => {
+    if (vistos.has(item.id)) return false;
+    vistos.add(item.id);
+    return true;
+  });
+  return { unique, dropped: items.length - unique.length };
+}
+
+/**
+ * Sube de nivel las carpetas que se salen del límite de profundidad.
+ *
+ * Un archivo puede traer una jerarquía más honda de la que la aplicación
+ * admite. Si se importa tal cual, el árbol se queda con lo que cabe y el resto
+ * desaparece de la vista con su contenido dentro. Aquí se reengancha cada
+ * carpeta demasiado honda al ancestro que sí cabe, de modo que nada se pierda
+ * aunque la forma cambie.
+ */
+function clampDepth(folders: Folder[]): { folders: Folder[]; flattened: number } {
+  const byId = new Map(folders.map((folder) => [folder.id, folder]));
+  let flattened = 0;
+
+  const result = folders.map((folder) => {
+    // Profundidad 1 es la carpeta principal, así que una sin padre es la 2.
+    let parentId = folder.parentId ?? null;
+    let depth = 2;
+    let cursor = parentId ? byId.get(parentId) : undefined;
+
+    while (cursor) {
+      depth += 1;
+      cursor = cursor.parentId ? byId.get(cursor.parentId) : undefined;
+    }
+
+    if (depth <= MAX_DEPTH) return folder;
+
+    // Sube tantos escalones como sobren.
+    flattened += 1;
+    while (depth > MAX_DEPTH && parentId) {
+      parentId = byId.get(parentId)?.parentId ?? null;
+      depth -= 1;
+    }
+    return { ...folder, parentId };
+  });
+
+  return { folders: result, flattened };
+}
+
+/**
  * Convierte un fichero cualquiera en una biblioteca válida.
  *
  * Descarta lo que no tenga id o nombre, y recoloca lo que apunte a una carpeta
  * inexistente en lugar de dejar referencias rotas.
  */
-export function parseBackup(raw: unknown): LibraryState {
+export function parseBackup(raw: unknown): ImportResult {
   if (typeof raw !== 'object' || raw === null) {
     throw new ImportError('El archivo no contiene un objeto JSON.');
   }
 
   const source = raw as Raw;
 
-  const projects: Project[] = records(collectionOf(source, 'projects', 'proyectos')).flatMap(
+  let discarded = 0;
+
+  const rawProjects: Project[] = records(collectionOf(source, 'projects', 'proyectos')).flatMap(
     (item) => {
       const id = asString(item.id);
       const name = asString(item.name) ?? asString(item.nombre);
@@ -85,9 +143,13 @@ export function parseBackup(raw: unknown): LibraryState {
     }
   );
 
+  const deduped = dedupe(rawProjects);
+  const projects = deduped.unique;
+  discarded += deduped.dropped;
+
   const projectIds = new Set(projects.map((project) => project.id));
 
-  const folders: Folder[] = records(collectionOf(source, 'folders', 'carpetas')).flatMap((item) => {
+  const rawFolders: Folder[] = records(collectionOf(source, 'folders', 'carpetas')).flatMap((item) => {
     const id = asString(item.id);
     const name = asString(item.name) ?? asString(item.nombre);
     const projectId = asString(item.projectId);
@@ -106,6 +168,12 @@ export function parseBackup(raw: unknown): LibraryState {
     ];
   });
 
+  const dedupedFolders = dedupe(rawFolders);
+  discarded += dedupedFolders.dropped;
+
+  const clamped = clampDepth(dedupedFolders.unique);
+  const folders = clamped.folders;
+
   const folderIds = new Set(folders.map((folder) => folder.id));
 
   /** Deja la ubicación en algo que exista de verdad. */
@@ -116,7 +184,7 @@ export function parseBackup(raw: unknown): LibraryState {
     return { projectId, folderId: folderId && folderIds.has(folderId) ? folderId : null };
   };
 
-  const prompts: Prompt[] = records(collectionOf(source, 'prompts')).flatMap((item, index) => {
+  const rawPrompts: Prompt[] = records(collectionOf(source, 'prompts')).flatMap((item, index) => {
     const id = asString(item.id);
     const title = asString(item.title) ?? asString(item.titulo);
     const content = asString(item.content) ?? asString(item.contenido);
@@ -137,7 +205,11 @@ export function parseBackup(raw: unknown): LibraryState {
     ];
   });
 
-  const links: Link[] = records(collectionOf(source, 'links', 'enlaces')).flatMap((item, index) => {
+  const dedupedPrompts = dedupe(rawPrompts);
+  const prompts = dedupedPrompts.unique;
+  discarded += dedupedPrompts.dropped;
+
+  const rawLinks: Link[] = records(collectionOf(source, 'links', 'enlaces')).flatMap((item, index) => {
     const id = asString(item.id);
     const url = asString(item.url);
     if (!id || !url) return [];
@@ -157,15 +229,23 @@ export function parseBackup(raw: unknown): LibraryState {
     ];
   });
 
+  const dedupedLinks = dedupe(rawLinks);
+  const links = dedupedLinks.unique;
+  discarded += dedupedLinks.dropped;
+
   if (projects.length + folders.length + prompts.length + links.length === 0) {
     throw new ImportError('No se ha encontrado ningún prompt, enlace o carpeta en el archivo.');
   }
 
-  return { projects, folders, prompts, links };
+  return {
+    state: { projects, folders, prompts, links },
+    discarded,
+    flattened: clamped.flattened,
+  };
 }
 
 /** Lee y valida un fichero elegido por el usuario. */
-export async function readBackupFile(file: File): Promise<LibraryState> {
+export async function readBackupFile(file: File): Promise<ImportResult> {
   let raw: unknown;
   try {
     raw = JSON.parse(await file.text());

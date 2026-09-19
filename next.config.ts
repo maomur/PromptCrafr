@@ -10,10 +10,6 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: false,
     dirs: ['src'],
   },
-  images: {
-    // El logotipo vive en /public; no queda ninguna imagen remota.
-    remotePatterns: [],
-  },
 };
 
 export default nextConfig;

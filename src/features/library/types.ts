@@ -60,8 +60,6 @@ export type LinkInput = Pick<
 
 /** Cualquier recurso de la biblioteca que se pueda ordenar y archivar en un proyecto. */
 
-/** Cualquier recurso de la biblioteca que se pueda ordenar y archivar en un proyecto. */
-export type LibraryItem = Prompt | Link;
 
 /**
  * Qué parte de la biblioteca se está mirando.

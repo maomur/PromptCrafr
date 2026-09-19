@@ -21,7 +21,7 @@ const volcado = {
 
 describe('parseBackup', () => {
   it('lee un volcado completo e ignora los campos que sobran', () => {
-    const state = parseBackup(volcado);
+    const { state } = parseBackup(volcado);
 
     expect(state.projects).toEqual([
       { id: 'p1', name: 'Trabajo', description: null, createdAt: '2026-01-01T00:00:00.000Z' },
@@ -33,7 +33,7 @@ describe('parseBackup', () => {
   });
 
   it('descarta lo que no tiene identificador o contenido', () => {
-    const state = parseBackup({
+    const { state } = parseBackup({
       projects: [{ name: 'Sin id' }, { id: 'p1', name: 'Válido' }],
       prompts: [{ id: 'x', title: 'Sin contenido' }, { id: 'y', content: 'Sin título' }],
     });
@@ -43,7 +43,7 @@ describe('parseBackup', () => {
   });
 
   it('suelta los recursos que apuntan a una carpeta que no viene en el archivo', () => {
-    const state = parseBackup({
+    const { state } = parseBackup({
       projects: [{ id: 'p1', name: 'Trabajo' }],
       prompts: [
         { id: 'a', title: 'A', content: 'x', projectId: 'p1', folderId: 'no-existe' },
@@ -56,7 +56,7 @@ describe('parseBackup', () => {
   });
 
   it('descarta las carpetas cuyo proyecto no viene en el archivo', () => {
-    const state = parseBackup({
+    const { state } = parseBackup({
       projects: [{ id: 'p1', name: 'Trabajo' }],
       folders: [
         { id: 'f1', name: 'Válida', projectId: 'p1' },
@@ -68,7 +68,7 @@ describe('parseBackup', () => {
   });
 
   it('ignora una categoría que no conoce', () => {
-    const state = parseBackup({
+    const { state } = parseBackup({
       prompts: [{ id: 'a', title: 'A', content: 'x', category: 'Inventada' }],
     });
 
@@ -76,14 +76,14 @@ describe('parseBackup', () => {
   });
 
   it('pone fecha y posición cuando faltan, en lugar de dejarlas inválidas', () => {
-    const state = parseBackup({ prompts: [{ id: 'a', title: 'A', content: 'x' }] });
+    const { state } = parseBackup({ prompts: [{ id: 'a', title: 'A', content: 'x' }] });
 
     expect(Number.isNaN(Date.parse(state.prompts[0].createdAt))).toBe(false);
     expect(state.prompts[0].order).toBe(1);
   });
 
   it('acepta los nombres de colección en español', () => {
-    const state = parseBackup({ carpetas: [], enlaces: [{ id: 'l', url: 'https://x.com' }] });
+    const { state } = parseBackup({ carpetas: [], enlaces: [{ id: 'l', url: 'https://x.com' }] });
 
     expect(state.links).toHaveLength(1);
   });
@@ -100,9 +100,53 @@ describe('parseBackup', () => {
 
 describe('ida y vuelta', () => {
   it('lo exportado se vuelve a importar igual', () => {
-    const original: LibraryState = parseBackup(volcado);
-    const recuperado = parseBackup(createBackup(original));
+    const original: LibraryState = parseBackup(volcado).state;
+    const recuperado = parseBackup(createBackup(original)).state;
 
     expect(recuperado).toEqual(original);
+  });
+});
+
+describe('ajustes al importar', () => {
+  it('descarta los registros que repiten identificador y lo cuenta', () => {
+    const { state, discarded } = parseBackup({
+      prompts: [
+        { id: 'dup', title: 'Primero', content: 'a' },
+        { id: 'dup', title: 'Segundo', content: 'b' },
+        { id: 'otro', title: 'Otro', content: 'c' },
+      ],
+    });
+
+    // La base indexa por id: el segundo habría pisado al primero al guardar.
+    expect(state.prompts.map((p) => p.title)).toEqual(['Primero', 'Otro']);
+    expect(discarded).toBe(1);
+  });
+
+  it('sube de nivel las carpetas que exceden el límite, sin perderlas', () => {
+    const { state, flattened } = parseBackup({
+      projects: [{ id: 'p', name: 'Raíz' }],
+      folders: [
+        { id: 'f1', name: 'N1', projectId: 'p', parentId: null },
+        { id: 'f2', name: 'N2', projectId: 'p', parentId: 'f1' },
+        { id: 'f3', name: 'N3', projectId: 'p', parentId: 'f2' },
+        { id: 'f4', name: 'N4', projectId: 'p', parentId: 'f3' },
+      ],
+    });
+
+    expect(state.folders).toHaveLength(4);
+    // N3 y N4 pasan a colgar de N1, que es el ancestro que sí cabe.
+    expect(state.folders.find((f) => f.id === 'f3')?.parentId).toBe('f1');
+    expect(state.folders.find((f) => f.id === 'f4')?.parentId).toBe('f1');
+    expect(flattened).toBe(2);
+  });
+
+  it('no toca nada cuando el archivo ya cabe', () => {
+    const { discarded, flattened } = parseBackup({
+      projects: [{ id: 'p', name: 'Raíz' }],
+      folders: [{ id: 'f1', name: 'N1', projectId: 'p', parentId: null }],
+    });
+
+    expect(discarded).toBe(0);
+    expect(flattened).toBe(0);
   });
 });
