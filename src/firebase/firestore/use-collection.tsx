@@ -27,11 +27,14 @@ export interface UseCollectionResult<T> {
 /**
  * React hook to subscribe to a Firestore collection or query in real-time.
  */
-export function useCollection<T = any>(
+export function useCollection<T = DocumentData>(
     memoizedTargetRefOrQuery: ((CollectionReference<DocumentData> | Query<DocumentData>) & {__memo?: boolean})  | null | undefined,
 ): UseCollectionResult<T> {
   const [data, setData] = useState<WithId<T>[] | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  // Arrancamos en "cargando" si ya hay una consulta: el efecto que abre el
+  // listener corre despues del primer pintado y, sin esto, la interfaz
+  // mostraria un estado vacio durante un fotograma.
+  const [isLoading, setIsLoading] = useState<boolean>(!!memoizedTargetRefOrQuery);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
   useEffect(() => {
@@ -56,7 +59,7 @@ export function useCollection<T = any>(
         setError(null);
         setIsLoading(false);
       },
-      (err: FirestoreError) => {
+      (firestoreError: FirestoreError) => {
         // Safe path extraction for both CollectionReference and Query
         let path = 'unknown_query';
         if ('path' in memoizedTargetRefOrQuery) {
@@ -67,6 +70,7 @@ export function useCollection<T = any>(
           operation: 'list',
           path,
         });
+        contextualError.cause = firestoreError;
 
         setError(contextualError);
         setData([]); // Return empty list instead of null on error to avoid iterability issues

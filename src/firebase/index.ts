@@ -3,8 +3,14 @@
 
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getAuth, signOut } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore'
+import { getAuth, signOut, type Auth } from 'firebase/auth';
+import {
+  getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  type Firestore,
+} from 'firebase/firestore';
 
 // IMPORTANT: DO NOT MODIFY THIS FUNCTION
 export function initializeFirebase() {
@@ -25,15 +31,36 @@ export function initializeFirebase() {
   return getSdks(getApp());
 }
 
+/**
+ * Abre Firestore con caché persistente en IndexedDB.
+ *
+ * Es lo que hace que la aplicación siga siendo utilizable sin conexión: las
+ * lecturas se sirven desde el disco y las escrituras quedan en cola hasta que
+ * vuelve la red. `persistentMultipleTabManager` coordina varias pestañas, que
+ * de otro modo se pelearían por el mismo almacén.
+ */
+function openFirestore(firebaseApp: FirebaseApp): Firestore {
+  try {
+    return initializeFirestore(firebaseApp, {
+      localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+    });
+  } catch {
+    // Ya estaba inicializado (recarga en caliente) o el navegador no soporta
+    // IndexedDB: seguimos con la instancia en memoria.
+    return getFirestore(firebaseApp);
+  }
+}
+
 export function getSdks(firebaseApp: FirebaseApp) {
   return {
     firebaseApp,
     auth: getAuth(firebaseApp),
-    firestore: getFirestore(firebaseApp)
+    firestore: openFirestore(firebaseApp),
   };
 }
 
-export const logOut = (auth: any) => signOut(auth);
+/** Cierra la sesión actual. El listener de `onAuthStateChanged` hace el resto. */
+export const logOut = (auth: Auth) => signOut(auth);
 
 export * from './provider';
 export * from './client-provider';

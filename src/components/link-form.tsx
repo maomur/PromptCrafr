@@ -1,137 +1,202 @@
 'use client';
 
-import { useState } from 'react';
-import { promptCategories, type PromptCategory, type Project, type Link } from '@/lib/definitions';
-import { useToast } from '@/hooks/use-toast';
-import { Label } from '@/components/ui/label';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
+import LocationSelect from '@/components/location-select';
+import {
+  NO_SELECTION,
+  decodeLocation,
+  encodeLocation,
+  promptCategories,
+  type Folder,
+  type Link,
+  type LinkInput,
+  type Project,
+} from '@/lib/definitions';
+import {
+  fromSelect,
+  linkFormSchema,
+  normalizeUrl,
+  toCategory,
+  toSelect,
+  type LinkFormValues,
+} from '@/lib/schemas';
 
 interface LinkFormProps {
   link?: Link;
   projects: Project[];
-  onSave: (linkData: {
-    url: string;
-    projectId: string | null;
-    title?: string;
-    description?: string;
-    category?: PromptCategory | null;
-  }, id?: string) => void;
+  folders: Folder[];
+  onSave: (input: LinkInput, id?: string) => void;
   onClose: () => void;
 }
 
-export default function LinkForm({ link, projects, onSave, onClose }: LinkFormProps) {
-  const { toast } = useToast();
+export default function LinkForm({ link, projects, folders, onSave, onClose }: LinkFormProps) {
   const isEditMode = !!link;
-  
-  const [url, setUrl] = useState(link?.url || '');
-  const [projectId, setProjectId] = useState<string>(link?.projectId || 'none');
-  const [title, setTitle] = useState(link?.title || '');
-  const [description, setDescription] = useState(link?.description || '');
-  const [category, setCategory] = useState<PromptCategory | 'none'>(link?.category || 'none');
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!url.trim()) {
-      toast({
-        variant: 'destructive',
-        title: 'Campo incompleto',
-        description: 'La URL es obligatoria.',
-      });
-      return;
-    }
+  const form = useForm<LinkFormValues>({
+    resolver: zodResolver(linkFormSchema),
+    defaultValues: {
+      url: link?.url ?? '',
+      title: link?.title ?? '',
+      description: link?.description ?? '',
+      category: toSelect(link?.category),
+      location: encodeLocation({
+        projectId: link?.projectId ?? null,
+        folderId: link?.folderId ?? null,
+      }),
+    },
+  });
 
-    setIsSubmitting(true);
-    onSave({
-      url: url.trim(),
-      projectId: projectId === 'none' ? null : projectId,
-      title: title.trim() || undefined,
-      description: description.trim() || undefined,
-      category: category === 'none' ? null : (category as PromptCategory),
-    }, link?.id);
+  const handleSubmit = (values: LinkFormValues) => {
+    onSave(
+      {
+        url: normalizeUrl(values.url),
+        // Guardamos null en lugar de "" para que las tarjetas puedan distinguir
+        // "sin título" de un título vacío.
+        title: values.title || null,
+        description: values.description || null,
+        category: toCategory(fromSelect(values.category)),
+        ...decodeLocation(values.location, folders),
+      },
+      link?.id
+    );
+    onClose();
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="url">URL (Obligatorio)</Label>
-        <Input 
-          id="url" 
-          placeholder="https://ejemplo.com" 
-          type="url"
-          value={url} 
-          onChange={e => setUrl(e.target.value)} 
-          required
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="url"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>URL</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="ejemplo.com/pagina"
+                  inputMode="url"
+                  autoComplete="off"
+                  {...field}
+                />
+              </FormControl>
+              <FormDescription className="text-xs">
+                Si omites «https://» lo añadimos por ti.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="link-project-select">Proyecto</Label>
-        <Select value={projectId} onValueChange={setProjectId} modal={false}>
-          <SelectTrigger id="link-project-select">
-            <SelectValue placeholder="Selecciona un proyecto" />
-          </SelectTrigger>
-          <SelectContent position="popper" sideOffset={4}>
-            <SelectItem value="none">Sin proyecto (General)</SelectItem>
-            {projects.map((p) => (
-              <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+        <FormField
+          control={form.control}
+          name="location"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Ubicación</FormLabel>
+              <FormControl>
+                <LocationSelect
+                  projects={projects}
+                  folders={folders}
+                  value={field.value}
+                  onChange={field.onChange}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="link-title">Nombre (Opcional)</Label>
-          <Input 
-            id="link-title" 
-            placeholder="Título del enlace" 
-            value={title} 
-            onChange={e => setTitle(e.target.value)} 
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="title"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Nombre (opcional)</FormLabel>
+                <FormControl>
+                  <Input placeholder="Título del enlace" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="category"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Categoría (opcional)</FormLabel>
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona una categoría" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent position="popper" sideOffset={4}>
+                    <SelectItem value={NO_SELECTION}>Sin categoría</SelectItem>
+                    {promptCategories.map((category) => (
+                      <SelectItem key={category} value={category}>
+                        {category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
           />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="link-category-select">Categoría (Opcional)</Label>
-          <Select value={category} onValueChange={(value) => setCategory(value as PromptCategory | 'none')} modal={false}>
-            <SelectTrigger id="link-category-select">
-              <SelectValue placeholder="Selecciona una categoría" />
-            </SelectTrigger>
-            <SelectContent position="popper" sideOffset={4}>
-              <SelectItem value="none">Sin categoría</SelectItem>
-              {promptCategories.map((cat) => (
-                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="link-description">Descripción (Opcional)</Label>
-        <Textarea 
-          id="link-description" 
-          placeholder="Breve nota sobre este enlace..." 
-          value={description} 
-          onChange={e => setDescription(e.target.value)} 
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Descripción (opcional)</FormLabel>
+              <FormControl>
+                <Textarea placeholder="Breve nota sobre este enlace..." {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
 
-      <div className="flex justify-end pt-2">
-        <Button type="submit" disabled={isSubmitting} className="bg-orange-500 hover:bg-orange-600 text-white border-none">
-          {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {isEditMode ? 'Guardar Cambios' : 'Guardar Enlace'}
-        </Button>
-      </div>
-    </form>
+        <div className="flex justify-end gap-2 pt-2">
+          <Button type="button" variant="outline" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button
+            type="submit"
+            disabled={form.formState.isSubmitting}
+            className="border-none bg-orange-500 text-white hover:bg-orange-600"
+          >
+            {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isEditMode ? 'Guardar cambios' : 'Guardar enlace'}
+          </Button>
+        </div>
+      </form>
+    </Form>
   );
 }

@@ -1,92 +1,105 @@
-
 'use client';
 
-import {
-  Card,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import type { Link, Project } from '@/lib/definitions';
-import { formatDistanceToNow } from 'date-fns';
-import { es } from 'date-fns/locale';
-import { Badge } from '@/components/ui/badge';
-import { Link as LinkIcon, ExternalLink, Trash2, GripVertical, Eye, MoreVertical, FolderInput, Folder } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 import { useCallback, useMemo } from 'react';
+import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { ExternalLink, Folder as FolderIcon, GripVertical, Link as LinkIcon } from 'lucide-react';
+import ItemActions from '@/components/item-actions';
+import type { Folder, Link, Location, Project } from '@/lib/definitions';
+import { copyToClipboard } from '@/lib/clipboard';
+import { formatRelativeDate } from '@/lib/dates';
 import { useToast } from '@/hooks/use-toast';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 
 interface LinkCardProps {
   link: Link;
   projects: Project[];
-  onDelete: (id: string) => void;
+  folders: Folder[];
+  onDelete: (link: Link) => void;
   onEdit: (link: Link) => void;
-  onMoveToProject: (linkId: string, projectId: string | null) => void;
+  onMoveTo: (location: Location) => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
 }
 
-export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToProject }: LinkCardProps) {
+/** Muestra "ejemplo.com/ruta" en lugar de la URL completa cuando es muy larga. */
+function displayUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    return `${parsed.hostname.replace(/^www\./, '')}${parsed.pathname === '/' ? '' : parsed.pathname}`;
+  } catch {
+    return url;
+  }
+}
+
+export default function LinkCard({
+  link,
+  projects,
+  folders,
+  onDelete,
+  onEdit,
+  onMoveTo,
+  onMoveUp,
+  onMoveDown,
+}: LinkCardProps) {
   const { toast } = useToast();
 
-  const project = useMemo(() => 
-    projects.find(p => p.id === link.projectId),
+  const project = useMemo(
+    () => projects.find((p) => p.id === link.projectId),
     [projects, link.projectId]
   );
 
-  const handleCardClick = useCallback((event: React.MouseEvent) => {
-    const target = event.target as HTMLElement;
-    if (
-      target.closest('button') || 
-      target.closest('.drag-handle') || 
-      target.closest('[role="menuitem"]') ||
-      target.closest('[role="menu"]')
-    ) {
-      return;
-    }
-
-    navigator.clipboard.writeText(link.url);
-    toast({
-      title: 'Enlace Copiado',
-      description: 'La URL se ha copiado a tu portapapeles.',
-    });
+  const copyUrl = useCallback(async () => {
+    const copied = await copyToClipboard(link.url);
+    toast(
+      copied
+        ? { title: 'Enlace copiado', description: 'La URL está en tu portapapeles.' }
+        : {
+            variant: 'destructive',
+            title: 'No se ha podido copiar',
+            description: 'Tu navegador ha bloqueado el acceso al portapapeles.',
+          }
+    );
   }, [link.url, toast]);
 
+  const handleCardClick = useCallback(
+    (event: React.MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (target.closest('button, a, [role="menuitem"], [role="menu"], .drag-handle')) return;
+      void copyUrl();
+    },
+    [copyUrl]
+  );
+
   return (
-    <Card 
+    <Card
       onClick={handleCardClick}
-      className="group flex flex-col h-full rounded-xl border-border/20 bg-card shadow-md transition-all duration-300 hover:shadow-lg relative overflow-hidden"
+      className="group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-xl border-border/20 bg-card shadow-md transition-all duration-300 hover:shadow-lg"
     >
-      {/* DRAG HANDLE: Now passive for SortableJS */}
-      <div className="drag-handle absolute top-0 right-0 p-3 z-10">
-        <GripVertical className="h-5 w-5 text-muted-foreground opacity-50 group-hover:opacity-100 transition-opacity" />
+      <div className="drag-handle absolute right-0 top-0 p-3 z-10" aria-hidden="true">
+        <GripVertical className="h-5 w-5 text-muted-foreground opacity-50 transition-opacity group-hover:opacity-100" />
       </div>
 
-      <CardHeader className="pt-6 md:pt-10 space-y-4">
+      <CardHeader className="space-y-4 pt-6 md:pt-10">
         <div className="flex flex-wrap items-center gap-2 pr-10">
           {project && (
-            <Badge variant="secondary" className="text-[11px] h-6 bg-muted text-muted-foreground font-normal border-none flex items-center gap-1.5 px-2.5">
-              <Folder className="h-4 w-4" />
+            <Badge
+              variant="secondary"
+              className="flex h-6 items-center gap-1.5 border-none bg-muted px-2.5 text-[11px] font-normal text-muted-foreground"
+            >
+              <FolderIcon className="h-4 w-4" />
               {project.name}
             </Badge>
           )}
           <div className="flex items-center gap-1.5">
-            <div className="p-1 bg-orange-100 rounded-md">
-              <LinkIcon className="h-4 w-4 text-orange-600" />
+            <div className="rounded-md bg-orange-100 p-1 dark:bg-orange-900/40">
+              <LinkIcon className="h-4 w-4 text-orange-600 dark:text-orange-400" />
             </div>
             {link.category && (
-              <Badge variant="secondary" className="text-[11px] py-0 h-6 px-2.5 font-medium bg-orange-50 text-orange-700 border-orange-100">
+              <Badge
+                variant="secondary"
+                className="h-6 border-orange-100 bg-orange-50 px-2.5 py-0 text-[11px] font-medium text-orange-700 dark:border-orange-900/40 dark:bg-orange-900/30 dark:text-orange-300"
+              >
                 {link.category}
               </Badge>
             )}
@@ -94,96 +107,48 @@ export default function LinkCard({ link, projects, onDelete, onEdit, onMoveToPro
         </div>
 
         <div className="space-y-1.5">
-          <CardTitle className="text-base font-bold truncate">
+          <CardTitle className="truncate text-base font-bold">
             {link.title || 'Enlace sin título'}
           </CardTitle>
           {link.description && (
-            <CardDescription className="text-[11px] line-clamp-2 leading-relaxed">
+            <CardDescription className="line-clamp-2 text-[11px] leading-relaxed">
               {link.description}
             </CardDescription>
           )}
-          <p className="text-[10px] font-mono text-muted-foreground truncate opacity-60 pt-1">
-            {link.url}
+          <p className="truncate pt-1 font-mono text-[10px] text-muted-foreground opacity-60" title={link.url}>
+            {displayUrl(link.url)}
           </p>
         </div>
       </CardHeader>
-      
+
       <div className="flex-grow" />
-      
-      <CardFooter className="flex items-center justify-between text-[10px] text-muted-foreground pb-4 pt-0">
-        <span className="opacity-70">
-          {formatDistanceToNow(new Date(link.createdAt), { addSuffix: true, locale: es })}
-        </span>
-        <div className="flex items-center gap-0.5 no-copy">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-8 w-8 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+
+      <CardFooter className="flex items-center justify-between pb-4 pt-0 text-[10px] text-muted-foreground">
+        <span className="opacity-70">{formatRelativeDate(link.createdAt)}</span>
+        <ItemActions
+          label="enlace"
+          projects={projects}
+          folders={folders}
+          location={{ projectId: link.projectId ?? null, folderId: link.folderId ?? null }}
+          onCopy={copyUrl}
+          onEdit={() => onEdit(link)}
+          onDelete={() => onDelete(link)}
+          onMoveTo={onMoveTo}
+          onMoveUp={onMoveUp}
+          onMoveDown={onMoveDown}
+        >
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-orange-600 hover:bg-orange-50 hover:text-orange-700 dark:hover:bg-orange-900/30"
             asChild
           >
-            <a href={link.url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+            <a href={link.url} target="_blank" rel="noopener noreferrer">
               <ExternalLink className="h-4 w-4" />
-              <span className="sr-only">Abrir</span>
+              <span className="sr-only">Abrir enlace en una pestaña nueva</span>
             </a>
           </Button>
-
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-8 w-8"
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit(link);
-            }}
-          >
-            <Eye className="h-4 w-4" />
-            <span className="sr-only">Ver detalles</span>
-          </Button>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
-                <MoreVertical className="h-4 w-4" />
-                <span className="sr-only">Opciones</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56" onClick={(e) => e.stopPropagation()}>
-              <DropdownMenuLabel>Organizar</DropdownMenuLabel>
-              
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger>
-                  <FolderInput className="mr-2 h-4 w-4" />
-                  Mover a Proyecto
-                </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent>
-                  <DropdownMenuItem onSelect={() => onMoveToProject(link.id, null)}>
-                    Sin Proyecto
-                  </DropdownMenuItem>
-                  {projects.length > 0 && <DropdownMenuSeparator />}
-                  {projects.map((p) => (
-                    <DropdownMenuItem 
-                      key={p.id} 
-                      onSelect={() => onMoveToProject(link.id, p.id)}
-                      disabled={link.projectId === p.id}
-                    >
-                      {p.name}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
-
-              <DropdownMenuSeparator />
-              
-              <DropdownMenuItem 
-                className="text-destructive focus:bg-destructive focus:text-destructive-foreground"
-                onSelect={() => onDelete(link.id)}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Eliminar
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+        </ItemActions>
       </CardFooter>
     </Card>
   );

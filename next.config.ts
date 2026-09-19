@@ -1,40 +1,18 @@
-import type {NextConfig} from 'next';
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Los errores de tipos y de lint rompen el build a propósito: antes estaban
+  // silenciados y el despliegue no protegía de nada.
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
+    dirs: ['src'],
   },
   images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'placehold.co',
-        port: '',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'images.unsplash.com',
-        port: '',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'picsum.photos',
-        port: '',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'www.pulseai.ws',
-        port: '',
-        pathname: '/**',
-      },
-    ],
+    // El logotipo vive en /public; no queda ninguna imagen remota.
+    remotePatterns: [],
   },
 };
 

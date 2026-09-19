@@ -1,150 +1,190 @@
 'use client';
 
-import { useState } from 'react';
-import { type Prompt, promptCategories, type PromptCategory, type Project } from '@/lib/definitions';
-import { useToast } from '@/hooks/use-toast';
-import { Label } from '@/components/ui/label';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/ui/select';
-import SubmitButton from './submit-button';
+import LocationSelect from '@/components/location-select';
+import {
+  NO_SELECTION,
+  decodeLocation,
+  encodeLocation,
+  promptCategories,
+  type Folder,
+  type Project,
+  type Prompt,
+  type PromptInput,
+} from '@/lib/definitions';
+import {
+  fromSelect,
+  promptFormSchema,
+  toCategory,
+  toSelect,
+  type PromptFormValues,
+} from '@/lib/schemas';
 
 interface PromptFormProps {
   prompt?: Prompt;
-  projects?: Project[];
-  onSave: (promptData: {
-    title: string;
-    description: string;
-    content: string;
-    category: PromptCategory | null;
-    projectId: string | null;
-  }, id?: string) => void;
+  projects: Project[];
+  folders: Folder[];
+  onSave: (input: PromptInput, id?: string) => void;
   onClose: () => void;
 }
 
-export default function PromptForm({ prompt, projects = [], onSave, onClose }: PromptFormProps) {
-  const { toast } = useToast();
+export default function PromptForm({ prompt, projects, folders, onSave, onClose }: PromptFormProps) {
   const isEditMode = !!prompt;
-  
-  const [title, setTitle] = useState(prompt?.title || '');
-  const [description, setDescription] = useState(prompt?.description || '');
-  const [category, setCategory] = useState<PromptCategory | 'none'>(prompt?.category || 'none');
-  const [projectId, setProjectId] = useState<string>(prompt?.projectId || 'none');
-  const [content, setContent] = useState(prompt?.content || '');
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const validate = () => {
-    const newErrors: Record<string, string> = {};
-    if (!title.trim()) newErrors.title = 'El título es obligatorio.';
-    if (!description.trim()) newErrors.description = 'La descripción es obligatoria.';
-    if (!content.trim()) newErrors.content = 'El contenido es obligatorio.';
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  const form = useForm<PromptFormValues>({
+    resolver: zodResolver(promptFormSchema),
+    defaultValues: {
+      title: prompt?.title ?? '',
+      description: prompt?.description ?? '',
+      content: prompt?.content ?? '',
+      category: toSelect(prompt?.category),
+      location: encodeLocation({
+        projectId: prompt?.projectId ?? null,
+        folderId: prompt?.folderId ?? null,
+      }),
+    },
+  });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isSubmitting) return;
-
-    if (validate()) {
-      setIsSubmitting(true);
-      onSave({ 
-        title: title.trim(), 
-        description: description.trim(), 
-        content: content.trim(), 
-        category: category === 'none' ? null : (category as PromptCategory),
-        projectId: projectId === 'none' ? null : projectId
-      }, prompt?.id);
-    } else {
-      toast({
-        variant: 'destructive',
-        title: 'Formulario incompleto',
-        description: 'Por favor, completa todos los campos obligatorios.',
-      });
-    }
+  const handleSubmit = (values: PromptFormValues) => {
+    onSave(
+      {
+        title: values.title,
+        description: values.description,
+        content: values.content,
+        category: toCategory(fromSelect(values.category)),
+        ...decodeLocation(values.location, folders),
+      },
+      prompt?.id
+    );
+    onClose();
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor='title'>Título</Label>
-          <Input 
-            id='title' 
-            name="title" 
-            placeholder="Ej: Asistente de Código" 
-            value={title} 
-            onChange={e => setTitle(e.target.value)} 
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="title"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Título</FormLabel>
+                <FormControl>
+                  <Input placeholder="Ej: Asistente de Código" autoComplete="off" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-          {errors.title && <p className="text-xs font-medium text-destructive">{errors.title}</p>}
+
+          <FormField
+            control={form.control}
+            name="location"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Ubicación</FormLabel>
+                <FormControl>
+                  <LocationSelect
+                    projects={projects}
+                    folders={folders}
+                    value={field.value}
+                    onChange={field.onChange}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="project-select">Proyecto</Label>
-          <Select value={projectId} onValueChange={setProjectId} modal={false}>
-            <SelectTrigger id="project-select">
-              <SelectValue placeholder="Selecciona un proyecto" />
-            </SelectTrigger>
-            <SelectContent position="popper" sideOffset={4}>
-              <SelectItem value="none">Sin proyecto (General)</SelectItem>
-              {projects.map((p) => (
-                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      
-      <div className="space-y-2">
-          <Label htmlFor='description'>Descripción</Label>
-          <Input 
-            id='description' 
-            name="description" 
-            placeholder="Breve resumen de para qué sirve..." 
-            value={description} 
-            onChange={e => setDescription(e.target.value)} 
-          />
-          {errors.description && <p className="text-xs font-medium text-destructive">{errors.description}</p>}
-      </div>
-      
-      <div className="space-y-2">
-          <Label htmlFor="category-select">Categoría (Opcional)</Label>
-          <Select value={category} onValueChange={(value) => setCategory(value as PromptCategory | 'none')} modal={false}>
-            <SelectTrigger id="category-select">
-              <SelectValue placeholder="Selecciona una categoría" />
-            </SelectTrigger>
-            <SelectContent position="popper" sideOffset={4}>
-              <SelectItem value="none">Sin categoría</SelectItem>
-              {promptCategories.map((cat) => (
-                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor='content'>Contenido del Prompt</Label>
-        <Textarea
-          id='content'
-          name="content"
-          placeholder="Escribe el prompt completo aquí..."
-          className="min-h-[150px] font-mono text-sm"
-          value={content} 
-          onChange={e => setContent(e.target.value)}
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Descripción</FormLabel>
+              <FormControl>
+                <Input placeholder="Breve resumen de para qué sirve..." {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-        {errors.content && <p className="text-xs font-medium text-destructive">{errors.content}</p>}
-      </div>
 
-      <div className="flex justify-end pt-2">
-        <SubmitButton isEditMode={isEditMode} isPending={isSubmitting} />
-      </div>
-    </form>
+        <FormField
+          control={form.control}
+          name="category"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Categoría (opcional)</FormLabel>
+              <Select value={field.value} onValueChange={field.onChange}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona una categoría" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent position="popper" sideOffset={4}>
+                  <SelectItem value={NO_SELECTION}>Sin categoría</SelectItem>
+                  {promptCategories.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="content"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Contenido del prompt</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="Escribe el prompt completo aquí..."
+                  className="min-h-[150px] font-mono text-sm"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <div className="flex justify-end gap-2 pt-2">
+          <Button type="button" variant="outline" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={form.formState.isSubmitting}>
+            {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isEditMode ? 'Guardar cambios' : 'Crear prompt'}
+          </Button>
+        </div>
+      </form>
+    </Form>
   );
 }

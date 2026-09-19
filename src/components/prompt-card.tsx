@@ -1,34 +1,30 @@
-
 'use client';
 
-import {
-  Card,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import type { Prompt, Project } from '@/lib/definitions';
-import { formatDistanceToNow } from 'date-fns';
-import { es } from 'date-fns/locale';
-import PromptCardActions from './prompt-card-actions';
+import { useCallback, useMemo } from 'react';
+import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Video, Image, FileText, Sparkles, GripVertical, Folder } from 'lucide-react';
+import { FileText, Folder as FolderIcon, GripVertical, Image as ImageIcon, Sparkles, Video } from 'lucide-react';
+import ItemActions from '@/components/item-actions';
+import type { Folder, Location, Project, Prompt } from '@/lib/definitions';
+import { copyToClipboard } from '@/lib/clipboard';
+import { formatRelativeDate } from '@/lib/dates';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { useCallback, useMemo } from 'react';
 
 interface PromptCardProps {
   prompt: Prompt;
   projects: Project[];
-  onDelete: (id: string) => void;
+  folders: Folder[];
+  onDelete: (prompt: Prompt) => void;
   onEdit: (prompt: Prompt) => void;
-  onMoveToProject: (promptId: string, projectId: string | null) => void;
+  onMoveTo: (location: Location) => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
 }
 
 const categoryIcons = {
   Video: <Video className="mr-1.5 h-4 w-4" />,
-  Imagen: <Image className="mr-1.5 h-4 w-4" />,
+  Imagen: <ImageIcon className="mr-1.5 h-4 w-4" />,
   Textos: <FileText className="mr-1.5 h-4 w-4" />,
   Otros: <Sparkles className="mr-1.5 h-4 w-4" />,
 };
@@ -38,71 +34,85 @@ const categoryColors = {
   Imagen: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300',
   Textos: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300',
   Otros: 'bg-gray-100 text-gray-800 dark:bg-gray-700/50 dark:text-gray-300',
-}
+};
 
-export default function PromptCard({ 
-  prompt, 
+export default function PromptCard({
+  prompt,
   projects,
-  onDelete, 
-  onEdit, 
-  onMoveToProject
+  folders,
+  onDelete,
+  onEdit,
+  onMoveTo,
+  onMoveUp,
+  onMoveDown,
 }: PromptCardProps) {
   const { toast } = useToast();
 
-  const project = useMemo(() => 
-    projects.find(p => p.id === prompt.projectId),
+  const project = useMemo(
+    () => projects.find((p) => p.id === prompt.projectId),
     [projects, prompt.projectId]
   );
 
-  const handleCardClick = useCallback((event: React.MouseEvent) => {
-    const target = event.target as HTMLElement;
-    if (
-      target.closest('button') || 
-      target.closest('.drag-handle') || 
-      target.closest('[role="menuitem"]') ||
-      target.closest('[role="menu"]')
-    ) {
-      return;
-    }
-
-    navigator.clipboard.writeText(prompt.content);
-    toast({
-      title: 'Prompt Copiado',
-      description: 'El contenido se ha copiado a tu portapapeles.',
-    });
+  const copyContent = useCallback(async () => {
+    const copied = await copyToClipboard(prompt.content);
+    toast(
+      copied
+        ? { title: 'Prompt copiado', description: 'El contenido está en tu portapapeles.' }
+        : {
+            variant: 'destructive',
+            title: 'No se ha podido copiar',
+            description: 'Tu navegador ha bloqueado el acceso al portapapeles.',
+          }
+    );
   }, [prompt.content, toast]);
 
+  // Un clic en cualquier zona "muerta" de la tarjeta copia el prompt. Los
+  // controles interactivos y el asa de arrastre quedan excluidos.
+  const handleCardClick = useCallback(
+    (event: React.MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (target.closest('button, a, [role="menuitem"], [role="menu"], .drag-handle')) return;
+      void copyContent();
+    },
+    [copyContent]
+  );
+
   return (
-    <Card 
+    <Card
       onClick={handleCardClick}
-      className="group flex h-full flex-col rounded-xl border-border/20 bg-card text-card-foreground shadow-md transition-all duration-300 hover:shadow-lg relative overflow-hidden"
+      className="group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-xl border-border/20 bg-card text-card-foreground shadow-md transition-all duration-300 hover:shadow-lg"
     >
-      {/* DRAG HANDLE: Now passive for SortableJS */}
-      <div className="drag-handle absolute top-0 right-0 p-3 z-10">
-        <GripVertical className="h-5 w-5 text-muted-foreground opacity-50 group-hover:opacity-100 transition-opacity" />
+      <div className="drag-handle absolute right-0 top-0 p-3 z-10" aria-hidden="true">
+        <GripVertical className="h-5 w-5 text-muted-foreground opacity-50 transition-opacity group-hover:opacity-100" />
       </div>
 
-      <CardHeader className="pt-6 md:pt-10 space-y-4">
+      <CardHeader className="space-y-4 pt-6 md:pt-10">
         <div className="flex flex-wrap items-center gap-2 pr-10">
           {project && (
-            <Badge variant="secondary" className="text-[11px] h-6 bg-muted text-muted-foreground font-normal border-none flex items-center gap-1.5 px-2.5">
-              <Folder className="h-4 w-4" />
+            <Badge
+              variant="secondary"
+              className="flex h-6 items-center gap-1.5 border-none bg-muted px-2.5 text-[11px] font-normal text-muted-foreground"
+            >
+              <FolderIcon className="h-4 w-4" />
               {project.name}
             </Badge>
           )}
           {prompt.category && (
-            <Badge 
+            <Badge
               variant="outline"
-              className={cn("flex items-center border-0 text-[11px] px-2.5 py-0 h-6 font-medium shrink-0", categoryColors[prompt.category])}
+              className={cn(
+                'flex h-6 shrink-0 items-center border-0 px-2.5 py-0 text-[11px] font-medium',
+                categoryColors[prompt.category]
+              )}
             >
               {categoryIcons[prompt.category]}
               {prompt.category}
             </Badge>
           )}
         </div>
-        
+
         <div className="space-y-1.5">
-          <CardTitle className="font-bold tracking-tight text-base truncate">
+          <CardTitle className="truncate text-base font-bold tracking-tight">
             {prompt.title}
           </CardTitle>
           <CardDescription className="line-clamp-2 text-[11px] leading-relaxed">
@@ -110,22 +120,23 @@ export default function PromptCard({
           </CardDescription>
         </div>
       </CardHeader>
-      
+
       <div className="flex-grow" />
-      
-      <CardFooter className="flex items-center justify-between text-[10px] text-muted-foreground pb-4 pt-0">
-        <span className="opacity-70">
-          {formatDistanceToNow(new Date(prompt.createdAt), { addSuffix: true, locale: es })}
-        </span>
-        <div className="no-copy">
-          <PromptCardActions 
-            prompt={prompt} 
-            projects={projects}
-            onDelete={onDelete} 
-            onEdit={() => onEdit(prompt)}
-            onMoveToProject={onMoveToProject}
-          />
-        </div>
+
+      <CardFooter className="flex items-center justify-between pb-4 pt-0 text-[10px] text-muted-foreground">
+        <span className="opacity-70">{formatRelativeDate(prompt.createdAt)}</span>
+        <ItemActions
+          label="prompt"
+          projects={projects}
+          folders={folders}
+          location={{ projectId: prompt.projectId ?? null, folderId: prompt.folderId ?? null }}
+          onCopy={copyContent}
+          onEdit={() => onEdit(prompt)}
+          onDelete={() => onDelete(prompt)}
+          onMoveTo={onMoveTo}
+          onMoveUp={onMoveUp}
+          onMoveDown={onMoveDown}
+        />
       </CardFooter>
     </Card>
   );

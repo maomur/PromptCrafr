@@ -12,19 +12,30 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 
+/**
+ * `beforeinstallprompt` es una extensión de Chromium que todavía no está en
+ * ninguna especificación, así que no existe en las librerías de TypeScript.
+ */
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
+
 const SNOOZE_KEY = 'pwa_install_snooze_until';
 const SNOOZE_DAYS = 7;
 
 export default function InstallPWABanner() {
-  const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showBanner, setShowBanner] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
 
   useEffect(() => {
     // 1. Verificar si ya está en modo standalone (instalada)
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches 
-      || (window.navigator as any).standalone 
-      || document.referrer.includes('android-app://');
+    const isStandalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      // Safari en iOS usa una propiedad propia en lugar de `display-mode`.
+      (window.navigator as Navigator & { standalone?: boolean }).standalone === true ||
+      document.referrer.includes('android-app://');
 
     if (isStandalone) return;
 
@@ -40,21 +51,22 @@ export default function InstallPWABanner() {
     setIsIOS(isAppleDevice);
 
     // Manejar evento de instalación en Android/Windows
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
-      setInstallPrompt(e);
+    const handleBeforeInstallPrompt = (event: Event) => {
+      event.preventDefault();
+      setInstallPrompt(event as BeforeInstallPromptEvent);
       setShowBanner(true);
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-    // En iOS, sugerir instalación después de unos segundos
-    if (isAppleDevice) {
-      const timer = setTimeout(() => setShowBanner(true), 4000);
-      return () => clearTimeout(timer);
-    }
+    // Safari no dispara `beforeinstallprompt`, así que en iOS mostramos las
+    // instrucciones manuales tras unos segundos.
+    const timer = isAppleDevice ? setTimeout(() => setShowBanner(true), 4000) : undefined;
 
-    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      if (timer) clearTimeout(timer);
+    };
   }, []);
 
   const snoozeInstallation = () => {

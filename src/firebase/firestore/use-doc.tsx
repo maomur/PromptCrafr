@@ -38,13 +38,16 @@ export interface UseDocResult<T> {
  * The Firestore DocumentReference. Waits if null/undefined.
  * @returns {UseDocResult<T>} Object with data, isLoading, error.
  */
-export function useDoc<T = any>(
+export function useDoc<T = DocumentData>(
   memoizedDocRef: DocumentReference<DocumentData> | null | undefined,
 ): UseDocResult<T> {
   type StateDataType = WithId<T> | null;
 
   const [data, setData] = useState<StateDataType>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  // Arrancamos en "cargando" si ya hay una consulta: el efecto que abre el
+  // listener corre despues del primer pintado y, sin esto, la interfaz
+  // mostraria un estado vacio durante un fotograma.
+  const [isLoading, setIsLoading] = useState<boolean>(!!memoizedDocRef);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
   useEffect(() => {
@@ -71,11 +74,12 @@ export function useDoc<T = any>(
         setError(null); // Clear any previous error on successful snapshot (even if doc doesn't exist)
         setIsLoading(false);
       },
-      (error: FirestoreError) => {
+      (firestoreError: FirestoreError) => {
         const contextualError = new FirestorePermissionError({
           operation: 'get',
           path: memoizedDocRef.path,
         })
+        contextualError.cause = firestoreError;
 
         setError(contextualError)
         setData(null)

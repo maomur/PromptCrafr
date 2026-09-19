@@ -5,63 +5,232 @@
       "description": "Represents a folder or project for organizing prompts.",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "ownerId": { "type": "string" }
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "ownerId": {
+          "type": "string"
+        }
       },
-      "required": ["id", "name", "createdAt", "ownerId"]
+      "required": [
+        "id",
+        "name",
+        "createdAt",
+        "ownerId"
+      ]
     },
     "Prompt": {
       "title": "Prompt",
       "description": "Represents a single AI prompt owned by a user.",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
-        "title": { "type": "string" },
-        "description": { "type": "string" },
-        "content": { "type": "string" },
-        "category": { "type": "string", "enum": ["Video", "Imagen", "Textos", "Otros"] },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "updatedAt": { "type": "string", "format": "date-time" },
-        "projectId": { "type": "string" },
-        "ownerId": { "type": "string" },
-        "order": { "type": "integer", "description": "The position of the prompt in the list." }
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string"
+        },
+        "category": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "Video",
+            "Imagen",
+            "Textos",
+            "Otros",
+            null
+          ]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "projectId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Proyecto al que pertenece, o null si está sin clasificar."
+        },
+        "ownerId": {
+          "type": "string"
+        },
+        "order": {
+          "type": "integer",
+          "description": "Posición en la lista; un valor mayor aparece antes."
+        },
+        "folderId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Carpeta dentro del proyecto, o null si está suelto en él."
+        }
       },
-      "required": ["id", "title", "content", "createdAt", "updatedAt", "ownerId"]
+      "required": [
+        "id",
+        "title",
+        "content",
+        "createdAt",
+        "updatedAt",
+        "ownerId",
+        "order"
+      ]
     },
     "Link": {
       "title": "Link",
       "description": "Represents a bookmarked URL within a project.",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
-        "url": { "type": "string", "format": "uri" },
-        "projectId": { "type": "string" },
-        "title": { "type": "string" },
-        "description": { "type": "string" },
-        "category": { "type": "string", "enum": ["Video", "Imagen", "Textos", "Otros"] },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "ownerId": { "type": "string" },
-        "order": { "type": "integer", "description": "The position of the link in the list." }
+        "id": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "projectId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Proyecto al que pertenece, o null si está sin clasificar."
+        },
+        "title": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "category": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "Video",
+            "Imagen",
+            "Textos",
+            "Otros",
+            null
+          ]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "ownerId": {
+          "type": "string"
+        },
+        "order": {
+          "type": "integer",
+          "description": "Posición en la lista; un valor mayor aparece antes."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "folderId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Carpeta dentro del proyecto, o null si está suelto en él."
+        }
       },
-      "required": ["id", "url", "createdAt", "ownerId"]
+      "required": [
+        "id",
+        "url",
+        "createdAt",
+        "ownerId",
+        "order"
+      ]
+    },
+    "Folder": {
+      "title": "Folder",
+      "description": "Subdivisión dentro de un proyecto. La jerarquía tiene dos niveles: proyecto y carpeta.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "projectId": {
+          "type": "string",
+          "description": "Proyecto contenedor. Una carpeta nunca existe fuera de un proyecto."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "ownerId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "projectId",
+        "createdAt",
+        "ownerId"
+      ]
     }
   },
   "auth": {
-    "providers": ["anonymous", "password"]
+    "providers": [
+      "password"
+    ]
   },
   "firestore": {
     "/users/{userId}/projects/{projectId}": {
-      "schema": { "$ref": "#/backend/entities/Project" },
+      "schema": {
+        "$ref": "#/backend/entities/Project"
+      },
       "description": "User-specific projects for prompt organization."
     },
+    "/users/{userId}/folders/{folderId}": {
+      "schema": {
+        "$ref": "#/backend/entities/Folder"
+      },
+      "description": "Carpetas de los proyectos del usuario."
+    },
     "/users/{userId}/prompts/{promptId}": {
-      "schema": { "$ref": "#/backend/entities/Prompt" },
+      "schema": {
+        "$ref": "#/backend/entities/Prompt"
+      },
       "description": "User-specific AI prompts."
     },
     "/users/{userId}/links/{linkId}": {
-      "schema": { "$ref": "#/backend/entities/Link" },
+      "schema": {
+        "$ref": "#/backend/entities/Link"
+      },
       "description": "User-specific links or bookmarks."
     }
   }

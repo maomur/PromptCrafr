@@ -1,26 +1,20 @@
-import { MetadataRoute } from 'next'
+import type { MetadataRoute } from 'next';
+import { APP_DESCRIPTION, APP_NAME, BRAND_COLOR } from '@/lib/constants';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'PromptCraft',
-    short_name: 'PromptCraft',
-    description: 'Gestiona tus prompts creativos con facilidad.',
+    name: APP_NAME,
+    short_name: APP_NAME,
+    description: APP_DESCRIPTION,
     start_url: '/',
     display: 'standalone',
     background_color: '#ffffff',
-    theme_color: '#007AFF',
+    theme_color: BRAND_COLOR,
+    lang: 'es',
     icons: [
-      {
-        src: 'https://www.pulseai.ws/logo193.png',
-        sizes: '192x192',
-        type: 'image/png',
-        purpose: 'maskable',
-      },
-      {
-        src: 'https://www.pulseai.ws/logo193.png',
-        sizes: '512x512',
-        type: 'image/png',
-      },
+      { src: '/icons/logo-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+      { src: '/icons/logo-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+      { src: '/icons/logo-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
     ],
-  }
+  };
 }

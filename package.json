@@ -1,16 +1,16 @@
-
 {
-  "name": "nextn",
+  "name": "promptcraft",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack -p 9002",
-    "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
-    "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
-    "build": "NODE_ENV=production next build",
+    "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck && npm run lint",
+    "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
+    "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts"
   },
   "dependencies": {
     "@genkit-ai/google-genai": "^1.20.0",
@@ -63,9 +63,12 @@
     "@types/react": "^19.2.1",
     "@types/react-dom": "^19.2.1",
     "@types/sortablejs": "^1.15.8",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^15.5.9",
     "genkit-cli": "^1.20.0",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
-  }
+  },
+  "description": "Biblioteca personal de prompts y enlaces, sincronizada con Firebase."
 }

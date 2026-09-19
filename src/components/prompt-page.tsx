@@ -1,19 +1,24 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
-import type { Prompt, PromptCategory, Project, Link } from '@/lib/definitions';
-import { promptCategories } from '@/lib/definitions';
+import { useCallback, useDeferredValue, useMemo, useState } from 'react';
+import type { User } from 'firebase/auth';
+import { Link as LinkIcon, Loader2, LogOut, Plus, Sparkles } from 'lucide-react';
+
 import Header from '@/components/header';
-import PromptList from '@/components/prompt-list';
-import LinkList from '@/components/link-list';
 import EmptyState from '@/components/empty-state';
-import PromptForm from '@/components/prompt-form';
+import LinkCard from '@/components/link-card';
 import LinkForm from '@/components/link-form';
+import PromptCard from '@/components/prompt-card';
+import PromptForm from '@/components/prompt-form';
+import LibraryToolbar from '@/components/library-toolbar';
+import NameDialog, { type NameDialogRequest } from '@/components/name-dialog';
+import ProjectSidebar from '@/components/project-sidebar';
+import SortableGrid from '@/components/sortable-grid';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -28,477 +33,476 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { 
-  Plus, 
-  Folder, 
-  Folders, 
-  Trash2, 
-  Filter,
-  Loader2,
-  LogOut,
-  Link as LinkIcon,
-  Sparkles
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { useLibrary, type ItemKind } from '@/hooks/use-library';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  useFirestore, 
-  useAuth, 
-  useCollection, 
-  useMemoFirebase,
-  logOut,
-  updateDocumentNonBlocking,
-  deleteDocumentNonBlocking,
-  setDocumentNonBlocking
-} from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
-import type { User } from 'firebase/auth';
+import { logOut, useAuth } from '@/firebase';
+import {
+  matchesFilter,
+  type Folder,
+  type LibraryFilter,
+  type Link,
+  type Location,
+  type Project,
+  type Prompt,
+  type PromptCategory,
+} from '@/lib/definitions';
+import { matchesQuery, parseQuery } from '@/lib/search';
 
-interface PromptPageProps {
-  user: User;
+const ALL_CATEGORIES = 'Todos';
+type CategoryFilter = PromptCategory | typeof ALL_CATEGORIES;
+
+/** Ubicación de un recurso, tolerando documentos antiguos sin `folderId`. */
+function locationOf(item: { projectId: string | null; folderId?: string | null }): Location {
+  return { projectId: item.projectId ?? null, folderId: item.folderId ?? null };
 }
 
-export default function PromptPage({ user }: PromptPageProps) {
-  const { toast } = useToast();
-  const firestore = useFirestore();
+function matchesCategory(
+  item: { category?: PromptCategory | null },
+  category: CategoryFilter
+): boolean {
+  return category === ALL_CATEGORIES || item.category === category;
+}
+
+/** Campos de un prompt sobre los que busca el usuario. */
+function promptHaystack(prompt: Prompt) {
+  return [prompt.title, prompt.description, prompt.content];
+}
+
+/** Campos de un enlace sobre los que busca el usuario. */
+function linkHaystack(link: Link) {
+  return [link.title, link.description, link.url];
+}
+
+/** Lo que se está a punto de borrar, a la espera de confirmación. */
+type PendingDeletion =
+  | { kind: 'prompt'; item: Prompt }
+  | { kind: 'link'; item: Link }
+  | { kind: 'project'; item: Project }
+  | { kind: 'folder'; item: Folder };
+
+export default function PromptPage({ user }: { user: User }) {
   const auth = useAuth();
+  const { toast } = useToast();
+  const library = useLibrary(user);
+  const { projects, folders, prompts, links } = library;
 
-  // Queries memoizadas
-  const projectsQuery = useMemoFirebase(() => {
-    if (!firestore || !user?.uid) return null;
-    return collection(firestore, 'users', user.uid, 'projects');
-  }, [firestore, user?.uid]);
+  const [editingPrompt, setEditingPrompt] = useState<Prompt | null>(null);
+  const [editingLink, setEditingLink] = useState<Link | null>(null);
+  const [isCreatingPrompt, setCreatingPrompt] = useState(false);
+  const [isCreatingLink, setCreatingLink] = useState(false);
+  const [pendingDeletion, setPendingDeletion] = useState<PendingDeletion | null>(null);
 
-  const promptsQuery = useMemoFirebase(() => {
-    if (!firestore || !user?.uid) return null;
-    return collection(firestore, 'users', user.uid, 'prompts');
-  }, [firestore, user?.uid]);
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>(ALL_CATEGORIES);
+  const [activeFilter, setActiveFilter] = useState<LibraryFilter>({ type: 'all' });
+  const [nameRequest, setNameRequest] = useState<NameDialogRequest | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const linksQuery = useMemoFirebase(() => {
-    if (!firestore || !user?.uid) return null;
-    return collection(firestore, 'users', user.uid, 'links');
-  }, [firestore, user?.uid]);
+  // El campo de texto responde al instante y el filtrado de la lista puede ir
+  // un fotograma por detrás si la biblioteca es grande.
+  const deferredQuery = useDeferredValue(searchQuery);
+  const searchTerms = useMemo(() => parseQuery(deferredQuery), [deferredQuery]);
 
-  const { data: rawProjects, isLoading: projectsLoading } = useCollection<Project>(projectsQuery);
-  const { data: rawPrompts, isLoading: promptsLoading } = useCollection<Prompt>(promptsQuery);
-  const { data: rawLinks, isLoading: linksLoading } = useCollection<Link>(linksQuery);
+  const visiblePrompts = useMemo(
+    () =>
+      prompts.filter(
+        (prompt) =>
+          matchesFilter(locationOf(prompt), activeFilter) &&
+          matchesCategory(prompt, categoryFilter) &&
+          matchesQuery(promptHaystack(prompt), searchTerms)
+      ),
+    [prompts, activeFilter, categoryFilter, searchTerms]
+  );
+  const visibleLinks = useMemo(
+    () =>
+      links.filter(
+        (link) =>
+          matchesFilter(locationOf(link), activeFilter) &&
+          matchesCategory(link, categoryFilter) &&
+          matchesQuery(linkHaystack(link), searchTerms)
+      ),
+    [links, activeFilter, categoryFilter, searchTerms]
+  );
 
-  const projects = useMemo(() => rawProjects || [], [rawProjects]);
-  const prompts = useMemo(() => rawPrompts || [], [rawPrompts]);
-  const links = useMemo(() => rawLinks || [], [rawLinks]);
+  // Los contadores de la barra lateral cuentan prompts y enlaces juntos, y no
+  // tienen en cuenta el filtro de categoría: describen el proyecto, no la vista.
+  const counts = useMemo(() => {
+    const result: Record<string, number> = {
+      all: prompts.length + links.length,
+      unassigned: 0,
+    };
+    for (const project of projects) result[`project:${project.id}`] = 0;
+    for (const folder of folders) result[`folder:${folder.id}`] = 0;
 
-  // UI States
-  const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
-  const [isCreateLinkDialogOpen, setCreateLinkDialogOpen] = useState(false);
-  const [isEditDialogOpen, setEditDialogOpen] = useState(false);
-  const [isEditLinkDialogOpen, setEditLinkDialogOpen] = useState(false);
-  const [isNewProjectDialogOpen, setNewProjectDialogOpen] = useState(false);
-  
-  // Delete Confirmation States
-  const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [isLinkDeleteDialogOpen, setLinkDeleteDialogOpen] = useState(false);
-  const [isProjectDeleteDialogOpen, setIsProjectDeleteDialogOpen] = useState(false);
-  
-  const [newProjectName, setNewProjectName] = useState('');
-  const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
-  const [selectedLink, setSelectedLink] = useState<Link | null>(null);
-  const [promptToDelete, setPromptToDelete] = useState<Prompt | null>(null);
-  const [linkToDelete, setLinkToDelete] = useState<Link | null>(null);
-  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
-  
-  const [categoryFilter, setCategoryFilter] = useState<PromptCategory | 'Todos'>('Todos');
-  const [activeProjectId, setActiveProjectId] = useState<string | 'all' | 'none'>('all');
+    for (const item of [...prompts, ...links]) {
+      const { projectId, folderId } = locationOf(item);
+      if (!projectId || projectId === 'none') {
+        result.unassigned += 1;
+        continue;
+      }
+      // El contador del proyecto incluye lo que hay en sus carpetas.
+      const projectKey = `project:${projectId}`;
+      if (projectKey in result) result[projectKey] += 1;
 
-  /**
-   * LIMPIEZA DE BLOQUEOS (Pointer-Events)
-   * Soluciona el problema de la aplicación congelada tras borrar un elemento.
-   */
-  useEffect(() => {
-    const isAnyDialogOpen = 
-      isDeleteDialogOpen || 
-      isLinkDeleteDialogOpen || 
-      isProjectDeleteDialogOpen ||
-      isCreateDialogOpen || 
-      isEditDialogOpen || 
-      isCreateLinkDialogOpen || 
-      isEditLinkDialogOpen || 
-      isNewProjectDialogOpen;
-
-    if (!isAnyDialogOpen) {
-      const cleanup = () => {
-        document.body.style.pointerEvents = 'auto';
-        document.body.style.overflow = 'auto';
-        document.body.classList.remove('pointer-events-none');
-      };
-
-      cleanup();
-      const t1 = setTimeout(cleanup, 100);
-      const t2 = setTimeout(cleanup, 500);
-      
-      return () => {
-        clearTimeout(t1);
-        clearTimeout(t2);
-      };
+      const folderKey = `folder:${folderId}`;
+      if (folderId && folderKey in result) result[folderKey] += 1;
     }
-  }, [isDeleteDialogOpen, isLinkDeleteDialogOpen, isProjectDeleteDialogOpen, isCreateDialogOpen, isEditDialogOpen, isCreateLinkDialogOpen, isEditLinkDialogOpen, isNewProjectDialogOpen]);
+    return result;
+  }, [projects, folders, prompts, links]);
 
-  const handleMoveToProject = useCallback((itemId: string, itemType: 'prompt' | 'link', projectId: string | null) => {
-    if (!firestore || !user?.uid) return;
-    const collectionName = itemType === 'prompt' ? 'prompts' : 'links';
-    const docRef = doc(firestore, 'users', user.uid, collectionName, itemId);
-    updateDocumentNonBlocking(docRef, { projectId: projectId || null });
-    toast({ title: "Recurso organizado" });
-  }, [user?.uid, firestore, toast]);
+  const confirmDeletion = useCallback(() => {
+    if (!pendingDeletion) return;
 
-  const handleSavePrompt = useCallback((promptData: any, id?: string) => {
-    if (!firestore || !user?.uid) return;
-    const userId = user.uid;
-    const now = new Date().toISOString();
-    
-    if (id) {
-      const docRef = doc(firestore, 'users', userId, 'prompts', id);
-      updateDocumentNonBlocking(docRef, { ...promptData, updatedAt: now });
-      setEditDialogOpen(false);
+    if (pendingDeletion.kind === 'project') {
+      library.deleteProject(pendingDeletion.item.id);
+      // Si estábamos mirando dentro de lo que acaba de desaparecer, volvemos
+      // a la vista general en lugar de quedarnos en un filtro fantasma.
+      if (
+        (activeFilter.type === 'project' || activeFilter.type === 'folder') &&
+        activeFilter.projectId === pendingDeletion.item.id
+      ) {
+        setActiveFilter({ type: 'all' });
+      }
+      toast({ title: 'Proyecto eliminado' });
+    } else if (pendingDeletion.kind === 'folder') {
+      library.deleteFolder(pendingDeletion.item.id);
+      if (activeFilter.type === 'folder' && activeFilter.folderId === pendingDeletion.item.id) {
+        setActiveFilter({ type: 'project', projectId: pendingDeletion.item.projectId });
+      }
+      toast({ title: 'Carpeta eliminada' });
     } else {
-      const colRef = collection(firestore, 'users', userId, 'prompts');
-      const newDocRef = doc(colRef);
-      const maxOrder = prompts.length > 0 ? Math.max(...prompts.map(p => p.order || 0)) : 0;
-      setDocumentNonBlocking(newDocRef, {
-        ...promptData,
-        id: newDocRef.id,
-        ownerId: userId,
-        createdAt: now,
-        updatedAt: now,
-        order: maxOrder + 1
+      library.deleteItem(pendingDeletion.kind, pendingDeletion.item.id);
+      toast({
+        title: pendingDeletion.kind === 'prompt' ? 'Prompt eliminado' : 'Enlace eliminado',
       });
-      setCreateDialogOpen(false);
     }
-    toast({ title: id ? 'Prompt actualizado' : 'Prompt creado' });
-  }, [user?.uid, firestore, prompts, toast]);
 
-  const handleSaveLink = useCallback((linkData: any, id?: string) => {
-    if (!firestore || !user?.uid) return;
-    const userId = user.uid;
-    
-    if (id) {
-      const docRef = doc(firestore, 'users', userId, 'links', id);
-      updateDocumentNonBlocking(docRef, linkData);
-      setEditLinkDialogOpen(false);
-    } else {
-      const colRef = collection(firestore, 'users', userId, 'links');
-      const newDocRef = doc(colRef);
-      const maxOrder = links.length > 0 ? Math.max(...links.map(l => l.order || 0)) : 0;
-      setDocumentNonBlocking(newDocRef, {
-        ...linkData,
-        id: newDocRef.id,
-        ownerId: userId,
-        createdAt: new Date().toISOString(),
-        order: maxOrder + 1
-      });
-      setCreateLinkDialogOpen(false);
+    setPendingDeletion(null);
+  }, [pendingDeletion, library, activeFilter, toast]);
+
+  const moveTo = useCallback(
+    (kind: ItemKind, itemId: string, location: Location) => {
+      library.moveTo(kind, itemId, location);
+      toast({ title: 'Recurso organizado' });
+    },
+    [library, toast]
+  );
+
+  // Las cuatro acciones de nombrar comparten un único diálogo.
+  const askForName = useCallback((request: NameDialogRequest) => setNameRequest(request), []);
+
+  /** Mueve un elemento una posición arriba o abajo dentro de la lista visible. */
+  const step = useCallback(
+    (kind: ItemKind, list: { id: string; order: number }[], index: number, delta: number) => {
+      const target = index + delta;
+      if (target < 0 || target >= list.length) return undefined;
+      return () => library.reorder(kind, list, index, target);
+    },
+    [library]
+  );
+
+  const deletionCopy = useMemo(() => {
+    if (!pendingDeletion) return null;
+    if (pendingDeletion.kind === 'prompt') {
+      return {
+        title: '¿Eliminar prompt?',
+        body: `Se eliminará definitivamente «${pendingDeletion.item.title}». Esta acción no se puede deshacer.`,
+        action: 'Eliminar',
+      };
     }
-    toast({ title: id ? 'Enlace actualizado' : 'Enlace guardado' });
-  }, [user?.uid, firestore, links, toast]);
-
-  const handleCreateProject = useCallback(() => {
-    if (!newProjectName.trim() || !firestore || !user?.uid) return;
-    const colRef = collection(firestore, 'users', user.uid, 'projects');
-    const newDocRef = doc(colRef);
-    setDocumentNonBlocking(newDocRef, {
-      id: newDocRef.id,
-      name: newProjectName.trim(),
-      ownerId: user.uid,
-      createdAt: new Date().toISOString(),
-    });
-    setNewProjectName('');
-    setNewProjectDialogOpen(false);
-    toast({ title: "Proyecto creado" });
-  }, [newProjectName, user?.uid, firestore, toast]);
-
-  const openDeleteProjectDialog = (project: Project, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setProjectToDelete(project);
-    setIsProjectDeleteDialogOpen(true);
-  };
-
-  /**
-   * ACCIONES DE BORRADO - REFORZADAS CON TIMEOUT
-   */
-  const executeDeletePrompt = () => {
-    if (promptToDelete && firestore && user?.uid) {
-      const docRef = doc(firestore, 'users', user.uid, 'prompts', promptToDelete.id);
-      setDeleteDialogOpen(false);
-      setTimeout(() => {
-        deleteDocumentNonBlocking(docRef);
-        setPromptToDelete(null);
-        toast({ title: "Prompt eliminado" });
-      }, 150);
+    if (pendingDeletion.kind === 'link') {
+      return {
+        title: '¿Eliminar enlace?',
+        body: `Se eliminará definitivamente «${pendingDeletion.item.title || pendingDeletion.item.url}». Esta acción no se puede deshacer.`,
+        action: 'Eliminar',
+      };
     }
-  };
-
-  const executeDeleteLink = () => {
-    if (linkToDelete && firestore && user?.uid) {
-      const docRef = doc(firestore, 'users', user.uid, 'links', linkToDelete.id);
-      setLinkDeleteDialogOpen(false);
-      setTimeout(() => {
-        deleteDocumentNonBlocking(docRef);
-        setLinkToDelete(null);
-        toast({ title: "Enlace eliminado" });
-      }, 150);
+    if (pendingDeletion.kind === 'folder') {
+      return {
+        title: '¿Eliminar carpeta?',
+        body: `Se eliminará la carpeta «${pendingDeletion.item.name}». Lo que contiene no se borra: quedará suelto dentro del proyecto.`,
+        action: 'Eliminar carpeta',
+      };
     }
-  };
+    return {
+      title: '¿Eliminar proyecto?',
+      body: `Se eliminará el proyecto «${pendingDeletion.item.name}», junto con sus carpetas. Los prompts y enlaces que contiene no se borran: pasarán a «Sin proyecto».`,
+      action: 'Eliminar proyecto',
+    };
+  }, [pendingDeletion]);
 
-  const executeDeleteProject = () => {
-    if (projectToDelete && firestore && user?.uid) {
-      const docRef = doc(firestore, 'users', user.uid, 'projects', projectToDelete.id);
-      setIsProjectDeleteDialogOpen(false);
-      setTimeout(() => {
-        deleteDocumentNonBlocking(docRef);
-        if (activeProjectId === projectToDelete.id) setActiveProjectId('all');
-        setProjectToDelete(null);
-        toast({ title: "Proyecto eliminado" });
-      }, 150);
-    }
-  };
-
-  const filteredPrompts = useMemo(() => {
-    return prompts.filter(p => {
-      const matchesProject = activeProjectId === 'all' || 
-                           (activeProjectId === 'none' && (!p.projectId || p.projectId === 'none')) ||
-                           p.projectId === activeProjectId;
-      const matchesCategory = categoryFilter === 'Todos' || p.category === categoryFilter;
-      return matchesProject && matchesCategory;
-    }).sort((a, b) => (b.order || 0) - (a.order || 0));
-  }, [prompts, activeProjectId, categoryFilter]);
-
-  const filteredLinks = useMemo(() => {
-    return links.filter(l => {
-      const matchesProject = activeProjectId === 'all' || 
-                           (activeProjectId === 'none' && (!l.projectId || l.projectId === 'none')) ||
-                           l.projectId === activeProjectId;
-      const matchesCategory = categoryFilter === 'Todos' || l.category === categoryFilter;
-      return matchesProject && matchesCategory;
-    }).sort((a, b) => (b.order || 0) - (a.order || 0));
-  }, [links, activeProjectId, categoryFilter]);
+  const isEmpty = visiblePrompts.length === 0 && visibleLinks.length === 0;
 
   return (
     <div className="relative min-h-[80vh]">
       <Header>
-        <div className="flex items-center gap-4">
-          <div className="hidden md:flex items-center gap-2">
-            <Filter className="h-4 w-4 opacity-70" />
-            <select
-              className="bg-transparent border-none text-sm focus:ring-0 cursor-pointer font-medium"
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value as PromptCategory | 'Todos')}
-            >
-              <option value="Todos">Todas las categorías</option>
-              {promptCategories.map((category) => (
-                <option key={category} value={category}>{category}</option>
-              ))}
-            </select>
-          </div>
-          <div className="flex items-center gap-2 border-l pl-4 border-border/60">
-            <Button variant="ghost" size="icon" onClick={() => logOut(auth)} title="Cerrar Sesión">
-              <LogOut className="h-5 w-5 text-muted-foreground hover:text-destructive transition-colors" />
-            </Button>
-          </div>
-        </div>
+        <Button variant="ghost" size="icon" onClick={() => logOut(auth)}>
+          <LogOut className="h-5 w-5 text-muted-foreground transition-colors hover:text-destructive" />
+          <span className="sr-only">Cerrar sesión</span>
+        </Button>
       </Header>
 
-      <div className="flex flex-col md:flex-row gap-8">
-        <aside className="w-full md:w-64 shrink-0 space-y-6">
-          <div className="space-y-2">
-            <div className="flex items-center justify-between px-2 pb-2 border-b border-border/40">
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center">
-                <Folders className="mr-2 h-4 w-4" /> Proyectos
-              </h2>
-              <Dialog open={isNewProjectDialogOpen} onOpenChange={setNewProjectDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-6 w-6">
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader><DialogTitle>Nuevo Proyecto</DialogTitle></DialogHeader>
-                  <div className="space-y-4 pt-4">
-                    <Input placeholder="Nombre del proyecto..." value={newProjectName} onChange={e => setNewProjectName(e.target.value)} />
-                    <Button className="w-full" onClick={handleCreateProject} disabled={!newProjectName.trim()}>Crear</Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
+      <div className="flex flex-col gap-8 md:flex-row">
+        <ProjectSidebar
+          projects={projects}
+          folders={folders}
+          counts={counts}
+          activeFilter={activeFilter}
+          onSelect={setActiveFilter}
+          onCreateProject={() =>
+            askForName({
+              title: 'Nuevo proyecto',
+              description: 'Agrupa prompts y enlaces relacionados bajo un mismo nombre.',
+              confirmLabel: 'Crear',
+              onConfirm: (name) => {
+                library.createProject(name);
+                toast({ title: 'Proyecto creado' });
+              },
+            })
+          }
+          onRenameProject={(project) =>
+            askForName({
+              title: 'Renombrar proyecto',
+              description: `Elige un nombre nuevo para «${project.name}».`,
+              initialValue: project.name,
+              confirmLabel: 'Guardar',
+              onConfirm: (name) => {
+                library.renameProject(project.id, name);
+                toast({ title: 'Proyecto renombrado' });
+              },
+            })
+          }
+          onDeleteProject={(project) => setPendingDeletion({ kind: 'project', item: project })}
+          onCreateFolder={(project) =>
+            askForName({
+              title: 'Nueva carpeta',
+              description: `Se creará dentro del proyecto «${project.name}».`,
+              confirmLabel: 'Crear',
+              onConfirm: (name) => {
+                library.createFolder(project.id, name);
+                toast({ title: 'Carpeta creada' });
+              },
+            })
+          }
+          onRenameFolder={(folder) =>
+            askForName({
+              title: 'Renombrar carpeta',
+              description: `Elige un nombre nuevo para «${folder.name}».`,
+              initialValue: folder.name,
+              confirmLabel: 'Guardar',
+              onConfirm: (name) => {
+                library.renameFolder(folder.id, name);
+                toast({ title: 'Carpeta renombrada' });
+              },
+            })
+          }
+          onDeleteFolder={(folder) => setPendingDeletion({ kind: 'folder', item: folder })}
+        />
 
-            <nav className="space-y-1">
-              <button 
-                onClick={() => setActiveProjectId('all')} 
-                className={cn("w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-all text-left", activeProjectId === 'all' ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50")}
-              >
-                <div className="flex items-center"><Folders className="mr-2 h-4 w-4" />Todos</div>
-                <span className="text-sm opacity-70 font-mono font-medium">({prompts.length + links.length})</span>
-              </button>
-              
-              <button 
-                onClick={() => setActiveProjectId('none')} 
-                className={cn("w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-all text-left", activeProjectId === 'none' ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50")}
-              >
-                <div className="flex items-center"><Folder className="mr-2 h-4 w-4" />Sin Proyecto</div>
-                <span className="text-sm opacity-70 font-mono font-medium">
-                  ({prompts.filter(p => !p.projectId || p.projectId === 'none').length + links.filter(l => !l.projectId || l.projectId === 'none').length})
-                </span>
-              </button>
+        <main className="flex-1 pb-24">
+          {!library.isLoading && (
+            <LibraryToolbar
+              query={searchQuery}
+              onQueryChange={setSearchQuery}
+              category={categoryFilter}
+              onCategoryChange={(value) => setCategoryFilter(value as CategoryFilter)}
+              allCategoriesLabel={ALL_CATEGORIES}
+              resultCount={visiblePrompts.length + visibleLinks.length}
+            />
+          )}
 
-              {projects.map((p) => {
-                const count = prompts.filter(pr => pr.projectId === p.id).length + links.filter(li => li.projectId === p.id).length;
-                return (
-                  <button 
-                    key={p.id} 
-                    onClick={() => setActiveProjectId(p.id)} 
-                    className={cn("group w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-all text-left", activeProjectId === p.id ? "bg-primary text-primary-foreground shadow-md" : "hover:bg-accent/50")}
-                  >
-                    <div className="flex items-center truncate">
-                      <Folder className="mr-2 h-4 w-4 shrink-0" />
-                      <span className="truncate">{p.name}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm opacity-70 font-mono font-medium">({count})</span>
-                      <Trash2 
-                        className="h-3.5 w-3.5 text-destructive opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110" 
-                        onClick={(e) => openDeleteProjectDialog(p, e)} 
-                      />
-                    </div>
-                  </button>
-                );
-              })}
-            </nav>
-          </div>
-        </aside>
-
-        <main className="flex-1 pb-20">
-          {projectsLoading || promptsLoading || linksLoading ? (
-             <div className="flex flex-col items-center justify-center pt-20 gap-4">
+          {library.isLoading ? (
+            <div className="flex flex-col items-center justify-center gap-4 pt-20">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               <p className="text-sm text-muted-foreground">Cargando biblioteca...</p>
             </div>
+          ) : isEmpty ? (
+            <EmptyState
+              isFiltered={prompts.length + links.length > 0}
+              searchQuery={searchQuery}
+              onCreatePrompt={() => setCreatingPrompt(true)}
+              onClearFilters={() => {
+                setActiveFilter({ type: 'all' });
+                setCategoryFilter(ALL_CATEGORIES);
+                setSearchQuery('');
+              }}
+            />
           ) : (
             <div className="space-y-8">
-              {filteredLinks.length === 0 && filteredPrompts.length === 0 ? <EmptyState /> : (
-                <>
-                  {filteredLinks.length > 0 && (
-                    <div className="space-y-4">
-                      <h3 className="text-sm font-bold uppercase tracking-widest text-orange-600 flex items-center gap-2 px-1">
-                        <LinkIcon className="h-4 w-4" /> Enlaces ({filteredLinks.length})
-                      </h3>
-                      <LinkList 
-                        links={filteredLinks} 
-                        projects={projects}
-                        onDeleteLink={(id) => { const l = links.find(li => li.id === id); if (l) { setLinkToDelete(l); setLinkDeleteDialogOpen(true); } }} 
-                        onEditLink={(link) => { setSelectedLink(link); setEditLinkDialogOpen(true); }}
-                        onReorder={() => {}}
-                        onMoveToProject={(linkId, projectId) => handleMoveToProject(linkId, 'link', projectId)}
-                      />
-                    </div>
-                  )}
-                  {filteredPrompts.length > 0 && (
-                    <div className="space-y-4">
-                      <h3 className="text-sm font-bold uppercase tracking-widest text-primary flex items-center gap-2 px-1">
-                        <Sparkles className="h-4 w-4" /> Prompts ({filteredPrompts.length})
-                      </h3>
-                      <PromptList
-                        prompts={filteredPrompts} 
-                        projects={projects}
-                        onDeletePrompt={(id) => { const p = prompts.find(pr => pr.id === id); if (p) { setPromptToDelete(p); setDeleteDialogOpen(true); } }}
-                        onEditPrompt={(prompt) => { setSelectedPrompt(prompt); setEditDialogOpen(true); }}
-                        onReorder={() => {}}
-                        onMoveToProject={(promptId, projectId) => handleMoveToProject(promptId, 'prompt', projectId)}
-                      />
-                    </div>
-                  )}
-                </>
+              {visibleLinks.length > 0 && (
+                <section className="space-y-4">
+                  <h2 className="flex items-center gap-2 px-1 text-sm font-bold uppercase tracking-widest text-orange-600 dark:text-orange-400">
+                    <LinkIcon className="h-4 w-4" /> Enlaces ({visibleLinks.length})
+                  </h2>
+                  <SortableGrid
+                    items={visibleLinks}
+                    onReorder={(from, to) => library.reorder('link', visibleLinks, from, to)}
+                    renderItem={(link) => {
+                      const index = visibleLinks.indexOf(link);
+                      return (
+                        <LinkCard
+                          link={link}
+                          projects={projects}
+                          onEdit={setEditingLink}
+                          onDelete={(item) => setPendingDeletion({ kind: 'link', item })}
+                          folders={folders}
+                          onMoveTo={(location) => moveTo('link', link.id, location)}
+                          onMoveUp={step('link', visibleLinks, index, -1)}
+                          onMoveDown={step('link', visibleLinks, index, 1)}
+                        />
+                      );
+                    }}
+                  />
+                </section>
+              )}
+
+              {visiblePrompts.length > 0 && (
+                <section className="space-y-4">
+                  <h2 className="flex items-center gap-2 px-1 text-sm font-bold uppercase tracking-widest text-primary">
+                    <Sparkles className="h-4 w-4" /> Prompts ({visiblePrompts.length})
+                  </h2>
+                  <SortableGrid
+                    items={visiblePrompts}
+                    onReorder={(from, to) => library.reorder('prompt', visiblePrompts, from, to)}
+                    renderItem={(prompt) => {
+                      const index = visiblePrompts.indexOf(prompt);
+                      return (
+                        <PromptCard
+                          prompt={prompt}
+                          projects={projects}
+                          onEdit={setEditingPrompt}
+                          onDelete={(item) => setPendingDeletion({ kind: 'prompt', item })}
+                          folders={folders}
+                          onMoveTo={(location) => moveTo('prompt', prompt.id, location)}
+                          onMoveUp={step('prompt', visiblePrompts, index, -1)}
+                          onMoveDown={step('prompt', visiblePrompts, index, 1)}
+                        />
+                      );
+                    }}
+                  />
+                </section>
               )}
             </div>
           )}
         </main>
       </div>
 
-      {/* FABs */}
-      <div className="fixed bottom-8 right-8 flex items-center gap-3 z-50">
-        <Dialog open={isCreateLinkDialogOpen} onOpenChange={setCreateLinkDialogOpen}>
-          <DialogTrigger asChild><Button className="h-16 w-16 rounded-full shadow-2xl bg-orange-500 hover:bg-orange-600" size="icon"><LinkIcon className="h-8 w-8 text-white" /></Button></DialogTrigger>
-          <DialogContent className="sm:max-w-[525px]"><DialogHeader><DialogTitle>Nuevo Enlace</DialogTitle></DialogHeader><LinkForm projects={projects} onSave={handleSaveLink} onClose={() => setCreateLinkDialogOpen(false)} /></DialogContent>
+      {/* Botones flotantes de creación */}
+      <div className="fixed bottom-8 right-8 z-40 flex items-center gap-3">
+        <Dialog open={isCreatingLink} onOpenChange={setCreatingLink}>
+          <DialogTrigger asChild>
+            <Button
+              size="icon"
+              className="h-16 w-16 rounded-full bg-orange-500 shadow-2xl hover:bg-orange-600"
+            >
+              <LinkIcon className="h-8 w-8 text-white" />
+              <span className="sr-only">Guardar un enlace</span>
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[525px]">
+            <DialogHeader>
+              <DialogTitle>Nuevo enlace</DialogTitle>
+              <DialogDescription>Guarda una dirección web en tu biblioteca.</DialogDescription>
+            </DialogHeader>
+            <LinkForm
+              projects={projects}
+              folders={folders}
+              onSave={(input) => {
+                library.saveLink(input);
+                toast({ title: 'Enlace guardado' });
+              }}
+              onClose={() => setCreatingLink(false)}
+            />
+          </DialogContent>
         </Dialog>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setCreateDialogOpen}>
-          <DialogTrigger asChild><Button className="h-16 w-16 rounded-full shadow-2xl bg-primary hover:bg-primary/90" size="icon"><Plus className="h-8 w-8 text-primary-foreground" /></Button></DialogTrigger>
-          <DialogContent className="sm:max-w-[625px]"><DialogHeader><DialogTitle>Nuevo Prompt</DialogTitle></DialogHeader><PromptForm onSave={handleSavePrompt} onClose={() => setCreateDialogOpen(false)} projects={projects} /></DialogContent>
+
+        <Dialog open={isCreatingPrompt} onOpenChange={setCreatingPrompt}>
+          <DialogTrigger asChild>
+            <Button size="icon" className="h-16 w-16 rounded-full shadow-2xl">
+              <Plus className="h-8 w-8" />
+              <span className="sr-only">Crear un prompt</span>
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[625px]">
+            <DialogHeader>
+              <DialogTitle>Nuevo prompt</DialogTitle>
+              <DialogDescription>Añade un prompt reutilizable a tu biblioteca.</DialogDescription>
+            </DialogHeader>
+            <PromptForm
+              projects={projects}
+              folders={folders}
+              onSave={(input) => {
+                library.savePrompt(input);
+                toast({ title: 'Prompt creado' });
+              }}
+              onClose={() => setCreatingPrompt(false)}
+            />
+          </DialogContent>
         </Dialog>
       </div>
 
-      {/* DIÁLOGOS DE EDICIÓN */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
+      {/* Edición. El contenido se desmonta al cerrar, así que el formulario
+          siempre arranca con los datos del recurso seleccionado. */}
+      <Dialog open={!!editingPrompt} onOpenChange={(open) => !open && setEditingPrompt(null)}>
         <DialogContent className="sm:max-w-[625px]">
-          <DialogHeader><DialogTitle>Editar Prompt</DialogTitle></DialogHeader>
-          {selectedPrompt && <PromptForm prompt={selectedPrompt} projects={projects} onSave={handleSavePrompt} onClose={() => setEditDialogOpen(false)} />}
+          <DialogHeader>
+            <DialogTitle>Editar prompt</DialogTitle>
+            <DialogDescription>Modifica los datos y guarda los cambios.</DialogDescription>
+          </DialogHeader>
+          {editingPrompt && (
+            <PromptForm
+              prompt={editingPrompt}
+              projects={projects}
+              folders={folders}
+              onSave={(input, id) => {
+                library.savePrompt(input, id);
+                toast({ title: 'Prompt actualizado' });
+              }}
+              onClose={() => setEditingPrompt(null)}
+            />
+          )}
         </DialogContent>
       </Dialog>
-      <Dialog open={isEditLinkDialogOpen} onOpenChange={setEditLinkDialogOpen}>
+
+      <Dialog open={!!editingLink} onOpenChange={(open) => !open && setEditingLink(null)}>
         <DialogContent className="sm:max-w-[525px]">
-          <DialogHeader><DialogTitle>Editar Enlace</DialogTitle></DialogHeader>
-          {selectedLink && <LinkForm link={selectedLink} projects={projects} onSave={handleSaveLink} onClose={() => setEditLinkDialogOpen(false)} />}
+          <DialogHeader>
+            <DialogTitle>Editar enlace</DialogTitle>
+            <DialogDescription>Modifica los datos y guarda los cambios.</DialogDescription>
+          </DialogHeader>
+          {editingLink && (
+            <LinkForm
+              link={editingLink}
+              projects={projects}
+              folders={folders}
+              onSave={(input, id) => {
+                library.saveLink(input, id);
+                toast({ title: 'Enlace actualizado' });
+              }}
+              onClose={() => setEditingLink(null)}
+            />
+          )}
         </DialogContent>
       </Dialog>
-      
-      {/* DIÁLOGOS DE BORRADO - REFORZADOS */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar prompt?</AlertDialogTitle>
-            <AlertDialogDescription>Se eliminará definitivamente "{promptToDelete?.title}". Esta acción no se puede deshacer.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction 
-              className="bg-destructive text-white hover:bg-destructive/90" 
-              onClick={executeDeletePrompt}
-            >
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
-      <AlertDialog open={isLinkDeleteDialogOpen} onOpenChange={setLinkDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar enlace?</AlertDialogTitle>
-            <AlertDialogDescription>Se eliminará definitivamente "{linkToDelete?.title || linkToDelete?.url}". Esta acción no se puede deshacer.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction 
-              className="bg-destructive text-white hover:bg-destructive/90" 
-              onClick={executeDeleteLink}
-            >
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <NameDialog request={nameRequest} onClose={() => setNameRequest(null)} />
 
-      <AlertDialog open={isProjectDeleteDialogOpen} onOpenChange={setIsProjectDeleteDialogOpen}>
+      {/* Una sola confirmación para todos los tipos de borrado. */}
+      <AlertDialog
+        open={!!pendingDeletion}
+        onOpenChange={(open) => !open && setPendingDeletion(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar proyecto?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Se eliminará el proyecto "{projectToDelete?.name}". Los prompts y enlaces dentro de este proyecto NO se borrarán, pero dejarán de estar organizados.
-            </AlertDialogDescription>
+            <AlertDialogTitle>{deletionCopy?.title}</AlertDialogTitle>
+            <AlertDialogDescription>{deletionCopy?.body}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction 
-              className="bg-destructive text-white hover:bg-destructive/90" 
-              onClick={executeDeleteProject}
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={confirmDeletion}
             >
-              Eliminar Proyecto
+              {deletionCopy?.action}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

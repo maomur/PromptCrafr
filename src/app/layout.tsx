@@ -7,14 +7,16 @@ import { cn } from '@/lib/utils';
 import Script from 'next/script';
 import InstallPWABanner from '@/components/install-pwa-banner';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
+import { APP_DESCRIPTION, APP_NAME, BRAND_COLOR } from '@/lib/constants';
 
 export const metadata: Metadata = {
-  title: 'PromptCraft',
-  description: 'Gestiona tus prompts creativos con facilidad.',
+  title: APP_NAME,
+  description: APP_DESCRIPTION,
+  applicationName: APP_NAME,
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'PromptCraft',
+    title: APP_NAME,
   },
   formatDetection: {
     telephone: false,
@@ -22,11 +24,11 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#007AFF',
+  themeColor: BRAND_COLOR,
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  // Sin `maximumScale` ni `userScalable`: bloquear el zoom impide leer a quien
+  // lo necesita y iOS lo ignora desde hace varias versiones.
 };
 
 export default function RootLayout({
@@ -37,7 +39,7 @@ export default function RootLayout({
   return (
     <html lang="es" className={cn(GeistSans.variable, GeistMono.variable)}>
       <head>
-        <link rel="apple-touch-icon" href="https://www.pulseai.ws/logo193.png" />
+        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
       </head>
       <body className="font-sans antialiased flex flex-col min-h-screen">
         <FirebaseClientProvider>
