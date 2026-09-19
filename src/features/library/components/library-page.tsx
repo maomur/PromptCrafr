@@ -12,6 +12,7 @@ import { filterKey, type FolderInput, type LibraryFilter, type Location } from '
 import BreadcrumbNav from '@/features/library/components/breadcrumb-nav';
 import ConfirmDeleteDialog, { type Deletion } from '@/features/library/components/confirm-delete-dialog';
 import CreateButtons from '@/features/library/components/create-buttons';
+import DeleteDropZone, { TRASH_TARGET } from '@/features/library/components/delete-drop-zone';
 import EmptyState from '@/features/library/components/empty-state';
 import ItemDialogs from '@/features/library/components/item-dialogs';
 import LibraryContent from '@/features/library/components/library-content';
@@ -106,6 +107,16 @@ export default function LibraryPage() {
     (kind: ItemKind, id: string, encoded: string) => {
       const item = (kind === 'prompt' ? prompts : links).find((candidate) => candidate.id === id);
       if (!item) return;
+
+      // La papelera no es una ubicación: pide confirmación en lugar de mover.
+      if (encoded === TRASH_TARGET) {
+        setDeletion(
+          kind === 'prompt'
+            ? { kind: 'prompt', item: item as Prompt }
+            : { kind: 'link', item: item as Link }
+        );
+        return;
+      }
 
       const destination = decodeLocation(encoded, tree);
       const current = locationOf(item);
@@ -210,6 +221,8 @@ export default function LibraryPage() {
           )}
         </main>
       </div>
+
+      <DeleteDropZone />
 
       <CreateButtons
         onCreateFolder={() => setFolderRequest({ mode: 'create', parent: NO_SELECTION })}

@@ -16,7 +16,8 @@ import { APP_NAME } from '@/lib/constants';
  * todavía no se ha usado, y además impedir usarlo, era justo lo contrario de
  * lo que se pretendía.
  *
- * Va abajo a la izquierda para no taparse con los botones de crear.
+ * Va abajo a la izquierda y por encima de la papelera, para no taparse
+ * con ella ni con los botones de crear.
  */
 export default function InstallBanner() {
   const { isVisible, isIOS, canInstall, install, snooze } = useInstallPrompt();
@@ -27,7 +28,7 @@ export default function InstallBanner() {
     <Card
       role="complementary"
       aria-label={`Instalar ${APP_NAME}`}
-      className="fixed bottom-8 left-4 z-30 w-[min(22rem,calc(100vw-2rem))] p-4 shadow-2xl animate-in slide-in-from-bottom-4"
+      className="fixed bottom-28 left-4 z-30 w-[min(22rem,calc(100vw-2rem))] p-4 shadow-2xl animate-in slide-in-from-bottom-4"
     >
       <div className="flex items-start gap-3">
         <div className="rounded-lg bg-primary/10 p-2">

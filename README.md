@@ -204,8 +204,19 @@ SortableJS sólo sabe mover cosas entre listas, así que cada destino es
 anuncia su ubicación en `data-drop-target`. El nodo vuelve
 siempre a su posición original y es React quien repinta.
 
+También hay una **papelera** abajo a la izquierda: soltar ahí un prompt o un
+enlace abre la misma confirmación que el menú. No borra de inmediato porque no
+hay deshacer y un arrastre puede soltarse sin querer. Es una zona de soltar y
+no un botón, así que pulsarla no hace nada y no se anuncia como control.
+
+El clon que sigue al cursor va al `<body>` (`fallbackOnBody`). Por omisión
+SortableJS lo inserta justo detrás del elemento arrastrado, donde pasa a ser
+su «hermano siguiente»: la referencia que se guarda para devolver la tarjeta a
+su sitio apuntaba entonces a un nodo que desaparece al soltar, la reinserción
+fallaba en silencio y la tarjeta se quedaba huérfana dentro del destino.
+
 Arrastrar no es accesible con teclado, así que cada tarjeta mantiene
-«Subir/Bajar posición» y «Mover a» en su menú.
+«Subir/Bajar posición», «Mover a» y «Eliminar» en su menú.
 
 ## Buscar y exportar
 

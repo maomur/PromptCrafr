@@ -64,9 +64,19 @@ export default function SortableGrid<T extends { id: string }>({
       dragClass: 'sortable-drag',
       // El arrastre nativo de HTML5 no funciona de forma fiable en táctil.
       forceFallback: true,
+      // El clon que sigue al cursor va al <body>. Por omisión SortableJS lo
+      // inserta justo detrás del elemento arrastrado, y entonces pasa a ser su
+      // «hermano siguiente»: la referencia que guardamos para devolverlo a su
+      // sitio apuntaba a un nodo que desaparece al soltar, la reinserción
+      // fallaba en silencio y la tarjeta se quedaba huérfana en el destino.
+      fallbackOnBody: true,
       group: { name: group, pull: true, put: false },
       onStart: (event) => {
         nextSibling = event.item.nextSibling;
+        // Cinturón: si aun así la referencia fuese el clon, no sirve.
+        if (nextSibling instanceof HTMLElement && nextSibling.classList.contains('sortable-fallback')) {
+          nextSibling = nextSibling.nextSibling;
+        }
         // Permite que el CSS insinúe los destinos válidos mientras se arrastra.
         document.documentElement.dataset.dragging = 'true';
       },
@@ -76,8 +86,12 @@ export default function SortableGrid<T extends { id: string }>({
         const { oldIndex, newIndex, item, from, to } = event;
 
         if (from && item) {
+          // Sin una referencia válida, `insertBefore(item, null)` lo añade al
+          // final: la posición exacta da igual porque React repinta la lista
+          // enseguida, pero dejarlo en el destino sí importaría.
+          const referencia = nextSibling?.parentNode === from ? nextSibling : null;
           try {
-            from.insertBefore(item, nextSibling);
+            from.insertBefore(item, referencia);
           } catch {
             // React ya se ha llevado el nodo; no hay nada que revertir.
           }

@@ -100,6 +100,19 @@ html[data-dragging='true'] [data-drop-target]:has(.sortable-ghost) {
   outline-style: solid;
 }
 
+/* La papelera es un círculo: su borde de destino debe seguir esa forma y no
+   el radio de las filas. */
+html[data-dragging='true'] [data-drop-target].rounded-full {
+  border-radius: 9999px;
+}
+
+/* Y al pasar por encima se resalta en rojo, no en el azul de archivar: lo que
+   va a ocurrir ahí es otra cosa. */
+html[data-dragging='true'] [data-drop-target].rounded-full:has(.sortable-ghost) {
+  background-color: hsl(var(--destructive) / 0.25);
+  outline-color: hsl(var(--destructive));
+}
+
 /*
  * SortableJS mete la tarjeta arrastrada dentro del destino para previsualizar
  * el hueco. En una fila de la barra lateral eso reventaría el diseño, así que
