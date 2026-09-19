@@ -12,7 +12,7 @@ interface SortableGridProps<T extends { id: string }> {
   onReorder: (from: number, to: number) => void;
   /** Se llama al soltar una tarjeta sobre una zona de destino. */
   onDropOnTarget: (itemId: string, location: string) => void;
-  renderItem: (item: T) => ReactNode;
+  renderItem: (item: T, index: number) => ReactNode;
   className?: string;
 }
 
@@ -103,9 +103,9 @@ export default function SortableGrid<T extends { id: string }>({
       ref={containerRef}
       className={cn('grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4', className)}
     >
-      {items.map((item) => (
+      {items.map((item, index) => (
         <div key={item.id} data-id={item.id} className="h-full">
-          {renderItem(item)}
+          {renderItem(item, index)}
         </div>
       ))}
     </div>

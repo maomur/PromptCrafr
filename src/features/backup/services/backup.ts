@@ -37,6 +37,26 @@ function asString(value: unknown): string | null {
   return typeof value === 'string' && value.trim() !== '' ? value : null;
 }
 
+/**
+ * Sólo se admiten direcciones http(s).
+ *
+ * Los enlaces escritos en el formulario ya pasan por esta regla, pero los que
+ * entran por un archivo no pasaban por ninguna: un `javascript:` acababa en el
+ * `href` de una tarjeta. Hoy React lo neutraliza, pero apoyarse en esa red de
+ * seguridad para algo que se puede comprobar aquí sería descuidado.
+ */
+function asHttpUrl(value: unknown): string | null {
+  const text = asString(value);
+  if (!text) return null;
+
+  try {
+    const url = new URL(text);
+    return url.protocol === 'http:' || url.protocol === 'https:' ? text : null;
+  } catch {
+    return null;
+  }
+}
+
 function asCategory(value: unknown): PromptCategory | null {
   return promptCategories.includes(value as PromptCategory) ? (value as PromptCategory) : null;
 }
@@ -211,7 +231,7 @@ export function parseBackup(raw: unknown): ImportResult {
 
   const rawLinks: Link[] = records(collectionOf(source, 'links', 'enlaces')).flatMap((item, index) => {
     const id = asString(item.id);
-    const url = asString(item.url);
+    const url = asHttpUrl(item.url);
     if (!id || !url) return [];
 
     return [

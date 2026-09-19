@@ -91,9 +91,7 @@ export default function LibraryContent({
             group="links"
             onReorder={(from, to) => onReorder('link', links, from, to)}
             onDropOnTarget={(id, location) => onDropOnTarget('link', id, location)}
-            renderItem={(item) => {
-              const index = links.indexOf(item);
-              return (
+            renderItem={(item, index) => (
                 <LinkCard
                   link={item}
                   tree={tree}
@@ -101,10 +99,9 @@ export default function LibraryContent({
                   onDelete={onDeleteLink}
                   onMoveTo={(location) => onMoveTo('link', item.id, location)}
                   onMoveUp={step('link', links, index, -1)}
-                  onMoveDown={step('link', links, index, 1)}
-                />
-              );
-            }}
+                onMoveDown={step('link', links, index, 1)}
+              />
+            )}
           />
         </section>
       )}
@@ -119,9 +116,7 @@ export default function LibraryContent({
             group="prompts"
             onReorder={(from, to) => onReorder('prompt', prompts, from, to)}
             onDropOnTarget={(id, location) => onDropOnTarget('prompt', id, location)}
-            renderItem={(item) => {
-              const index = prompts.indexOf(item);
-              return (
+            renderItem={(item, index) => (
                 <PromptCard
                   prompt={item}
                   tree={tree}
@@ -129,10 +124,9 @@ export default function LibraryContent({
                   onDelete={onDeletePrompt}
                   onMoveTo={(location) => onMoveTo('prompt', item.id, location)}
                   onMoveUp={step('prompt', prompts, index, -1)}
-                  onMoveDown={step('prompt', prompts, index, 1)}
-                />
-              );
-            }}
+                onMoveDown={step('prompt', prompts, index, 1)}
+              />
+            )}
           />
         </section>
       )}

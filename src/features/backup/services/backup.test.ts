@@ -150,3 +150,27 @@ describe('ajustes al importar', () => {
     expect(flattened).toBe(0);
   });
 });
+
+describe('seguridad de las URLs importadas', () => {
+  it('descarta los enlaces que no sean http o https', () => {
+    const { state } = parseBackup({
+      links: [
+        { id: 'a', url: 'javascript:alert(1)' },
+        { id: 'b', url: 'data:text/html,<script>alert(1)</script>' },
+        { id: 'c', url: 'vbscript:msgbox(1)' },
+        { id: 'd', url: 'https://ejemplo.com' },
+        { id: 'e', url: 'http://ejemplo.com' },
+      ],
+    });
+
+    expect(state.links.map((l) => l.id)).toEqual(['d', 'e']);
+  });
+
+  it('descarta una URL que ni siquiera se puede interpretar', () => {
+    const { state } = parseBackup({
+      links: [{ id: 'a', url: 'no es una url' }, { id: 'b', url: 'https://ok.com' }],
+    });
+
+    expect(state.links.map((l) => l.id)).toEqual(['b']);
+  });
+});

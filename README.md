@@ -136,7 +136,10 @@ datos. Las operaciones de un mismo cambio van en **una sola transacción**, así
 que una mudanza no puede quedarse a medias.
 
 Cuando una pestaña escribe, avisa a las demás por `BroadcastChannel` y éstas
-recargan ([`lib/broadcast.ts`](src/lib/broadcast.ts)).
+recargan ([`lib/broadcast.ts`](src/lib/broadcast.ts)). Hay **un solo canal por
+pestaña**, compartido entre emisor y oyente: la especificación excluye del
+reparto al objeto que publica, pero no a los demás objetos de la misma
+pestaña, así que con dos canales cada escritura se avisaba a sí misma.
 
 ### Copias de seguridad
 
@@ -222,6 +225,19 @@ silenciosos.
 | [`library/services/ordering.test.ts`](src/features/library/services/ordering.test.ts) | Reparto de posiciones al reordenar    |
 | [`library/services/csv.test.ts`](src/features/library/services/csv.test.ts) | Escapado del CSV                                |
 | [`library/services/search.test.ts`](src/features/library/services/search.test.ts) | Coincidencias sin tildes                  |
+
+## Seguridad
+
+Las direcciones de los enlaces se limitan a `http` y `https`, **también al
+importar**: un archivo ajeno podría traer un `javascript:` que acabaría en el
+`href` de una tarjeta. React lo bloquea hoy, pero apoyarse en esa red de
+seguridad para algo comprobable sería descuidado.
+
+Queda una consideración conocida y asumida: el **CSV no escapa las fórmulas**.
+Un prompt que empiece por `=`, `+`, `-` o `@` lo interpretará una hoja de
+cálculo como fórmula. No se antepone una comilla porque alteraría el texto del
+prompt, que es justo lo que se quiere exportar; el contenido es además del
+propio usuario. Tenlo en cuenta antes de compartir un CSV con terceros.
 
 ## Límites que conviene conocer
 
