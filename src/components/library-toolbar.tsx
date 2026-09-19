@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { Search, X } from 'lucide-react';
+import { Download, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   Select,
   SelectContent,
@@ -22,6 +23,10 @@ interface LibraryToolbarProps {
   allCategoriesLabel: string;
   /** Número de recursos que se están mostrando, para anunciarlo al buscar. */
   resultCount: number;
+  /** Descarga todos los prompts en un CSV. */
+  onExport: () => void;
+  /** Cuántos prompts se exportarían; a cero, el botón no tiene sentido. */
+  exportCount: number;
 }
 
 export default function LibraryToolbar({
@@ -31,6 +36,8 @@ export default function LibraryToolbar({
   onCategoryChange,
   allCategoriesLabel,
   resultCount,
+  onExport,
+  exportCount,
 }: LibraryToolbarProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -95,8 +102,9 @@ export default function LibraryToolbar({
         )}
       </div>
 
-      <Select value={category} onValueChange={onCategoryChange}>
-        <SelectTrigger className="w-full sm:w-[190px]" aria-label="Filtrar por categoría">
+      <div className="flex items-center gap-3">
+        <Select value={category} onValueChange={onCategoryChange}>
+          <SelectTrigger className="w-full sm:w-[190px]" aria-label="Filtrar por categoría">
           <SelectValue />
         </SelectTrigger>
         <SelectContent align="end">
@@ -107,7 +115,30 @@ export default function LibraryToolbar({
             </SelectItem>
           ))}
         </SelectContent>
-      </Select>
+        </Select>
+
+        <TooltipProvider delayDuration={300}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                className="shrink-0"
+                onClick={onExport}
+                disabled={exportCount === 0}
+              >
+                <Download className="h-4 w-4" />
+                <span className="sr-only">Exportar los prompts a CSV</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {exportCount === 0
+                ? 'No hay prompts que exportar'
+                : `Exportar ${exportCount === 1 ? 'el prompt' : `los ${exportCount} prompts`} a CSV`}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
 
       {/* Los lectores de pantalla no ven que la lista se ha encogido, así que
           se lo contamos. */}

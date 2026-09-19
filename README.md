@@ -34,6 +34,22 @@ están los fallos caros y silenciosos.
 | [`tree.test.ts`](src/lib/tree.test.ts)           | Jerarquía: filtros por descendencia, contadores acumulados, límite de niveles |
 | [`ordering.test.ts`](src/lib/ordering.test.ts)   | Reparto de posiciones al reordenar                                     |
 | [`search.test.ts`](src/lib/search.test.ts)       | Coincidencias sin tildes y por varias palabras                         |
+| [`csv.test.ts`](src/lib/csv.test.ts)             | Escapado del CSV: comillas, comas y saltos de línea                    |
+
+## Exportar a CSV
+
+El botón junto al buscador descarga **todos** los prompts, no sólo los que se
+estén viendo: el filtro activo no cambia lo que sale. Una columna lleva la
+ruta completa de la carpeta («Trabajo / Nómina / Recibos»).
+
+Dos detalles que hacen que el fichero se abra bien en cualquier sitio, en
+[`src/lib/csv.ts`](src/lib/csv.ts):
+
+- **Escapado RFC 4180.** El contenido de un prompt casi siempre tiene saltos
+  de línea, y sin entrecomillar convierte cada uno en una fila nueva que
+  descuadra la hoja entera.
+- **BOM de UTF-8** delante del fichero. Sin él, Excel lo abre en la
+  codificación del sistema y destroza tildes y eñes.
 
 ## Arquitectura
 

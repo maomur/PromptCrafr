@@ -64,6 +64,7 @@ import {
   subtreeFolderIds,
   type TreeNode,
 } from '@/lib/tree';
+import { csvFileName, downloadCsv, promptsToCsv } from '@/lib/csv';
 import { matchesQuery, parseQuery } from '@/lib/search';
 
 const ALL_CATEGORIES = 'Todos';
@@ -313,6 +314,20 @@ export default function PromptPage({ user }: { user: User }) {
   );
 
 
+  /**
+   * Descarga todos los prompts en un CSV.
+   *
+   * Exporta la biblioteca entera, no lo que se esté viendo: el botón dice
+   * cuántos prompts saldrán, así que el filtro activo no debería cambiarlo.
+   */
+  const exportPrompts = useCallback(() => {
+    downloadCsv(csvFileName(), promptsToCsv(prompts, tree));
+    toast({
+      title: 'Prompts exportados',
+      description: `${prompts.length} ${prompts.length === 1 ? 'prompt' : 'prompts'} en un archivo CSV.`,
+    });
+  }, [prompts, tree, toast]);
+
   /** Mueve un recurso a la ubicación sobre la que se ha soltado. */
   const handleDropOnTarget = useCallback(
     (kind: ItemKind, itemId: string, encodedLocation: string) => {
@@ -370,6 +385,8 @@ export default function PromptPage({ user }: { user: User }) {
               onCategoryChange={(value) => setCategoryFilter(value as CategoryFilter)}
               allCategoriesLabel={ALL_CATEGORIES}
               resultCount={visiblePrompts.length + visibleLinks.length}
+              onExport={exportPrompts}
+              exportCount={prompts.length}
             />
           )}
 
