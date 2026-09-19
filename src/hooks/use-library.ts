@@ -12,6 +12,7 @@ import {
   useFirestore,
   useMemoFirebase,
 } from '@/firebase';
+import { assignOrders, moveItem, nextOrder, type Sortable } from '@/lib/ordering';
 import {
   buildTree,
   countTree,
@@ -34,42 +35,6 @@ import {
 /** Los dos tipos de recurso que guarda la biblioteca. */
 export type ItemKind = 'prompt' | 'link';
 
-/** Un recurso ordenable dentro de una lista. */
-type Sortable = { id: string; order: number };
-
-/**
- * Reparte las posiciones existentes entre los elementos ya reordenados.
- *
- * Reutilizamos los valores de `order` que ya tenían estos elementos en lugar de
- * renumerar desde cero: así los recursos que no están visibles por el filtro
- * activo conservan su posición relativa respecto al resto de la biblioteca.
- */
-function assignOrders<T extends Sortable>(reordered: T[]): Map<string, number> {
-  const slots = reordered.map((item) => item.order ?? 0).sort((a, b) => b - a);
-
-  // Si los valores venían duplicados o a cero (datos antiguos), renumeramos.
-  const isUsable = new Set(slots).size === slots.length;
-  const finalSlots = isUsable ? slots : reordered.map((_, index) => reordered.length - index);
-
-  const changes = new Map<string, number>();
-  reordered.forEach((item, index) => {
-    if (item.order !== finalSlots[index]) changes.set(item.id, finalSlots[index]);
-  });
-  return changes;
-}
-
-/** Mueve un elemento de una posición a otra devolviendo un array nuevo. */
-function moveItem<T>(items: T[], from: number, to: number): T[] {
-  const next = items.slice();
-  const [moved] = next.splice(from, 1);
-  next.splice(to, 0, moved);
-  return next;
-}
-
-/** Posición para un elemento nuevo: siempre en lo alto de la lista. */
-function nextOrder(items: Sortable[]): number {
-  return items.reduce((max, item) => Math.max(max, item.order ?? 0), 0) + 1;
-}
 
 /**
  * Punto único de acceso a la biblioteca del usuario en Firestore.

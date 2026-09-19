@@ -11,15 +11,29 @@ npm install
 npm run dev        # http://localhost:9002
 ```
 
-| Comando             | Qué hace                                        |
-| ------------------- | ----------------------------------------------- |
-| `npm run dev`       | Servidor de desarrollo (Turbopack, puerto 9002) |
-| `npm run build`     | Build de producción                              |
-| `npm run check`     | Tipos + lint, lo mismo que valida el build       |
-| `npm run typecheck` | Sólo TypeScript                                  |
-| `npm run lint`      | Sólo ESLint                                      |
+| Comando              | Qué hace                                        |
+| -------------------- | ----------------------------------------------- |
+| `npm run dev`        | Servidor de desarrollo (Turbopack, puerto 9002) |
+| `npm run build`      | Build de producción                              |
+| `npm run check`      | Tipos + lint + tests: pásalo antes de subir nada |
+| `npm run test`       | Sólo los tests                                   |
+| `npm run test:watch` | Tests en modo vigilancia                         |
+| `npm run typecheck`  | Sólo TypeScript                                  |
+| `npm run lint`       | Sólo ESLint                                      |
 
 El build **falla** si hay errores de tipos o de lint. Es intencionado.
+
+## Tests
+
+Vitest, con los ficheros junto al código que prueban (`src/lib/*.test.ts`).
+No hay tests de componentes: lo que se cubre es la lógica pura, que es donde
+están los fallos caros y silenciosos.
+
+| Fichero                                          | Qué protege                                                            |
+| ------------------------------------------------ | ---------------------------------------------------------------------- |
+| [`tree.test.ts`](src/lib/tree.test.ts)           | Jerarquía: filtros por descendencia, contadores acumulados, límite de niveles |
+| [`ordering.test.ts`](src/lib/ordering.test.ts)   | Reparto de posiciones al reordenar                                     |
+| [`search.test.ts`](src/lib/search.test.ts)       | Coincidencias sin tildes y por varias palabras                         |
 
 ## Arquitectura
 
@@ -32,7 +46,8 @@ src/
 ├── components/     Interfaz (shadcn/ui en components/ui)
 ├── firebase/       Inicialización, contexto, hooks de lectura y escrituras
 ├── hooks/          use-library (acceso a los datos) y use-toast
-└── lib/            Tipos, esquemas de validación y utilidades
+└── lib/            Tipos, árbol de carpetas, orden, búsqueda y validación
+                    (con sus tests al lado)
 ```
 
 ### Datos
