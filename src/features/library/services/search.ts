@@ -25,15 +25,29 @@ export function parseQuery(query: string): string[] {
 }
 
 /**
- * Comprueba si un recurso encaja con la búsqueda.
+ * Junta los campos de un recurso en un texto ya normalizado.
+ *
+ * Se precalcula una vez por recurso, no en cada pulsación. Normalizar el
+ * contenido completo de cientos de prompts a cada tecla costaba cientos de
+ * milisegundos y se notaba al escribir.
+ */
+export function buildHaystack(fields: (string | null | undefined)[]): string {
+  return normalizeText(fields.filter(Boolean).join(' '));
+}
+
+/**
+ * Comprueba si un texto ya normalizado encaja con la búsqueda.
  *
  * Todas las palabras tienen que aparecer, pero pueden estar repartidas entre
  * campos distintos: "logo azul" encuentra un prompt titulado "Logo" cuya
  * descripción menciona el azul.
  */
+export function matchesHaystack(haystack: string, terms: string[]): boolean {
+  return terms.every((term) => haystack.includes(term));
+}
+
+/** Versión directa, para cuando no merece la pena precalcular. */
 export function matchesQuery(fields: (string | null | undefined)[], terms: string[]): boolean {
   if (terms.length === 0) return true;
-
-  const haystack = normalizeText(fields.filter(Boolean).join(' '));
-  return terms.every((term) => haystack.includes(term));
+  return matchesHaystack(buildHaystack(fields), terms);
 }

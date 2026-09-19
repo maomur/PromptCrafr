@@ -1,24 +1,22 @@
 'use client';
 
-import { Download, Share } from 'lucide-react';
+import { Download, Share, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Card } from '@/components/ui/card';
 import { useInstallPrompt } from '@/features/pwa/hooks/use-install-prompt';
 import { APP_NAME } from '@/lib/constants';
 
 /**
  * Invitación a instalar la aplicación.
  *
- * Sólo se ocupa de pintar: cuándo aparece, si el navegador admite la
- * instalación automática y el recordatorio pospuesto los decide
- * `useInstallPrompt`.
+ * Es un aviso al pie y **no un diálogo modal**. Antes lo era, y en producción
+ * —donde el navegador sí ofrece instalar— se abría con velo encima de la
+ * biblioteca en la primera visita, bloqueando la aplicación entera antes de
+ * que el usuario hubiera visto nada. Pedir permiso para instalar algo que
+ * todavía no se ha usado, y además impedir usarlo, era justo lo contrario de
+ * lo que se pretendía.
+ *
+ * Va abajo a la izquierda para no taparse con los botones de crear.
  */
 export default function InstallBanner() {
   const { isVisible, isIOS, canInstall, install, snooze } = useInstallPrompt();
@@ -26,53 +24,47 @@ export default function InstallBanner() {
   if (!isVisible) return null;
 
   return (
-    <Dialog open onOpenChange={(open) => !open && snooze()}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Download className="h-5 w-5 text-primary" />
-            Instalar {APP_NAME}
-          </DialogTitle>
-          <DialogDescription>
-            {isIOS
-              ? 'Para una mejor experiencia, añade esta aplicación a tu pantalla de inicio.'
-              : 'Instálala para abrirla desde tu escritorio o menú de inicio.'}
-          </DialogDescription>
-        </DialogHeader>
+    <Card
+      role="complementary"
+      aria-label={`Instalar ${APP_NAME}`}
+      className="fixed bottom-8 left-4 z-30 w-[min(22rem,calc(100vw-2rem))] p-4 shadow-2xl animate-in slide-in-from-bottom-4"
+    >
+      <div className="flex items-start gap-3">
+        <div className="rounded-lg bg-primary/10 p-2">
+          <Download className="h-5 w-5 text-primary" />
+        </div>
 
-        {isIOS ? (
-          <div className="space-y-4 py-4">
-            <div className="flex items-start gap-3 rounded-lg bg-muted p-3 text-sm">
-              <div className="rounded bg-background p-1 shadow-sm">1</div>
-              <p>
-                Toca el botón <strong>Compartir</strong>{' '}
-                <Share className="mb-1 inline h-4 w-4" /> en la barra inferior de Safari.
-              </p>
-            </div>
-            <div className="flex items-start gap-3 rounded-lg bg-muted p-3 text-sm">
-              <div className="rounded bg-background p-1 shadow-sm">2</div>
-              <p>
-                Desliza y selecciona <strong>Añadir a pantalla de inicio</strong>.
-              </p>
-            </div>
-          </div>
-        ) : (
-          <p className="py-4 text-sm text-muted-foreground">
-            Se abrirá a pantalla completa y seguirá funcionando sin conexión.
-          </p>
-        )}
+        <div className="min-w-0 flex-1 space-y-2">
+          <p className="text-sm font-semibold">Instalar {APP_NAME}</p>
 
-        <DialogFooter className="flex flex-col gap-2 sm:flex-row">
+          {isIOS ? (
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              Toca <Share className="mb-0.5 inline h-3 w-3" /> <strong>Compartir</strong> en Safari
+              y luego <strong>Añadir a pantalla de inicio</strong>.
+            </p>
+          ) : (
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              Ábrela desde tu escritorio, a pantalla completa y sin conexión.
+            </p>
+          )}
+
           {canInstall && (
-            <Button onClick={() => void install()} className="w-full sm:w-auto">
-              Instalar ahora
+            <Button size="sm" onClick={() => void install()}>
+              Instalar
             </Button>
           )}
-          <Button variant="outline" onClick={snooze} className="w-full sm:w-auto">
-            {isIOS ? 'Entendido' : 'Más tarde'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          className="-mr-1 -mt-1 h-7 w-7 shrink-0"
+          onClick={snooze}
+        >
+          <X className="h-4 w-4" />
+          <span className="sr-only">Ahora no</span>
+        </Button>
+      </div>
+    </Card>
   );
 }

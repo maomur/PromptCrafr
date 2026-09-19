@@ -3,7 +3,7 @@
 import { useCallback, useDeferredValue, useMemo, useState } from 'react';
 import { filterKey, matchesFilter, type LibraryFilter, type Location } from '@/features/folders/types';
 import { findNode, pathTo, subtreeFolderIds, type TreeNode } from '@/features/folders/services/tree';
-import { matchesQuery, parseQuery } from '@/features/library/services/search';
+import { buildHaystack, matchesHaystack, parseQuery } from '@/features/library/services/search';
 import type { Link, Prompt, PromptCategory } from '@/features/library/types';
 
 export const ALL_CATEGORIES = 'Todos';
@@ -50,22 +50,40 @@ export function useLibraryView(tree: TreeNode[], prompts: Prompt[], links: Link[
     [activeNode]
   );
 
+  /**
+   * Texto buscable de cada recurso, normalizado una sola vez.
+   *
+   * Sólo se recalcula cuando cambian los recursos, no con cada tecla: es la
+   * diferencia entre una búsqueda instantánea y media palabra de retraso en
+   * una biblioteca grande.
+   */
+  const promptHaystacks = useMemo(
+    () => new Map(prompts.map((p) => [p.id, buildHaystack([p.title, p.description, p.content])])),
+    [prompts]
+  );
+  const linkHaystacks = useMemo(
+    () => new Map(links.map((l) => [l.id, buildHaystack([l.title, l.description, l.url])])),
+    [links]
+  );
+
   const matches = useCallback(
-    (item: { projectId: string | null; folderId?: string | null; category?: PromptCategory | null },
-     haystack: (string | null | undefined)[]) =>
+    (
+      item: { id: string; projectId: string | null; folderId?: string | null; category?: PromptCategory | null },
+      haystacks: Map<string, string>
+    ) =>
       matchesFilter(locationOf(item), filter, folderScope) &&
       (category === ALL_CATEGORIES || item.category === category) &&
-      matchesQuery(haystack, terms),
+      (terms.length === 0 || matchesHaystack(haystacks.get(item.id) ?? '', terms)),
     [filter, folderScope, category, terms]
   );
 
   const visiblePrompts = useMemo(
-    () => prompts.filter((p) => matches(p, [p.title, p.description, p.content])),
-    [prompts, matches]
+    () => prompts.filter((p) => matches(p, promptHaystacks)),
+    [prompts, matches, promptHaystacks]
   );
   const visibleLinks = useMemo(
-    () => links.filter((l) => matches(l, [l.title, l.description, l.url])),
-    [links, matches]
+    () => links.filter((l) => matches(l, linkHaystacks)),
+    [links, matches, linkHaystacks]
   );
 
   /** Subcarpetas directas del nodo abierto, que se muestran como tarjetas. */

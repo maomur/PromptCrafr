@@ -14,6 +14,15 @@ interface BeforeInstallPromptEvent extends Event {
 const SNOOZE_KEY = 'pwa_install_snooze_until';
 const SNOOZE_DAYS = 7;
 
+/**
+ * Margen antes de proponer la instalación.
+ *
+ * El navegador ofrece instalar casi al instante de cargar. Aparecer entonces
+ * es interrumpir a alguien que todavía no ha visto la aplicación, así que se
+ * espera a que haya tenido tiempo de mirarla.
+ */
+const DELAY_MS = 12_000;
+
 /** ¿La aplicación ya está instalada y abierta como tal? */
 function isInstalled(): boolean {
   return (
@@ -52,16 +61,18 @@ export function useInstallPrompt() {
     const appleDevice = /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
     setIOS(appleDevice);
 
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
     const handlePrompt = (browserEvent: Event) => {
       browserEvent.preventDefault();
       setEvent(browserEvent as BeforeInstallPromptEvent);
-      setVisible(true);
+      timer = setTimeout(() => setVisible(true), DELAY_MS);
     };
     window.addEventListener('beforeinstallprompt', handlePrompt);
 
-    // Safari no dispara el evento, así que en iOS enseñamos las instrucciones
-    // manuales tras unos segundos.
-    const timer = appleDevice ? setTimeout(() => setVisible(true), 4000) : undefined;
+    // Safari no dispara el evento, así que en iOS se enseñan las
+    // instrucciones manuales pasado el mismo margen.
+    if (appleDevice) timer = setTimeout(() => setVisible(true), DELAY_MS);
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handlePrompt);

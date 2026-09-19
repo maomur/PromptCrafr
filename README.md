@@ -239,6 +239,29 @@ cálculo como fórmula. No se antepone una comilla porque alteraría el texto de
 prompt, que es justo lo que se quiere exportar; el contenido es además del
 propio usuario. Tenlo en cuenta antes de compartir un CSV con terceros.
 
+## Rendimiento medido
+
+Con **1000 recursos** (800 prompts y 200 enlaces), 12 carpetas principales y
+144 subcarpetas, en Chrome:
+
+| Medida                                   | Valor    |
+| ---------------------------------------- | -------- |
+| Biblioteca visible tras recargar          | ~650 ms  |
+| Filtrar en memoria (por pulsación)        | 0,09 ms  |
+| Nodos en el DOM                           | ~45 000  |
+| Memoria del montón de JS                  | ~250 MB  |
+| Reacción de la búsqueda                   | ~430 ms  |
+
+El texto buscable de cada recurso se normaliza **una sola vez** y no en cada
+pulsación, que es lo que deja el filtrado en 0,09 ms.
+
+Los ~430 ms de la búsqueda no son el filtrado: son React montando y
+desmontando tarjetas. **No hay virtualización**: se pinta todo lo que pasa el
+filtro. A partir de unos 1000 recursos la memoria empieza a pesar, y en un
+móvil con poca RAM podría ir justo. Si se llega ahí, la solución es mostrar
+los resultados por tandas; hacerlo antes de necesitarlo complicaría el
+arrastrar y soltar sin ganar nada.
+
 ## Límites que conviene conocer
 
 - **Los datos viven en un solo navegador.** Lo que guardes en el portátil no
