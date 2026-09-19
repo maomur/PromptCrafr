@@ -58,8 +58,22 @@ export default function SortableGrid<T extends { id: string }>({
 
     const sortable = new Sortable(element, {
       animation: 150,
-      handle: '.drag-handle',
       draggable: '[data-id]',
+      // La tarjeta entera se arrastra. Antes sólo valía el asa: 44×44 px en
+      // una esquina, el 4 % de su superficie y al 50 % de opacidad, así que
+      // agarrar la tarjeta por el título no hacía nada.
+      //
+      // Lo que no debe arrastrar: los controles de dentro.
+      filter: 'button, a, [role="menuitem"], [role="menu"], input, textarea',
+      preventOnFilter: false,
+      // Un clic en la tarjeta copia su contenido. Sin este margen, el temblor
+      // de la mano al pulsar convertiría cada copia en un arrastre.
+      fallbackTolerance: 8,
+      // En táctil hace falta mantener pulsado; si no, deslizar para leer la
+      // lista arrastraría la tarjeta en lugar de desplazar la página.
+      delay: 180,
+      delayOnTouchOnly: true,
+      touchStartThreshold: 5,
       ghostClass: 'sortable-ghost',
       dragClass: 'sortable-drag',
       // El arrastre nativo de HTML5 no funciona de forma fiable en táctil.

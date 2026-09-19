@@ -195,8 +195,18 @@ Borrar nunca se lleva recursos por delante:
 
 ## Arrastrar y soltar
 
-Una tarjeta se arrastra por su asa para reordenarla o para archivarla en otro
-sitio: las filas de la barra lateral y las tarjetas de carpeta son destinos
+Una tarjeta se arrastra **por cualquier parte** para reordenarla o archivarla
+en otro sitio. Antes sólo valía un asa de 44×44 px en la esquina, el 4 % de su
+superficie y al 50 % de opacidad: agarrarla por el título no hacía nada, y
+parecía que el arrastre estuviera roto.
+
+Tres salvaguardas hacen que eso no rompa lo demás: los controles de dentro
+quedan excluidos; hace falta mover **8 px** antes de considerarlo un arrastre,
+para que el clic que copia siga copiando aunque tiemble la mano; y en táctil
+hace falta **mantener pulsado** 180 ms, o deslizar para leer la lista
+arrastraría la tarjeta en vez de desplazar la página.
+
+Los destinos: las filas de la barra lateral y las tarjetas de carpeta son destinos
 válidos, y se insinúan mientras dura el arrastre.
 
 SortableJS sólo sabe mover cosas entre listas, así que cada destino es

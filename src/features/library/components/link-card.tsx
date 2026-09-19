@@ -71,7 +71,7 @@ export default function LinkCard({
   const handleCardClick = useCallback(
     (event: React.MouseEvent) => {
       const target = event.target as HTMLElement;
-      if (target.closest('button, a, [role="menuitem"], [role="menu"], .drag-handle')) return;
+      if (target.closest('button, a, [role="menuitem"], [role="menu"]')) return;
       void copyUrl();
     },
     [copyUrl]
@@ -82,8 +82,10 @@ export default function LinkCard({
       onClick={handleCardClick}
       className="group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-xl border-border/20 bg-card shadow-md transition-all duration-300 hover:shadow-lg"
     >
-      <div className="drag-handle absolute right-0 top-0 p-3 z-10" aria-hidden="true">
-        <GripVertical className="h-5 w-5 text-muted-foreground opacity-50 transition-opacity group-hover:opacity-100" />
+      {/* Pista visual de que la tarjeta se mueve: ya no es la única zona
+          por la que se puede arrastrar, así que no lleva `drag-handle`. */}
+      <div className="pointer-events-none absolute right-0 top-0 z-10 p-3" aria-hidden="true">
+        <GripVertical className="h-5 w-5 text-muted-foreground opacity-40 transition-opacity group-hover:opacity-100" />
       </div>
 
       <CardHeader className="space-y-4 pt-6 md:pt-10">

@@ -132,13 +132,10 @@ html[data-dragging='true'] [data-drop-target].rounded-full:has(.sortable-ghost) 
   cursor: grabbing !important;
 }
 
-.drag-handle {
-  cursor: grab;
-  /* Evita que el navegador interprete el arrastre como desplazamiento. */
-  touch-action: none !important;
-}
-
-.drag-handle:active {
+/* La tarjeta entera se arrastra, así que el cursor lo indica en toda ella.
+   No se fija `touch-action`: en táctil hace falta mantener pulsado, y
+   bloquearlo impediría desplazar la lista con el dedo. */
+[data-id]:active {
   cursor: grabbing;
 }
 
