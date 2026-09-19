@@ -1,146 +1,75 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
 import { Download, Share } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from '@/components/ui/dialog';
+import { useInstallPrompt } from '@/features/pwa/hooks/use-install-prompt';
+import { APP_NAME } from '@/lib/constants';
 
 /**
- * `beforeinstallprompt` es una extensión de Chromium que todavía no está en
- * ninguna especificación, así que no existe en las librerías de TypeScript.
+ * Invitación a instalar la aplicación.
+ *
+ * Sólo se ocupa de pintar: cuándo aparece, si el navegador admite la
+ * instalación automática y el recordatorio pospuesto los decide
+ * `useInstallPrompt`.
  */
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
-}
+export default function InstallBanner() {
+  const { isVisible, isIOS, canInstall, install, snooze } = useInstallPrompt();
 
-const SNOOZE_KEY = 'pwa_install_snooze_until';
-const SNOOZE_DAYS = 7;
-
-export default function InstallPWABanner() {
-  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [showBanner, setShowBanner] = useState(false);
-  const [isIOS, setIsIOS] = useState(false);
-
-  useEffect(() => {
-    // 1. Verificar si ya está en modo standalone (instalada)
-    const isStandalone =
-      window.matchMedia('(display-mode: standalone)').matches ||
-      // Safari en iOS usa una propiedad propia en lugar de `display-mode`.
-      (window.navigator as Navigator & { standalone?: boolean }).standalone === true ||
-      document.referrer.includes('android-app://');
-
-    if (isStandalone) return;
-
-    // 2. Verificar si el usuario ha pospuesto la instalación recientemente
-    const snoozeUntil = localStorage.getItem(SNOOZE_KEY);
-    if (snoozeUntil && Date.now() < parseInt(snoozeUntil, 10)) {
-      return;
-    }
-
-    // Detectar iOS
-    const userAgent = window.navigator.userAgent.toLowerCase();
-    const isAppleDevice = /iphone|ipad|ipod/.test(userAgent);
-    setIsIOS(isAppleDevice);
-
-    // Manejar evento de instalación en Android/Windows
-    const handleBeforeInstallPrompt = (event: Event) => {
-      event.preventDefault();
-      setInstallPrompt(event as BeforeInstallPromptEvent);
-      setShowBanner(true);
-    };
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-    // Safari no dispara `beforeinstallprompt`, así que en iOS mostramos las
-    // instrucciones manuales tras unos segundos.
-    const timer = isAppleDevice ? setTimeout(() => setShowBanner(true), 4000) : undefined;
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-      if (timer) clearTimeout(timer);
-    };
-  }, []);
-
-  const snoozeInstallation = () => {
-    const snoozeUntil = Date.now() + SNOOZE_DAYS * 24 * 60 * 60 * 1000;
-    localStorage.setItem(SNOOZE_KEY, snoozeUntil.toString());
-    setShowBanner(false);
-  };
-
-  const handleInstallClick = async () => {
-    if (!installPrompt) return;
-    
-    installPrompt.prompt();
-    const { outcome } = await installPrompt.userChoice;
-    
-    if (outcome === 'accepted') {
-      setInstallPrompt(null);
-      setShowBanner(false);
-    } else {
-      snoozeInstallation();
-    }
-  };
-
-  const onOpenChange = (open: boolean) => {
-    if (!open) {
-      snoozeInstallation();
-    } else {
-      setShowBanner(true);
-    }
-  };
-
-  if (!showBanner) return null;
+  if (!isVisible) return null;
 
   return (
-    <Dialog open={showBanner} onOpenChange={onOpenChange}>
+    <Dialog open onOpenChange={(open) => !open && snooze()}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Download className="h-5 w-5 text-primary" />
-            Instalar PromptCraft
+            Instalar {APP_NAME}
           </DialogTitle>
           <DialogDescription>
-            {isIOS 
-              ? "Para una mejor experiencia, añade esta aplicación a tu pantalla de inicio." 
-              : "Instala nuestra aplicación para acceder rápidamente desde tu escritorio o menú de inicio."}
+            {isIOS
+              ? 'Para una mejor experiencia, añade esta aplicación a tu pantalla de inicio.'
+              : 'Instálala para abrirla desde tu escritorio o menú de inicio.'}
           </DialogDescription>
         </DialogHeader>
 
         {isIOS ? (
           <div className="space-y-4 py-4">
-            <div className="flex items-start gap-3 bg-muted p-3 rounded-lg text-sm">
-              <div className="bg-background p-1 rounded shadow-sm">1</div>
-              <p>Toca el botón <strong>Compartir</strong> <Share className="inline h-4 w-4 mb-1" /> en la barra inferior de Safari.</p>
+            <div className="flex items-start gap-3 rounded-lg bg-muted p-3 text-sm">
+              <div className="rounded bg-background p-1 shadow-sm">1</div>
+              <p>
+                Toca el botón <strong>Compartir</strong>{' '}
+                <Share className="mb-1 inline h-4 w-4" /> en la barra inferior de Safari.
+              </p>
             </div>
-            <div className="flex items-start gap-3 bg-muted p-3 rounded-lg text-sm">
-              <div className="bg-background p-1 rounded shadow-sm">2</div>
-              <p>Desliza hacia abajo y selecciona <strong>Añadir a pantalla de inicio</strong>.</p>
+            <div className="flex items-start gap-3 rounded-lg bg-muted p-3 text-sm">
+              <div className="rounded bg-background p-1 shadow-sm">2</div>
+              <p>
+                Desliza y selecciona <strong>Añadir a pantalla de inicio</strong>.
+              </p>
             </div>
           </div>
         ) : (
-          <div className="py-4">
-            <p className="text-sm text-muted-foreground">
-              Obtendrás una experiencia a pantalla completa y acceso sin conexión mejorado.
-            </p>
-          </div>
+          <p className="py-4 text-sm text-muted-foreground">
+            Se abrirá a pantalla completa y seguirá funcionando sin conexión.
+          </p>
         )}
 
-        <DialogFooter className="flex flex-col sm:flex-row gap-2">
-          {!isIOS && (
-            <Button onClick={handleInstallClick} className="w-full sm:w-auto">
+        <DialogFooter className="flex flex-col gap-2 sm:flex-row">
+          {canInstall && (
+            <Button onClick={() => void install()} className="w-full sm:w-auto">
               Instalar ahora
             </Button>
           )}
-          <Button variant="outline" onClick={snoozeInstallation} className="w-full sm:w-auto">
-            {isIOS ? "Entendido" : "Más tarde"}
+          <Button variant="outline" onClick={snooze} className="w-full sm:w-auto">
+            {isIOS ? 'Entendido' : 'Más tarde'}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -30,7 +30,7 @@ suyo y sólo conoce lo que está por debajo de ella:
 
 ```
 src/
-├── app/            Sólo enrutado. Server Components que coordinan.
+├── app/            Sólo enrutado: layout, page, loading, error, not-found
 ├── features/       El núcleo modular
 │   ├── backup/     Exportar e importar la biblioteca en JSON
 │   ├── folders/    Jerarquía de carpetas: árbol, reglas y su interfaz
@@ -40,12 +40,18 @@ src/
 │   ├── layout/     Cabecera y pie
 │   └── ui/         Componentes genéricos y atómicos (shadcn/ui)
 ├── hooks/          Hooks transversales de interfaz
-└── lib/            Cliente de la base local, utilidades compartidas
+├── lib/            Cliente de la base local y utilidades compartidas
+└── styles/         Hoja de estilos global
 ```
 
-Cada feature sigue el mismo reparto interno: `components/`, `hooks/`,
-`services/`, `types.ts` y `schemas.ts`. Todas las importaciones usan alias
-(`@/features/...`, `@/components/...`).
+Cada feature reparte lo suyo en `components/`, `hooks/`, `services/`,
+`types.ts` y `schemas.ts`, y sólo crea las que necesita. Todas las
+importaciones usan alias (`@/features/...`, `@/components/...`); no hay ni una
+ruta relativa fuera de los componentes de shadcn.
+
+`app/` contiene únicamente ficheros de enrutado. Los estilos viven en
+`src/styles/`; `manifest.ts` e `icon.svg` se quedan porque son convenciones de
+metadatos del App Router y Next.js los busca exactamente ahí.
 
 ### Sentido de las dependencias
 
@@ -60,10 +66,12 @@ feature de carpetas, que no sabe qué es un prompt. Así no hay ciclos.
 
 ### Sobre los Server Components
 
-`layout.tsx` y `page.tsx` **son** Server Components y se limitan a coordinar.
-De ahí para abajo todo es cliente, y no por comodidad: **los datos viven en el
+`layout.tsx`, `page.tsx`, `loading.tsx`, `not-found.tsx`, la cabecera, el pie y
+el logotipo **son** Server Components. La frontera de cliente empieza en
+`LibraryPage` y baja de ahí, y no por comodidad: **los datos viven en el
 navegador de quien usa la aplicación**, así que no hay nada que el servidor
-pueda traer. No existe una capa de datos en servidor que mover.
+pueda traer ni ninguna capa de datos que mover. `error.tsx` es de cliente
+porque React necesita poder reintentar el render desde el navegador.
 
 ## Los datos
 

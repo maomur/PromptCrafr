@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * Copia texto al portapapeles.
  *

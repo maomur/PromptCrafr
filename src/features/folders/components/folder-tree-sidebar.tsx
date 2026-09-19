@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import {
   ChevronRight,
   Folder as FolderIcon,
@@ -24,6 +23,7 @@ import {
 import DropTarget from '@/features/library/components/drop-target';
 import { type LibraryFilter, filterKey } from '@/features/folders/types';
 import { NO_SELECTION } from '@/lib/constants';
+import { useExpandedNodes } from '@/features/folders/hooks/use-expanded-nodes';
 import { canHaveChildren, type TreeNode } from '@/features/folders/tree';
 import { cn } from '@/lib/utils';
 
@@ -77,26 +77,20 @@ export default function ProjectSidebar({
   onEdit,
   onDelete,
 }: ProjectSidebarProps) {
-  // Un nodo se despliega al pulsar su flecha y, mientras nadie la haya tocado,
-  // también solo cuando se está mirando dentro de él.
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const activeKey = filterKey(activeFilter);
-
-  /** Claves del camino desde la raíz hasta el nodo activo. */
-  const openByDefault = (node: TreeNode): boolean =>
-    node.key === activeKey || node.children.some(openByDefault);
+  const { isExpanded, setExpanded } = useExpandedNodes(activeKey);
 
   const renderNode = (node: TreeNode) => {
     const isActive = activeKey === node.key;
     const hasChildren = node.children.length > 0;
-    const open = expanded[node.key] ?? openByDefault(node);
+    const open = isExpanded(node);
     const label = node.kind === 'project' ? 'proyecto' : 'carpeta';
 
     return (
       <Collapsible
         key={node.key}
         open={open && hasChildren}
-        onOpenChange={(value) => setExpanded((prev) => ({ ...prev, [node.key]: value }))}
+        onOpenChange={(value) => setExpanded(node.key, value)}
       >
         <DropTarget location={node.key} className="group/row flex items-center gap-0.5">
           {hasChildren ? (

@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { GeistMono } from 'geist/font/mono';
 import { GeistSans } from 'geist/font/sans';
-import './globals.css';
+import '@/styles/globals.css';
 
 import AppFooter from '@/components/layout/app-footer';
 import { Toaster } from '@/components/ui/toaster';

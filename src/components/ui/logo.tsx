@@ -1,4 +1,3 @@
-import { useId } from 'react';
 import { cn } from '@/lib/utils';
 
 interface LogoProps {
@@ -7,6 +6,10 @@ interface LogoProps {
   className?: string;
 }
 
+/** Id del degradado. Dos logotipos en la misma página comparten definición,
+ *  que es idéntica, así que repetirlo no cambia nada de lo que se pinta. */
+const GRADIENT_ID = 'promptcraft-logo-gradient';
+
 /**
  * Marca de PromptCraft: el signo `>_` de un prompt de línea de comandos, con
  * un destello que lo sitúa en el terreno de la IA.
@@ -14,13 +17,10 @@ interface LogoProps {
  * Va en línea, y no como <img>, para que escale sin pérdida a cualquier
  * tamaño, no cueste una petición de red y herede el redondeo del contenedor.
  * El fichero equivalente en `public/icons/logo.svg` es el original del que
- * salen los PNG del manifest.
+ * salen los PNG del manifest. No usa hooks, así que puede renderizarse en
+ * servidor.
  */
 export default function Logo({ size = 40, className }: LogoProps) {
-  // Dos logotipos en la misma página compartirían el id del degradado y el
-  // segundo se pintaría en negro; `useId` lo evita.
-  const gradientId = useId();
-
   return (
     <svg
       width={size}
@@ -31,13 +31,13 @@ export default function Logo({ size = 40, className }: LogoProps) {
       aria-label="PromptCraft"
     >
       <defs>
-        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={GRADIENT_ID} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#3D9DFF" />
           <stop offset="1" stopColor="#0062DD" />
         </linearGradient>
       </defs>
 
-      <rect width="64" height="64" rx="15" fill={`url(#${gradientId})`} />
+      <rect width="64" height="64" rx="15" fill={`url(#${GRADIENT_ID})`} />
 
       <g
         fill="none"

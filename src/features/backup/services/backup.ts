@@ -1,6 +1,6 @@
+import { BACKUP_VERSION, type Backup } from '@/features/backup/types';
 import type { Folder, Project } from '@/features/folders/types';
-import type { Link, LibraryState, Prompt } from '@/features/library/types';
-import { promptCategories, type PromptCategory } from '@/features/library/types';
+import { promptCategories, type LibraryState, type Link, type Prompt, type PromptCategory } from '@/features/library/types';
 
 /**
  * Copias de seguridad en JSON.
@@ -11,17 +11,6 @@ import { promptCategories, type PromptCategory } from '@/features/library/types'
  * esta aplicación como un volcado plano de las colecciones, e ignora los
  * campos que sobren en lugar de rechazar el fichero entero.
  */
-
-export const BACKUP_VERSION = 1;
-
-export type Backup = {
-  version: number;
-  exportedAt: string;
-  projects: Project[];
-  folders: Folder[];
-  prompts: Prompt[];
-  links: Link[];
-};
 
 export function createBackup(state: LibraryState, date = new Date()): Backup {
   return {
