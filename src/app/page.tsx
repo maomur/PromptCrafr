@@ -1,11 +1,11 @@
 'use client';
 
-import Image from 'next/image';
 import { Loader2 } from 'lucide-react';
 import AuthScreen from '@/components/auth-screen';
 import PromptPage from '@/components/prompt-page';
 import { useUser } from '@/firebase';
-import { APP_NAME, LOGO_SRC } from '@/lib/constants';
+import Logo from '@/components/logo';
+import { APP_NAME } from '@/lib/constants';
 
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -16,14 +16,7 @@ export default function Home() {
         <div className="flex animate-in flex-col items-center gap-6 fade-in zoom-in duration-500">
           <div className="relative">
             <div className="absolute inset-0 scale-150 animate-pulse rounded-full bg-primary/20 blur-3xl" />
-            <Image
-              src={LOGO_SRC}
-              alt=""
-              width={120}
-              height={120}
-              className="relative rounded-3xl shadow-2xl"
-              priority
-            />
+            <Logo size={120} className="relative rounded-[28px] shadow-2xl" />
           </div>
           <div className="flex flex-col items-center gap-2">
             <h1 className="text-2xl font-bold tracking-tight text-foreground">{APP_NAME}</h1>

@@ -18,7 +18,7 @@ const PAGES_CACHE = `promptcraft-pages-${VERSION}`;
 const ASSETS_CACHE = `promptcraft-assets-${VERSION}`;
 const CURRENT_CACHES = [PAGES_CACHE, ASSETS_CACHE];
 
-const PRECACHED_ASSETS = ['/icons/logo-192.png', '/icons/apple-touch-icon.png'];
+const PRECACHED_ASSETS = ['/icons/logo-192.png', '/icons/apple-touch-icon.png', '/icon.svg'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

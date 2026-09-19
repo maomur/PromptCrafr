@@ -65,6 +65,25 @@ Next.js con el detalle de la petición denegada.
 Las operaciones que tocan varios documentos —reordenar una lista, borrar un
 proyecto— usan lotes atómicos.
 
+### Logotipo e iconos
+
+La marca es el signo `>_` de un prompt de línea de comandos con un destello que
+lo sitúa en el terreno de la IA. Dentro de la aplicación se pinta con el
+componente [`<Logo />`](src/components/logo.tsx), en línea, para que escale sin
+pérdida y no cueste una petición de red.
+
+Hay cuatro variantes del mismo dibujo, cada una por un motivo concreto:
+
+| Fichero                        | Para qué                                                  |
+| ------------------------------ | --------------------------------------------------------- |
+| `public/icons/logo.svg`         | Original del que salen los PNG                             |
+| `src/app/icon.svg`              | Favicon: sin destello, que a 16 px sería una mancha        |
+| `public/icons/maskable.svg`     | Android: fondo a sangre y glifo al 62 %, porque el lanzador recorta |
+| `public/icons/apple.svg`        | iOS: fondo a sangre, porque el sistema aplica su redondeo  |
+
+Los PNG del manifest se regeneran desde los SVG con Chrome headless; no hay
+ningún paso de build que lo haga solo.
+
 ### Proyectos y carpetas
 
 La jerarquía tiene **exactamente dos niveles**: un recurso está suelto, dentro
@@ -86,6 +105,28 @@ Borrar nunca arrastra recursos:
 | Un proyecto | Se borran sus carpetas; los recursos van a «Sin proyecto» |
 
 Ambas operaciones son lotes atómicos.
+
+Al entrar en un proyecto se ven primero sus carpetas como tarjetas y debajo
+todo su contenido, incluido el que vive dentro de esas carpetas. Al entrar en
+una carpeta, sólo lo suyo.
+
+### Arrastrar y soltar
+
+Una tarjeta se puede arrastrar por su asa para reordenarla dentro de la lista o
+para archivarla en otro sitio. Los destinos válidos son las filas de la barra
+lateral («Sin proyecto», cada proyecto y cada carpeta) y las tarjetas de
+carpeta de la vista de proyecto; se insinúan con un borde discontinuo mientras
+dura el arrastre.
+
+SortableJS sólo sabe mover cosas entre listas, así que cada destino es
+[una lista más](src/components/drop-target.tsx), vacía y no ordenable, que
+anuncia su ubicación en `data-drop-target`. La rejilla de origen la lee al
+soltar, de modo que toda la lógica vive en un único sitio. El nodo vuelve
+siempre a su posición original y es React quien repinta la lista cuando
+Firestore confirma el cambio: nunca hay dos fuentes de verdad sobre el DOM.
+
+Arrastrar no es accesible con teclado, así que cada tarjeta mantiene
+«Subir/Bajar posición» y «Mover a» en su menú.
 
 ### Búsqueda
 

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
 import { Loader2, Sparkles } from 'lucide-react';
 import { initiateEmailSignIn, initiateEmailSignUp, useAuth } from '@/firebase';
 import { Button } from '@/components/ui/button';
@@ -17,7 +16,8 @@ import {
 } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { APP_NAME, LOGO_SRC } from '@/lib/constants';
+import Logo from '@/components/logo';
+import { APP_NAME } from '@/lib/constants';
 
 /** Traduce los códigos de Firebase Auth a mensajes que el usuario entienda. */
 function authErrorMessage(code: string | undefined): string {
@@ -110,7 +110,7 @@ export default function AuthScreen() {
       <Card className="w-full max-w-md border-border/40 shadow-2xl">
         <CardHeader className="flex flex-col items-center space-y-1">
           <div className="mb-4 rounded-2xl bg-primary/10 p-3">
-            <Image src={LOGO_SRC} alt="" width={64} height={64} className="rounded-xl shadow-sm" priority />
+            <Logo size={64} className="rounded-[15px] shadow-sm" />
           </div>
           <CardTitle className="text-3xl font-bold tracking-tight">{APP_NAME}</CardTitle>
           <CardDescription>Tu biblioteca personal de prompts en la nube</CardDescription>

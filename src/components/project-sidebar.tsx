@@ -21,7 +21,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { filterKey, type Folder, type LibraryFilter, type Project } from '@/lib/definitions';
+import DropTarget from '@/components/drop-target';
+import {
+  NO_SELECTION,
+  filterKey,
+  type Folder,
+  type LibraryFilter,
+  type Project,
+} from '@/lib/definitions';
 import { cn } from '@/lib/utils';
 
 interface ProjectSidebarProps {
@@ -39,13 +46,22 @@ interface ProjectSidebarProps {
   onDeleteFolder: (folder: Folder) => void;
 }
 
+/**
+ * Anchos de las columnas laterales de cada fila.
+ *
+ * Todas las filas de primer nivel reservan el mismo hueco para la flecha y
+ * para el menú, tengan o no. Es lo que mantiene «Todos», «Sin proyecto» y los
+ * proyectos alineados en la misma vertical en lugar de ir escalonándose.
+ */
+const CHEVRON_SLOT = 'w-6 shrink-0';
+const MENU_SLOT = 'w-7 shrink-0';
+
 const rowClass = (isActive: boolean) =>
   cn(
     'flex min-w-0 flex-1 items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-all',
     isActive ? 'bg-primary text-primary-foreground shadow-md' : 'hover:bg-accent/50'
   );
 
-/** Contador a la derecha de cada fila. */
 function Count({ value }: { value: number }) {
   return <span className="shrink-0 font-mono text-sm font-medium opacity-70">({value})</span>;
 }
@@ -63,14 +79,15 @@ export default function ProjectSidebar({
   onRenameFolder,
   onDeleteFolder,
 }: ProjectSidebarProps) {
-  // Un proyecto se despliega al pulsar su flecha, y también solo si el filtro
-  // activo apunta a una de sus carpetas.
+  // Un proyecto se despliega al pulsar su flecha y, mientras nadie la haya
+  // tocado, también solo cuando se está mirando dentro de él.
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const activeKey = filterKey(activeFilter);
 
   const isExpanded = (projectId: string) =>
     expanded[projectId] ??
-    (activeFilter.type === 'folder' && activeFilter.projectId === projectId);
+    ((activeFilter.type === 'folder' || activeFilter.type === 'project') &&
+      activeFilter.projectId === projectId);
 
   return (
     <aside className="w-full shrink-0 space-y-2 md:w-64">
@@ -85,65 +102,72 @@ export default function ProjectSidebar({
       </div>
 
       <nav className="space-y-1">
-        <button
-          type="button"
-          onClick={() => onSelect({ type: 'all' })}
-          className={rowClass(activeKey === 'all')}
-          aria-current={activeKey === 'all' ? 'true' : undefined}
-        >
-          <span className="flex items-center">
-            <Folders className="mr-2 h-4 w-4" />
-            Todos
-          </span>
-          <Count value={counts.all ?? 0} />
-        </button>
+        {/* «Todos» no es una ubicación, así que no admite que le suelten nada. */}
+        <div className="flex items-center gap-0.5">
+          <div className={CHEVRON_SLOT} />
+          <button
+            type="button"
+            onClick={() => onSelect({ type: 'all' })}
+            className={rowClass(activeKey === 'all')}
+            aria-current={activeKey === 'all' ? 'true' : undefined}
+          >
+            <span className="flex items-center">
+              <Folders className="mr-2 h-4 w-4" />
+              Todos
+            </span>
+            <Count value={counts.all ?? 0} />
+          </button>
+          <div className={MENU_SLOT} />
+        </div>
 
-        <button
-          type="button"
-          onClick={() => onSelect({ type: 'unassigned' })}
-          className={rowClass(activeKey === 'unassigned')}
-          aria-current={activeKey === 'unassigned' ? 'true' : undefined}
-        >
-          <span className="flex items-center">
-            <FolderIcon className="mr-2 h-4 w-4" />
-            Sin proyecto
-          </span>
-          <Count value={counts.unassigned ?? 0} />
-        </button>
+        <DropTarget location={NO_SELECTION} className="flex items-center gap-0.5">
+          <div className={CHEVRON_SLOT} />
+          <button
+            type="button"
+            onClick={() => onSelect({ type: 'unassigned' })}
+            className={rowClass(activeKey === 'unassigned')}
+            aria-current={activeKey === 'unassigned' ? 'true' : undefined}
+          >
+            <span className="flex items-center">
+              <FolderIcon className="mr-2 h-4 w-4" />
+              Sin proyecto
+            </span>
+            <Count value={counts.unassigned ?? 0} />
+          </button>
+          <div className={MENU_SLOT} />
+        </DropTarget>
 
         {projects.map((project) => {
           const projectFolders = folders.filter((folder) => folder.projectId === project.id);
           const projectKey = `project:${project.id}`;
           const open = isExpanded(project.id);
+          const hasFolders = projectFolders.length > 0;
 
           return (
             <Collapsible
               key={project.id}
-              open={open}
+              open={open && hasFolders}
               onOpenChange={(value) => setExpanded((prev) => ({ ...prev, [project.id]: value }))}
             >
-              {/* Fila del proyecto: desplegar, seleccionar y menú son tres
-                  botones hermanos, nunca anidados unos dentro de otros. */}
-              <div className="group flex items-center gap-0.5">
-                <CollapsibleTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-6 shrink-0"
-                    disabled={projectFolders.length === 0}
-                  >
-                    <ChevronRight
-                      className={cn(
-                        'h-4 w-4 transition-transform',
-                        open && 'rotate-90',
-                        projectFolders.length === 0 && 'opacity-0'
-                      )}
-                    />
-                    <span className="sr-only">
-                      {open ? 'Contraer' : 'Desplegar'} las carpetas de {project.name}
-                    </span>
-                  </Button>
-                </CollapsibleTrigger>
+              <DropTarget location={projectKey} className="group flex items-center gap-0.5">
+                {hasFolders ? (
+                  <CollapsibleTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn(CHEVRON_SLOT, 'h-8 hover:bg-accent')}
+                    >
+                      <ChevronRight
+                        className={cn('h-4 w-4 transition-transform', open && 'rotate-90')}
+                      />
+                      <span className="sr-only">
+                        {open ? 'Contraer' : 'Desplegar'} las carpetas de {project.name}
+                      </span>
+                    </Button>
+                  </CollapsibleTrigger>
+                ) : (
+                  <div className={CHEVRON_SLOT} />
+                )}
 
                 <button
                   type="button"
@@ -152,7 +176,7 @@ export default function ProjectSidebar({
                   aria-current={activeKey === projectKey ? 'true' : undefined}
                 >
                   <span className="flex min-w-0 items-center">
-                    {open ? (
+                    {open && hasFolders ? (
                       <FolderOpen className="mr-2 h-4 w-4 shrink-0" />
                     ) : (
                       <FolderIcon className="mr-2 h-4 w-4 shrink-0" />
@@ -167,7 +191,10 @@ export default function ProjectSidebar({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-7 shrink-0 opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100 data-[state=open]:opacity-100"
+                      className={cn(
+                        MENU_SLOT,
+                        'h-8 opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100 data-[state=open]:opacity-100'
+                      )}
                     >
                       <MoreHorizontal className="h-4 w-4" />
                       <span className="sr-only">Opciones del proyecto {project.name}</span>
@@ -192,13 +219,23 @@ export default function ProjectSidebar({
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-              </div>
+              </DropTarget>
 
-              <CollapsibleContent className="space-y-1 pt-1">
+              {/*
+                Las carpetas cuelgan de una guía vertical alineada bajo el
+                icono del proyecto: con sólo sangrarlas, la jerarquía no se
+                distinguía de una lista plana.
+              */}
+              <CollapsibleContent className="pt-1">
+                <div className="ml-[26px] space-y-1 border-l border-border pl-3">
                 {projectFolders.map((folder) => {
                   const folderKey = `folder:${folder.id}`;
                   return (
-                    <div key={folder.id} className="group/folder flex items-center gap-0.5 pl-6">
+                    <DropTarget
+                      key={folder.id}
+                      location={folderKey}
+                      className="group/folder flex items-center gap-0.5"
+                    >
                       <button
                         type="button"
                         onClick={() =>
@@ -219,7 +256,10 @@ export default function ProjectSidebar({
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 shrink-0 opacity-0 transition-opacity focus-visible:opacity-100 group-hover/folder:opacity-100 data-[state=open]:opacity-100"
+                            className={cn(
+                              MENU_SLOT,
+                              'h-7 opacity-0 transition-opacity focus-visible:opacity-100 group-hover/folder:opacity-100 data-[state=open]:opacity-100'
+                            )}
                           >
                             <MoreHorizontal className="h-3.5 w-3.5" />
                             <span className="sr-only">Opciones de la carpeta {folder.name}</span>
@@ -240,9 +280,10 @@ export default function ProjectSidebar({
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
-                    </div>
+                    </DropTarget>
                   );
                 })}
+                </div>
               </CollapsibleContent>
             </Collapsible>
           );

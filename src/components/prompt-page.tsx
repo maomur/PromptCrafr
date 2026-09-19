@@ -2,7 +2,7 @@
 
 import { useCallback, useDeferredValue, useMemo, useState } from 'react';
 import type { User } from 'firebase/auth';
-import { Link as LinkIcon, Loader2, LogOut, Plus, Sparkles } from 'lucide-react';
+import { FolderTree, Link as LinkIcon, Loader2, LogOut, Plus, Sparkles } from 'lucide-react';
 
 import Header from '@/components/header';
 import EmptyState from '@/components/empty-state';
@@ -10,6 +10,7 @@ import LinkCard from '@/components/link-card';
 import LinkForm from '@/components/link-form';
 import PromptCard from '@/components/prompt-card';
 import PromptForm from '@/components/prompt-form';
+import FolderCard from '@/components/folder-card';
 import LibraryToolbar from '@/components/library-toolbar';
 import NameDialog, { type NameDialogRequest } from '@/components/name-dialog';
 import ProjectSidebar from '@/components/project-sidebar';
@@ -37,6 +38,7 @@ import { useLibrary, type ItemKind } from '@/hooks/use-library';
 import { useToast } from '@/hooks/use-toast';
 import { logOut, useAuth } from '@/firebase';
 import {
+  decodeLocation,
   matchesFilter,
   type Folder,
   type LibraryFilter,
@@ -230,7 +232,46 @@ export default function PromptPage({ user }: { user: User }) {
     };
   }, [pendingDeletion]);
 
-  const isEmpty = visiblePrompts.length === 0 && visibleLinks.length === 0;
+  /**
+   * Carpetas que se muestran como tarjetas.
+   *
+   * Sólo al mirar un proyecto entero: dentro de una carpeta ya no hay nada
+   * más abajo que enseñar, y en «Todos» serían ruido.
+   */
+  const visibleFolders = useMemo(
+    () =>
+      activeFilter.type === 'project'
+        ? folders.filter((folder) => folder.projectId === activeFilter.projectId)
+        : [],
+    [folders, activeFilter]
+  );
+
+  /** Mueve un recurso a la ubicación sobre la que se ha soltado. */
+  const handleDropOnTarget = useCallback(
+    (kind: ItemKind, itemId: string, encodedLocation: string) => {
+      const source = kind === 'prompt' ? prompts : links;
+      const item = source.find((candidate) => candidate.id === itemId);
+      if (!item) return;
+
+      const destination = decodeLocation(encodedLocation, folders);
+      const current = locationOf(item);
+
+      // Soltar algo donde ya estaba no merece ni una escritura ni un aviso.
+      if (
+        current.projectId === destination.projectId &&
+        current.folderId === destination.folderId
+      ) {
+        return;
+      }
+
+      library.moveTo(kind, itemId, destination);
+      toast({ title: 'Recurso movido' });
+    },
+    [prompts, links, folders, library, toast]
+  );
+
+  const isEmpty =
+    visiblePrompts.length === 0 && visibleLinks.length === 0 && visibleFolders.length === 0;
 
   return (
     <div className="relative min-h-[80vh]">
@@ -328,6 +369,43 @@ export default function PromptPage({ user }: { user: User }) {
             />
           ) : (
             <div className="space-y-8">
+              {visibleFolders.length > 0 && (
+                <section className="space-y-4">
+                  <h2 className="flex items-center gap-2 px-1 text-sm font-bold uppercase tracking-widest text-muted-foreground">
+                    <FolderTree className="h-4 w-4" /> Carpetas ({visibleFolders.length})
+                  </h2>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    {visibleFolders.map((folder) => (
+                      <FolderCard
+                        key={folder.id}
+                        folder={folder}
+                        count={counts[`folder:${folder.id}`] ?? 0}
+                        onOpen={() =>
+                          setActiveFilter({
+                            type: 'folder',
+                            projectId: folder.projectId,
+                            folderId: folder.id,
+                          })
+                        }
+                        onRename={() =>
+                          askForName({
+                            title: 'Renombrar carpeta',
+                            description: `Elige un nombre nuevo para «${folder.name}».`,
+                            initialValue: folder.name,
+                            confirmLabel: 'Guardar',
+                            onConfirm: (name) => {
+                              library.renameFolder(folder.id, name);
+                              toast({ title: 'Carpeta renombrada' });
+                            },
+                          })
+                        }
+                        onDelete={() => setPendingDeletion({ kind: 'folder', item: folder })}
+                      />
+                    ))}
+                  </div>
+                </section>
+              )}
+
               {visibleLinks.length > 0 && (
                 <section className="space-y-4">
                   <h2 className="flex items-center gap-2 px-1 text-sm font-bold uppercase tracking-widest text-orange-600 dark:text-orange-400">
@@ -335,7 +413,9 @@ export default function PromptPage({ user }: { user: User }) {
                   </h2>
                   <SortableGrid
                     items={visibleLinks}
+                    group="links"
                     onReorder={(from, to) => library.reorder('link', visibleLinks, from, to)}
+                    onDropOnTarget={(id, location) => handleDropOnTarget('link', id, location)}
                     renderItem={(link) => {
                       const index = visibleLinks.indexOf(link);
                       return (
@@ -362,7 +442,9 @@ export default function PromptPage({ user }: { user: User }) {
                   </h2>
                   <SortableGrid
                     items={visiblePrompts}
+                    group="prompts"
                     onReorder={(from, to) => library.reorder('prompt', visiblePrompts, from, to)}
+                    onDropOnTarget={(id, location) => handleDropOnTarget('prompt', id, location)}
                     renderItem={(prompt) => {
                       const index = visiblePrompts.indexOf(prompt);
                       return (

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Variante para iOS: fondo a sangre, porque el sistema aplica su propio
+       redondeo y un cuadrado ya redondeado dejaría esquinas claras. -->
+  <defs>
+    <linearGradient id="pc-apple" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3D9DFF"/>
+      <stop offset="1" stop-color="#0062DD"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" fill="url(#pc-apple)"/>
+  <g fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M19 23 L29 33 L19 43"/>
+    <path d="M35 43 H45"/>
+  </g>
+  <path d="M46 14 L47.7 19.3 L53 21 L47.7 22.7 L46 28 L44.3 22.7 L39 21 L44.3 19.3 Z" fill="#fff"/>
+</svg>

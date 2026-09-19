@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Variante simplificada para la pestaña del navegador: sin el destello,
+       que a 16 px se convierte en una mancha, y con el glifo más grande. -->
+  <defs>
+    <linearGradient id="pc-fav" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3D9DFF"/>
+      <stop offset="1" stop-color="#0062DD"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="15" fill="url(#pc-fav)"/>
+  <g fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M17 20 L30 32 L17 44"/>
+    <path d="M37 44 H48"/>
+  </g>
+</svg>

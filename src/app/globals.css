@@ -82,6 +82,33 @@
 }
 
 /* Arrastrar y soltar (SortableJS) */
+
+/*
+ * Mientras se arrastra, los destinos válidos se insinúan con un borde
+ * discontinuo, y el que está bajo el cursor se resalta. Sin esto no hay forma
+ * de saber que la barra lateral acepta que le suelten algo.
+ */
+html[data-dragging='true'] [data-drop-target] {
+  border-radius: calc(var(--radius) + 2px);
+  outline: 2px dashed hsl(var(--primary) / 0.35);
+  outline-offset: 2px;
+}
+
+html[data-dragging='true'] [data-drop-target]:has(.sortable-ghost) {
+  background-color: hsl(var(--primary) / 0.12);
+  outline-color: hsl(var(--primary));
+  outline-style: solid;
+}
+
+/*
+ * SortableJS mete la tarjeta arrastrada dentro del destino para previsualizar
+ * el hueco. En una fila de la barra lateral eso reventaría el diseño, así que
+ * la escondemos y dejamos que hable el resaltado.
+ */
+[data-drop-target] .sortable-ghost {
+  display: none !important;
+}
+
 .sortable-ghost {
   opacity: 0.4;
   background-color: hsl(var(--muted)) !important;

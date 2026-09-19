@@ -7,5 +7,13 @@ export const APP_DESCRIPTION = 'Gestiona tus prompts creativos con facilidad.';
 /** Color de marca (#007AFF), usado en el manifest y en la barra del navegador. */
 export const BRAND_COLOR = '#007AFF';
 
-/** Logotipo de la aplicación. Servido desde /public para que funcione sin conexión. */
-export const LOGO_SRC = '/icons/logo-192.png';
+/**
+ * Iconos de la PWA, generados a partir de `public/icons/logo.svg`.
+ * Dentro de la aplicación el logotipo se pinta con el componente <Logo />.
+ */
+export const APP_ICONS = {
+  any192: '/icons/logo-192.png',
+  any512: '/icons/logo-512.png',
+  maskable512: '/icons/maskable-512.png',
+  appleTouch: '/icons/apple-touch-icon.png',
+} as const;

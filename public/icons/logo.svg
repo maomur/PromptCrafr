@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="PromptCraft">
+  <title>PromptCraft</title>
+  <defs>
+    <linearGradient id="pc-bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3D9DFF"/>
+      <stop offset="1" stop-color="#0062DD"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Cuadrado redondeado con el azul de marca. -->
+  <rect width="64" height="64" rx="15" fill="url(#pc-bg)"/>
+
+  <!-- El signo ">_" del prompt: el cursor de una línea de comandos. -->
+  <g fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M19 23 L29 33 L19 43"/>
+    <path d="M35 43 H45"/>
+  </g>
+
+  <!-- Destello: el guiño a la IA que lo separa de un terminal cualquiera.
+       Va separado del chevron para que no se empasten a tamaño de favicon. -->
+  <path d="M46 14 L47.7 19.3 L53 21 L47.7 22.7 L46 28 L44.3 22.7 L39 21 L44.3 19.3 Z" fill="#fff"/>
+</svg>

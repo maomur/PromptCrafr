@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next';
-import { APP_DESCRIPTION, APP_NAME, BRAND_COLOR } from '@/lib/constants';
+import { APP_DESCRIPTION, APP_ICONS, APP_NAME, BRAND_COLOR } from '@/lib/constants';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
@@ -12,9 +12,11 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: BRAND_COLOR,
     lang: 'es',
     icons: [
-      { src: '/icons/logo-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-      { src: '/icons/logo-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-      { src: '/icons/logo-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+      { src: APP_ICONS.any192, sizes: '192x192', type: 'image/png', purpose: 'any' },
+      { src: APP_ICONS.any512, sizes: '512x512', type: 'image/png', purpose: 'any' },
+      // El maskable lleva el fondo a sangre y el glifo encogido, porque el
+      // lanzador de Android recorta el icono a su propia forma.
+      { src: APP_ICONS.maskable512, sizes: '512x512', type: 'image/png', purpose: 'maskable' },
     ],
   };
 }

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
-import Image from 'next/image';
-import { APP_NAME, LOGO_SRC } from '@/lib/constants';
+import Logo from '@/components/logo';
+import { APP_NAME } from '@/lib/constants';
 
 export default function Header({ children }: { children?: ReactNode }) {
   return (
@@ -9,14 +9,7 @@ export default function Header({ children }: { children?: ReactNode }) {
       <div className="hidden flex-1 md:block" />
 
       <div className="z-10 flex items-center gap-3 md:absolute md:left-1/2 md:-translate-x-1/2">
-        <Image
-          src={LOGO_SRC}
-          alt=""
-          width={40}
-          height={40}
-          className="rounded-lg shadow-sm"
-          priority
-        />
+        <Logo size={40} className="rounded-[9px] shadow-sm" />
         <h1 className="font-sans text-xl font-bold tracking-tight text-foreground">{APP_NAME}</h1>
       </div>
 
