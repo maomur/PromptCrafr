@@ -87,7 +87,12 @@ ningún paso de build que lo haga solo.
 ### Proyectos y carpetas
 
 La jerarquía tiene **exactamente dos niveles**: un recurso está suelto, dentro
-de un proyecto, o dentro de una carpeta de ese proyecto. Por eso `folders` es
+de un proyecto, o dentro de una carpeta de ese proyecto. En la interfaz, un
+proyecto se presenta como **carpeta principal** y una carpeta como
+**subcarpeta**; los dos niveles se crean y se editan con el mismo formulario
+([`folder-form.tsx`](src/components/folder-form.tsx)), donde dejar la
+ubicación en «carpeta principal» es lo que crea un proyecto. Ambos tienen
+nombre y descripción opcional. Por eso `folders` es
 una colección aparte con un `projectId`, y no un `parentId` recursivo en
 `projects`: no hay anidamiento arbitrario que modelar.
 
@@ -104,7 +109,9 @@ Borrar nunca arrastra recursos:
 | Una carpeta | Sus recursos quedan sueltos dentro del proyecto        |
 | Un proyecto | Se borran sus carpetas; los recursos van a «Sin proyecto» |
 
-Ambas operaciones son lotes atómicos.
+Ambas operaciones son lotes atómicos. Cambiar una subcarpeta de proyecto
+también lo es: sus recursos guardan `projectId` además de `folderId`, así que
+la mudanza tiene que arrastrarlos a todos o a ninguno.
 
 Al entrar en un proyecto se ven primero sus carpetas como tarjetas y debajo
 todo su contenido, incluido el que vive dentro de esas carpetas. Al entrar en

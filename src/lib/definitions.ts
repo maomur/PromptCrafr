@@ -8,6 +8,7 @@ export const NO_SELECTION = 'none';
 export type Project = {
   id: string;
   name: string;
+  description?: string | null;
   createdAt: string;
   ownerId: string;
 };
@@ -22,10 +23,24 @@ export type Project = {
 export type Folder = {
   id: string;
   name: string;
+  description?: string | null;
   /** Proyecto al que pertenece. Una carpeta nunca existe fuera de un proyecto. */
   projectId: string;
   createdAt: string;
   ownerId: string;
+};
+
+/**
+ * Datos comunes a un proyecto y a una carpeta.
+ *
+ * Los dos niveles se crean y se editan con el mismo formulario: `parentId` a
+ * null significa «carpeta principal», es decir, un proyecto.
+ */
+export type FolderInput = {
+  name: string;
+  description: string | null;
+  /** Proyecto contenedor, o null para crear un proyecto. */
+  parentId: string | null;
 };
 
 export type Prompt = {

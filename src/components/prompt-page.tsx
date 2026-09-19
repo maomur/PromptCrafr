@@ -2,7 +2,15 @@
 
 import { useCallback, useDeferredValue, useMemo, useState } from 'react';
 import type { User } from 'firebase/auth';
-import { FolderTree, Link as LinkIcon, Loader2, LogOut, Plus, Sparkles } from 'lucide-react';
+import {
+  FolderPlus,
+  FolderTree,
+  Link as LinkIcon,
+  Loader2,
+  LogOut,
+  Plus,
+  Sparkles,
+} from 'lucide-react';
 
 import Header from '@/components/header';
 import EmptyState from '@/components/empty-state';
@@ -11,8 +19,8 @@ import LinkForm from '@/components/link-form';
 import PromptCard from '@/components/prompt-card';
 import PromptForm from '@/components/prompt-form';
 import FolderCard from '@/components/folder-card';
+import FolderForm from '@/components/folder-form';
 import LibraryToolbar from '@/components/library-toolbar';
-import NameDialog, { type NameDialogRequest } from '@/components/name-dialog';
 import ProjectSidebar from '@/components/project-sidebar';
 import SortableGrid from '@/components/sortable-grid';
 import { Button } from '@/components/ui/button';
@@ -41,6 +49,7 @@ import {
   decodeLocation,
   matchesFilter,
   type Folder,
+  type FolderInput,
   type LibraryFilter,
   type Link,
   type Location,
@@ -75,6 +84,18 @@ function linkHaystack(link: Link) {
   return [link.title, link.description, link.url];
 }
 
+/**
+ * Qué está pidiendo el diálogo de carpetas.
+ *
+ * Crear admite una ubicación de partida (el botón flotante la deja libre; el
+ * menú de un proyecto la trae ya puesta). Editar distingue los dos niveles
+ * porque un proyecto no puede mudarse a ninguna parte.
+ */
+type FolderDialog =
+  | { mode: 'create'; parentId: string | null }
+  | { mode: 'edit-project'; project: Project }
+  | { mode: 'edit-folder'; folder: Folder };
+
 /** Lo que se está a punto de borrar, a la espera de confirmación. */
 type PendingDeletion =
   | { kind: 'prompt'; item: Prompt }
@@ -96,7 +117,7 @@ export default function PromptPage({ user }: { user: User }) {
 
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>(ALL_CATEGORIES);
   const [activeFilter, setActiveFilter] = useState<LibraryFilter>({ type: 'all' });
-  const [nameRequest, setNameRequest] = useState<NameDialogRequest | null>(null);
+  const [folderDialog, setFolderDialog] = useState<FolderDialog | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   // El campo de texto responde al instante y el filtrado de la lista puede ir
@@ -189,8 +210,27 @@ export default function PromptPage({ user }: { user: User }) {
     [library, toast]
   );
 
-  // Las cuatro acciones de nombrar comparten un único diálogo.
-  const askForName = useCallback((request: NameDialogRequest) => setNameRequest(request), []);
+  /** Guarda lo que devuelve el formulario, en el nivel que corresponda. */
+  const saveFolder = useCallback(
+    (input: FolderInput) => {
+      if (!folderDialog) return;
+
+      if (folderDialog.mode === 'edit-project') {
+        library.updateProject(folderDialog.project.id, input);
+        toast({ title: 'Proyecto actualizado' });
+      } else if (folderDialog.mode === 'edit-folder') {
+        library.updateFolder(folderDialog.folder.id, input);
+        toast({ title: 'Carpeta actualizada' });
+      } else if (input.parentId) {
+        library.createFolder(input.parentId, input);
+        toast({ title: 'Carpeta creada' });
+      } else {
+        library.createProject(input);
+        toast({ title: 'Proyecto creado' });
+      }
+    },
+    [folderDialog, library, toast]
+  );
 
   /** Mueve un elemento una posición arriba o abajo dentro de la lista visible. */
   const step = useCallback(
@@ -201,6 +241,41 @@ export default function PromptPage({ user }: { user: User }) {
     },
     [library]
   );
+
+  const folderCopy = useMemo(() => {
+    if (!folderDialog) return null;
+
+    if (folderDialog.mode === 'edit-project') {
+      const { project } = folderDialog;
+      return {
+        title: 'Editar proyecto',
+        body: 'Un proyecto es una carpeta principal: no puede moverse dentro de otra.',
+        submitLabel: 'Guardar',
+        initial: { name: project.name, description: project.description ?? null, parentId: null },
+      };
+    }
+
+    if (folderDialog.mode === 'edit-folder') {
+      const { folder } = folderDialog;
+      return {
+        title: 'Editar carpeta',
+        body: 'Si la cambias de proyecto, su contenido se muda con ella.',
+        submitLabel: 'Guardar',
+        initial: {
+          name: folder.name,
+          description: folder.description ?? null,
+          parentId: folder.projectId,
+        },
+      };
+    }
+
+    return {
+      title: 'Nueva carpeta',
+      body: 'Déjala como principal para crear un proyecto, o elige dentro de cuál va.',
+      submitLabel: 'Crear',
+      initial: { name: '', description: null, parentId: folderDialog.parentId },
+    };
+  }, [folderDialog]);
 
   const deletionCopy = useMemo(() => {
     if (!pendingDeletion) return null;
@@ -289,53 +364,11 @@ export default function PromptPage({ user }: { user: User }) {
           counts={counts}
           activeFilter={activeFilter}
           onSelect={setActiveFilter}
-          onCreateProject={() =>
-            askForName({
-              title: 'Nuevo proyecto',
-              description: 'Agrupa prompts y enlaces relacionados bajo un mismo nombre.',
-              confirmLabel: 'Crear',
-              onConfirm: (name) => {
-                library.createProject(name);
-                toast({ title: 'Proyecto creado' });
-              },
-            })
-          }
-          onRenameProject={(project) =>
-            askForName({
-              title: 'Renombrar proyecto',
-              description: `Elige un nombre nuevo para «${project.name}».`,
-              initialValue: project.name,
-              confirmLabel: 'Guardar',
-              onConfirm: (name) => {
-                library.renameProject(project.id, name);
-                toast({ title: 'Proyecto renombrado' });
-              },
-            })
-          }
+          onCreateProject={() => setFolderDialog({ mode: 'create', parentId: null })}
+          onEditProject={(project) => setFolderDialog({ mode: 'edit-project', project })}
           onDeleteProject={(project) => setPendingDeletion({ kind: 'project', item: project })}
-          onCreateFolder={(project) =>
-            askForName({
-              title: 'Nueva carpeta',
-              description: `Se creará dentro del proyecto «${project.name}».`,
-              confirmLabel: 'Crear',
-              onConfirm: (name) => {
-                library.createFolder(project.id, name);
-                toast({ title: 'Carpeta creada' });
-              },
-            })
-          }
-          onRenameFolder={(folder) =>
-            askForName({
-              title: 'Renombrar carpeta',
-              description: `Elige un nombre nuevo para «${folder.name}».`,
-              initialValue: folder.name,
-              confirmLabel: 'Guardar',
-              onConfirm: (name) => {
-                library.renameFolder(folder.id, name);
-                toast({ title: 'Carpeta renombrada' });
-              },
-            })
-          }
+          onCreateFolder={(project) => setFolderDialog({ mode: 'create', parentId: project.id })}
+          onEditFolder={(folder) => setFolderDialog({ mode: 'edit-folder', folder })}
           onDeleteFolder={(folder) => setPendingDeletion({ kind: 'folder', item: folder })}
         />
 
@@ -387,18 +420,7 @@ export default function PromptPage({ user }: { user: User }) {
                             folderId: folder.id,
                           })
                         }
-                        onRename={() =>
-                          askForName({
-                            title: 'Renombrar carpeta',
-                            description: `Elige un nombre nuevo para «${folder.name}».`,
-                            initialValue: folder.name,
-                            confirmLabel: 'Guardar',
-                            onConfirm: (name) => {
-                              library.renameFolder(folder.id, name);
-                              toast({ title: 'Carpeta renombrada' });
-                            },
-                          })
-                        }
+                        onEdit={() => setFolderDialog({ mode: 'edit-folder', folder })}
                         onDelete={() => setPendingDeletion({ kind: 'folder', item: folder })}
                       />
                     ))}
@@ -470,6 +492,15 @@ export default function PromptPage({ user }: { user: User }) {
 
       {/* Botones flotantes de creación */}
       <div className="fixed bottom-8 right-8 z-40 flex items-center gap-3">
+        <Button
+          size="icon"
+          className="h-16 w-16 rounded-full bg-violet-600 shadow-2xl hover:bg-violet-700"
+          onClick={() => setFolderDialog({ mode: 'create', parentId: null })}
+        >
+          <FolderPlus className="h-8 w-8 text-white" />
+          <span className="sr-only">Crear una carpeta</span>
+        </Button>
+
         <Dialog open={isCreatingLink} onOpenChange={setCreatingLink}>
           <DialogTrigger asChild>
             <Button
@@ -566,7 +597,24 @@ export default function PromptPage({ user }: { user: User }) {
         </DialogContent>
       </Dialog>
 
-      <NameDialog request={nameRequest} onClose={() => setNameRequest(null)} />
+      <Dialog open={!!folderDialog} onOpenChange={(open) => !open && setFolderDialog(null)}>
+        <DialogContent className="sm:max-w-[460px]">
+          <DialogHeader>
+            <DialogTitle>{folderCopy?.title}</DialogTitle>
+            <DialogDescription>{folderCopy?.body}</DialogDescription>
+          </DialogHeader>
+          {folderDialog && folderCopy && (
+            <FolderForm
+              projects={projects}
+              initial={folderCopy.initial}
+              lockParent={folderDialog.mode === 'edit-project'}
+              submitLabel={folderCopy.submitLabel}
+              onSave={saveFolder}
+              onClose={() => setFolderDialog(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Una sola confirmación para todos los tipos de borrado. */}
       <AlertDialog

@@ -15,6 +15,7 @@ import {
 import {
   collections,
   type Folder,
+  type FolderInput,
   type Link,
   type LinkInput,
   type Location,
@@ -139,14 +140,15 @@ export function useLibrary(user: User) {
   );
 
   const createProject = useCallback(
-    (name: string) => {
-      const trimmed = name.trim();
-      if (!trimmed) return;
+    (input: Omit<FolderInput, 'parentId'>) => {
+      const name = input.name.trim();
+      if (!name) return;
 
       const newDoc = doc(collection(firestore, 'users', uid, collections.projects));
       setDocumentNonBlocking(newDoc, {
         id: newDoc.id,
-        name: trimmed,
+        name,
+        description: input.description || null,
         ownerId: uid,
         createdAt: new Date().toISOString(),
       });
@@ -154,11 +156,14 @@ export function useLibrary(user: User) {
     [firestore, uid]
   );
 
-  const renameProject = useCallback(
-    (projectId: string, name: string) => {
-      const trimmed = name.trim();
-      if (!trimmed) return;
-      updateDocumentNonBlocking(docRef(collections.projects, projectId), { name: trimmed });
+  const updateProject = useCallback(
+    (projectId: string, input: Omit<FolderInput, 'parentId'>) => {
+      const name = input.name.trim();
+      if (!name) return;
+      updateDocumentNonBlocking(docRef(collections.projects, projectId), {
+        name,
+        description: input.description || null,
+      });
     },
     [docRef]
   );
@@ -198,14 +203,15 @@ export function useLibrary(user: User) {
   );
 
   const createFolder = useCallback(
-    (projectId: string, name: string) => {
-      const trimmed = name.trim();
-      if (!trimmed) return;
+    (projectId: string, input: Omit<FolderInput, 'parentId'>) => {
+      const name = input.name.trim();
+      if (!name) return;
 
       const newDoc = doc(collection(firestore, 'users', uid, collections.folders));
       setDocumentNonBlocking(newDoc, {
         id: newDoc.id,
-        name: trimmed,
+        name,
+        description: input.description || null,
         projectId,
         ownerId: uid,
         createdAt: new Date().toISOString(),
@@ -214,13 +220,44 @@ export function useLibrary(user: User) {
     [firestore, uid]
   );
 
-  const renameFolder = useCallback(
-    (folderId: string, name: string) => {
-      const trimmed = name.trim();
-      if (!trimmed) return;
-      updateDocumentNonBlocking(docRef(collections.folders, folderId), { name: trimmed });
+  /**
+   * Edita una carpeta y, si cambia de proyecto, se lleva su contenido consigo.
+   *
+   * Los recursos guardan tanto `projectId` como `folderId`; si sólo moviésemos
+   * la carpeta, su contenido seguiría contando para el proyecto anterior.
+   */
+  const updateFolder = useCallback(
+    (folderId: string, input: FolderInput) => {
+      const name = input.name.trim();
+      if (!name) return;
+
+      const folder = folders.find((candidate) => candidate.id === folderId);
+      const nextProjectId = input.parentId ?? folder?.projectId;
+      if (!nextProjectId) return;
+
+      const batch = writeBatch(firestore);
+      batch.update(docRef(collections.folders, folderId), {
+        name,
+        description: input.description || null,
+        projectId: nextProjectId,
+      });
+
+      if (folder && nextProjectId !== folder.projectId) {
+        for (const prompt of prompts) {
+          if (prompt.folderId === folderId) {
+            batch.update(docRef(collections.prompts, prompt.id), { projectId: nextProjectId });
+          }
+        }
+        for (const link of links) {
+          if (link.folderId === folderId) {
+            batch.update(docRef(collections.links, link.id), { projectId: nextProjectId });
+          }
+        }
+      }
+
+      commitBatchNonBlocking(batch, `users/${uid}/${collections.folders}/${folderId}`);
     },
-    [docRef]
+    [firestore, uid, folders, prompts, links, docRef]
   );
 
   /**
@@ -343,10 +380,10 @@ export function useLibrary(user: User) {
     isLoading,
     error,
     createProject,
-    renameProject,
+    updateProject,
     deleteProject,
     createFolder,
-    renameFolder,
+    updateFolder,
     deleteFolder,
     savePrompt,
     saveLink,

@@ -2,7 +2,7 @@
   "entities": {
     "Project": {
       "title": "Project",
-      "description": "Represents a folder or project for organizing prompts.",
+      "description": "Carpeta principal. Agrupa recursos sueltos y carpetas; la jerarquía no baja de ahí.",
       "type": "object",
       "properties": {
         "id": {
@@ -10,6 +10,13 @@
         },
         "name": {
           "type": "string"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Texto libre opcional sobre para qué sirve."
         },
         "createdAt": {
           "type": "string",
@@ -181,6 +188,13 @@
         },
         "name": {
           "type": "string"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Texto libre opcional sobre para qué sirve."
         },
         "projectId": {
           "type": "string",

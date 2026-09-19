@@ -39,10 +39,10 @@ interface ProjectSidebarProps {
   activeFilter: LibraryFilter;
   onSelect: (filter: LibraryFilter) => void;
   onCreateProject: () => void;
-  onRenameProject: (project: Project) => void;
+  onEditProject: (project: Project) => void;
   onDeleteProject: (project: Project) => void;
   onCreateFolder: (project: Project) => void;
-  onRenameFolder: (folder: Folder) => void;
+  onEditFolder: (folder: Folder) => void;
   onDeleteFolder: (folder: Folder) => void;
 }
 
@@ -73,10 +73,10 @@ export default function ProjectSidebar({
   activeFilter,
   onSelect,
   onCreateProject,
-  onRenameProject,
+  onEditProject,
   onDeleteProject,
   onCreateFolder,
-  onRenameFolder,
+  onEditFolder,
   onDeleteFolder,
 }: ProjectSidebarProps) {
   // Un proyecto se despliega al pulsar su flecha y, mientras nadie la haya
@@ -201,9 +201,9 @@ export default function ProjectSidebar({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem onSelect={() => onRenameProject(project)}>
+                    <DropdownMenuItem onSelect={() => onEditProject(project)}>
                       <Pencil className="mr-2 h-4 w-4" />
-                      Renombrar
+                      Editar proyecto
                     </DropdownMenuItem>
                     <DropdownMenuItem onSelect={() => onCreateFolder(project)}>
                       <FolderPlus className="mr-2 h-4 w-4" />
@@ -266,9 +266,9 @@ export default function ProjectSidebar({
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48">
-                          <DropdownMenuItem onSelect={() => onRenameFolder(folder)}>
+                          <DropdownMenuItem onSelect={() => onEditFolder(folder)}>
                             <Pencil className="mr-2 h-4 w-4" />
-                            Renombrar
+                            Editar carpeta
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
