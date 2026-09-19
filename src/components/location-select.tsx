@@ -1,6 +1,5 @@
 'use client';
 
-import { Fragment } from 'react';
 import {
   Select,
   SelectContent,
@@ -9,54 +8,54 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { NO_SELECTION, type Folder, type Project } from '@/lib/definitions';
+import { Folder as FolderIcon, Folders } from 'lucide-react';
+import { NO_SELECTION } from '@/lib/definitions';
+import { flatten, type TreeNode } from '@/lib/tree';
 
 interface LocationSelectProps {
-  projects: Project[];
-  folders: Folder[];
-  /** Valor codificado con `encodeLocation`. */
+  tree: TreeNode[];
+  /** Clave del nodo (`project:<id>` / `folder:<id>`) o `none`. */
   value: string;
   onChange: (value: string) => void;
   id?: string;
 }
 
 /**
- * Elige dónde archivar un recurso: suelto, en un proyecto o en una de sus
- * carpetas.
+ * Elige dónde archivar un recurso dentro del árbol de carpetas.
  *
- * Es un único desplegable con las carpetas sangradas bajo su proyecto, en
- * lugar de dos controles encadenados, porque la jerarquía tiene sólo dos
- * niveles y así se ve entera de un vistazo.
+ * Es un único desplegable con toda la jerarquía sangrada, en lugar de varios
+ * controles encadenados: con tres niveles el encadenamiento obligaría a tres
+ * clics para llegar al fondo.
  */
-export default function LocationSelect({
-  projects,
-  folders,
-  value,
-  onChange,
-  id,
-}: LocationSelectProps) {
+export default function LocationSelect({ tree, value, onChange, id }: LocationSelectProps) {
+  const nodes = flatten(tree);
+
   return (
     <Select value={value} onValueChange={onChange}>
       <SelectTrigger id={id}>
         <SelectValue placeholder="Selecciona una ubicación" />
       </SelectTrigger>
       <SelectContent position="popper" sideOffset={4} className="max-h-72">
-        <SelectItem value={NO_SELECTION}>Sin proyecto (General)</SelectItem>
+        <SelectItem value={NO_SELECTION}>
+          <span className="flex items-center gap-2">
+            <Folders className="h-4 w-4" />
+            Sin carpeta
+          </span>
+        </SelectItem>
+        {nodes.length > 0 && <SelectSeparator />}
 
-        {projects.map((project) => {
-          const projectFolders = folders.filter((folder) => folder.projectId === project.id);
-          return (
-            <Fragment key={project.id}>
-              <SelectSeparator />
-              <SelectItem value={`project:${project.id}`}>{project.name}</SelectItem>
-              {projectFolders.map((folder) => (
-                <SelectItem key={folder.id} value={`folder:${folder.id}`} className="pl-12">
-                  {folder.name}
-                </SelectItem>
-              ))}
-            </Fragment>
-          );
-        })}
+        {nodes.map((node) => (
+          <SelectItem
+            key={node.key}
+            value={node.key}
+            style={{ paddingLeft: `${(node.depth - 1) * 16 + 32}px` }}
+          >
+            <span className="flex items-center gap-2">
+              <FolderIcon className="h-4 w-4 shrink-0 opacity-70" />
+              <span className="truncate">{node.name}</span>
+            </span>
+          </SelectItem>
+        ))}
       </SelectContent>
     </Select>
   );

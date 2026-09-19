@@ -11,10 +11,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import DropTarget from '@/components/drop-target';
-import type { Folder } from '@/lib/definitions';
+import type { TreeNode } from '@/lib/tree';
 
 interface FolderCardProps {
-  folder: Folder;
+  node: TreeNode;
   /** Recursos que contiene, para no tener que entrar a comprobarlo. */
   count: number;
   onOpen: () => void;
@@ -30,9 +30,9 @@ interface FolderCardProps {
  * recursos: mover algo a una carpeta que ya tienes delante no debería obligar
  * a apuntar a la barra lateral.
  */
-export default function FolderCard({ folder, count, onOpen, onEdit, onDelete }: FolderCardProps) {
+export default function FolderCard({ node, count, onOpen, onEdit, onDelete }: FolderCardProps) {
   return (
-    <DropTarget location={`folder:${folder.id}`} className="h-full">
+    <DropTarget location={node.key} className="h-full">
       <Card
         onClick={(event) => {
           if ((event.target as HTMLElement).closest('button, [role="menuitem"], [role="menu"]')) {
@@ -56,7 +56,7 @@ export default function FolderCard({ folder, count, onOpen, onEdit, onDelete }: 
                   className="-mr-2 -mt-1 h-8 w-8 shrink-0 opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100 data-[state=open]:opacity-100"
                 >
                   <MoreVertical className="h-4 w-4" />
-                  <span className="sr-only">Opciones de la carpeta {folder.name}</span>
+                  <span className="sr-only">Opciones de la carpeta {node.name}</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
@@ -77,12 +77,12 @@ export default function FolderCard({ folder, count, onOpen, onEdit, onDelete }: 
           </div>
 
           <div className="space-y-1.5">
-            <h3 className="truncate text-base font-bold tracking-tight" title={folder.name}>
-              {folder.name}
+            <h3 className="truncate text-base font-bold tracking-tight" title={node.name}>
+              {node.name}
             </h3>
-            {folder.description ? (
+            {node.description ? (
               <p className="line-clamp-2 text-[11px] leading-relaxed text-muted-foreground">
-                {folder.description}
+                {node.description}
               </p>
             ) : (
               <p className="text-[11px] italic leading-relaxed text-muted-foreground/60">

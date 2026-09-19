@@ -180,7 +180,7 @@
     },
     "Folder": {
       "title": "Folder",
-      "description": "Subdivisión dentro de un proyecto. La jerarquía tiene dos niveles: proyecto y carpeta.",
+      "description": "Subdivisión de una carpeta principal. La jerarquía admite hasta 3 niveles: proyecto › carpeta › carpeta.",
       "type": "object",
       "properties": {
         "id": {
@@ -198,7 +198,14 @@
         },
         "projectId": {
           "type": "string",
-          "description": "Proyecto contenedor. Una carpeta nunca existe fuera de un proyecto."
+          "description": "Proyecto raíz. Desnormalizado: siempre coincide con el del padre, para poder filtrar un proyecto entero sin recorrer el árbol."
+        },
+        "parentId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Carpeta contenedora, o null si cuelga directamente del proyecto."
         },
         "createdAt": {
           "type": "string",

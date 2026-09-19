@@ -18,6 +18,7 @@ import LinkCard from '@/components/link-card';
 import LinkForm from '@/components/link-form';
 import PromptCard from '@/components/prompt-card';
 import PromptForm from '@/components/prompt-form';
+import BreadcrumbNav from '@/components/breadcrumb-nav';
 import FolderCard from '@/components/folder-card';
 import FolderForm from '@/components/folder-form';
 import LibraryToolbar from '@/components/library-toolbar';
@@ -46,17 +47,23 @@ import { useLibrary, type ItemKind } from '@/hooks/use-library';
 import { useToast } from '@/hooks/use-toast';
 import { logOut, useAuth } from '@/firebase';
 import {
-  decodeLocation,
+  NO_SELECTION,
+  filterKey,
   matchesFilter,
-  type Folder,
   type FolderInput,
   type LibraryFilter,
   type Link,
   type Location,
-  type Project,
   type Prompt,
   type PromptCategory,
 } from '@/lib/definitions';
+import {
+  decodeLocation,
+  findNode,
+  pathTo,
+  subtreeFolderIds,
+  type TreeNode,
+} from '@/lib/tree';
 import { matchesQuery, parseQuery } from '@/lib/search';
 
 const ALL_CATEGORIES = 'Todos';
@@ -87,27 +94,24 @@ function linkHaystack(link: Link) {
 /**
  * Qué está pidiendo el diálogo de carpetas.
  *
- * Crear admite una ubicación de partida (el botón flotante la deja libre; el
- * menú de un proyecto la trae ya puesta). Editar distingue los dos niveles
- * porque un proyecto no puede mudarse a ninguna parte.
+ * Crear admite una ubicación de partida: el botón flotante la deja libre y el
+ * menú de una carpeta la trae ya puesta.
  */
 type FolderDialog =
-  | { mode: 'create'; parentId: string | null }
-  | { mode: 'edit-project'; project: Project }
-  | { mode: 'edit-folder'; folder: Folder };
+  | { mode: 'create'; parent: string }
+  | { mode: 'edit'; node: TreeNode };
 
 /** Lo que se está a punto de borrar, a la espera de confirmación. */
 type PendingDeletion =
   | { kind: 'prompt'; item: Prompt }
   | { kind: 'link'; item: Link }
-  | { kind: 'project'; item: Project }
-  | { kind: 'folder'; item: Folder };
+  | { kind: 'node'; item: TreeNode };
 
 export default function PromptPage({ user }: { user: User }) {
   const auth = useAuth();
   const { toast } = useToast();
   const library = useLibrary(user);
-  const { projects, folders, prompts, links } = library;
+  const { tree, counts, prompts, links } = library;
 
   const [editingPrompt, setEditingPrompt] = useState<Prompt | null>(null);
   const [editingLink, setEditingLink] = useState<Link | null>(null);
@@ -125,73 +129,69 @@ export default function PromptPage({ user }: { user: User }) {
   const deferredQuery = useDeferredValue(searchQuery);
   const searchTerms = useMemo(() => parseQuery(deferredQuery), [deferredQuery]);
 
+  /** Nodo abierto ahora mismo, si el filtro apunta a uno. */
+  const activeNode = useMemo(
+    () => (activeFilter.type === 'all' || activeFilter.type === 'unassigned'
+      ? undefined
+      : findNode(tree, filterKey(activeFilter))),
+    [tree, activeFilter]
+  );
+
+  /**
+   * Carpetas que cuentan para el filtro actual.
+   *
+   * Entrar en una carpeta muestra también lo que hay en sus subcarpetas, igual
+   * que entrar en una principal muestra todo lo suyo.
+   */
+  const folderScope = useMemo(
+    () => (activeNode && activeNode.kind === 'folder' ? subtreeFolderIds(activeNode) : undefined),
+    [activeNode]
+  );
+
   const visiblePrompts = useMemo(
     () =>
       prompts.filter(
         (prompt) =>
-          matchesFilter(locationOf(prompt), activeFilter) &&
+          matchesFilter(locationOf(prompt), activeFilter, folderScope) &&
           matchesCategory(prompt, categoryFilter) &&
           matchesQuery(promptHaystack(prompt), searchTerms)
       ),
-    [prompts, activeFilter, categoryFilter, searchTerms]
+    [prompts, activeFilter, folderScope, categoryFilter, searchTerms]
   );
   const visibleLinks = useMemo(
     () =>
       links.filter(
         (link) =>
-          matchesFilter(locationOf(link), activeFilter) &&
+          matchesFilter(locationOf(link), activeFilter, folderScope) &&
           matchesCategory(link, categoryFilter) &&
           matchesQuery(linkHaystack(link), searchTerms)
       ),
-    [links, activeFilter, categoryFilter, searchTerms]
+    [links, activeFilter, folderScope, categoryFilter, searchTerms]
   );
 
-  // Los contadores de la barra lateral cuentan prompts y enlaces juntos, y no
-  // tienen en cuenta el filtro de categoría: describen el proyecto, no la vista.
-  const counts = useMemo(() => {
-    const result: Record<string, number> = {
-      all: prompts.length + links.length,
-      unassigned: 0,
-    };
-    for (const project of projects) result[`project:${project.id}`] = 0;
-    for (const folder of folders) result[`folder:${folder.id}`] = 0;
-
-    for (const item of [...prompts, ...links]) {
-      const { projectId, folderId } = locationOf(item);
-      if (!projectId || projectId === 'none') {
-        result.unassigned += 1;
-        continue;
-      }
-      // El contador del proyecto incluye lo que hay en sus carpetas.
-      const projectKey = `project:${projectId}`;
-      if (projectKey in result) result[projectKey] += 1;
-
-      const folderKey = `folder:${folderId}`;
-      if (folderId && folderKey in result) result[folderKey] += 1;
-    }
-    return result;
-  }, [projects, folders, prompts, links]);
 
   const confirmDeletion = useCallback(() => {
     if (!pendingDeletion) return;
 
-    if (pendingDeletion.kind === 'project') {
-      library.deleteProject(pendingDeletion.item.id);
-      // Si estábamos mirando dentro de lo que acaba de desaparecer, volvemos
-      // a la vista general en lugar de quedarnos en un filtro fantasma.
-      if (
-        (activeFilter.type === 'project' || activeFilter.type === 'folder') &&
-        activeFilter.projectId === pendingDeletion.item.id
-      ) {
-        setActiveFilter({ type: 'all' });
+    if (pendingDeletion.kind === 'node') {
+      const node = pendingDeletion.item;
+      if (node.kind === 'project') library.deleteProject(node.id);
+      else library.deleteFolder(node);
+
+      // Si estábamos mirando dentro de lo que acaba de desaparecer, subimos al
+      // nivel de encima en lugar de quedarnos en un filtro fantasma.
+      const path = pathTo(tree, node.key);
+      if (path.some((step) => step.key === filterKey(activeFilter))) {
+        const parent = path.at(-2);
+        setActiveFilter(
+          parent
+            ? parent.kind === 'project'
+              ? { type: 'project', projectId: parent.id }
+              : { type: 'folder', projectId: parent.projectId, folderId: parent.id }
+            : { type: 'all' }
+        );
       }
-      toast({ title: 'Proyecto eliminado' });
-    } else if (pendingDeletion.kind === 'folder') {
-      library.deleteFolder(pendingDeletion.item.id);
-      if (activeFilter.type === 'folder' && activeFilter.folderId === pendingDeletion.item.id) {
-        setActiveFilter({ type: 'project', projectId: pendingDeletion.item.projectId });
-      }
-      toast({ title: 'Carpeta eliminada' });
+      toast({ title: node.kind === 'project' ? 'Carpeta principal eliminada' : 'Carpeta eliminada' });
     } else {
       library.deleteItem(pendingDeletion.kind, pendingDeletion.item.id);
       toast({
@@ -200,7 +200,7 @@ export default function PromptPage({ user }: { user: User }) {
     }
 
     setPendingDeletion(null);
-  }, [pendingDeletion, library, activeFilter, toast]);
+  }, [pendingDeletion, library, tree, activeFilter, toast]);
 
   const moveTo = useCallback(
     (kind: ItemKind, itemId: string, location: Location) => {
@@ -210,23 +210,17 @@ export default function PromptPage({ user }: { user: User }) {
     [library, toast]
   );
 
-  /** Guarda lo que devuelve el formulario, en el nivel que corresponda. */
+  /** Guarda lo que devuelve el formulario, creando o editando según el caso. */
   const saveFolder = useCallback(
     (input: FolderInput) => {
       if (!folderDialog) return;
 
-      if (folderDialog.mode === 'edit-project') {
-        library.updateProject(folderDialog.project.id, input);
-        toast({ title: 'Proyecto actualizado' });
-      } else if (folderDialog.mode === 'edit-folder') {
-        library.updateFolder(folderDialog.folder.id, input);
-        toast({ title: 'Carpeta actualizada' });
-      } else if (input.parentId) {
-        library.createFolder(input.parentId, input);
-        toast({ title: 'Carpeta creada' });
+      if (folderDialog.mode === 'edit') {
+        library.updateNode(folderDialog.node, input);
+        toast({ title: folderDialog.node.kind === 'project' ? 'Carpeta principal actualizada' : 'Carpeta actualizada' });
       } else {
-        library.createProject(input);
-        toast({ title: 'Proyecto creado' });
+        library.createNode(input);
+        toast({ title: input.parent === 'none' ? 'Carpeta principal creada' : 'Subcarpeta creada' });
       }
     },
     [folderDialog, library, toast]
@@ -245,37 +239,35 @@ export default function PromptPage({ user }: { user: User }) {
   const folderCopy = useMemo(() => {
     if (!folderDialog) return null;
 
-    if (folderDialog.mode === 'edit-project') {
-      const { project } = folderDialog;
+    if (folderDialog.mode === 'edit') {
+      const { node } = folderDialog;
+      const parent = node.kind === 'project' ? NO_SELECTION : pathTo(tree, node.key).at(-2)?.key;
       return {
-        title: 'Editar proyecto',
-        body: 'Un proyecto es una carpeta principal: no puede moverse dentro de otra.',
+        title: node.kind === 'project' ? 'Editar carpeta principal' : 'Editar carpeta',
+        body:
+          node.kind === 'project'
+            ? 'Una carpeta principal no puede moverse dentro de otra.'
+            : 'Si la cambias de sitio, se muda con todo lo que contiene.',
         submitLabel: 'Guardar',
-        initial: { name: project.name, description: project.description ?? null, parentId: null },
-      };
-    }
-
-    if (folderDialog.mode === 'edit-folder') {
-      const { folder } = folderDialog;
-      return {
-        title: 'Editar carpeta',
-        body: 'Si la cambias de proyecto, su contenido se muda con ella.',
-        submitLabel: 'Guardar',
+        lockParent: node.kind === 'project',
+        moving: node.kind === 'folder' ? node : undefined,
         initial: {
-          name: folder.name,
-          description: folder.description ?? null,
-          parentId: folder.projectId,
+          name: node.name,
+          description: node.description,
+          parent: parent ?? NO_SELECTION,
         },
       };
     }
 
     return {
-      title: 'Nueva carpeta',
-      body: 'Déjala como principal para crear un proyecto, o elige dentro de cuál va.',
+      title: folderDialog.parent === NO_SELECTION ? 'Nueva carpeta principal' : 'Nueva subcarpeta',
+      body: 'Déjala como principal o elige dentro de qué carpeta va.',
       submitLabel: 'Crear',
-      initial: { name: '', description: null, parentId: folderDialog.parentId },
+      lockParent: false,
+      moving: undefined,
+      initial: { name: '', description: null, parent: folderDialog.parent },
     };
-  }, [folderDialog]);
+  }, [folderDialog, tree]);
 
   const deletionCopy = useMemo(() => {
     if (!pendingDeletion) return null;
@@ -293,33 +285,33 @@ export default function PromptPage({ user }: { user: User }) {
         action: 'Eliminar',
       };
     }
-    if (pendingDeletion.kind === 'folder') {
+    const node = pendingDeletion.item;
+    if (node.kind === 'project') {
       return {
-        title: '¿Eliminar carpeta?',
-        body: `Se eliminará la carpeta «${pendingDeletion.item.name}». Lo que contiene no se borra: quedará suelto dentro del proyecto.`,
-        action: 'Eliminar carpeta',
+        title: '¿Eliminar carpeta principal?',
+        body: `Se eliminará «${node.name}» y todas sus subcarpetas. Los prompts y enlaces que contengan no se borran: pasarán a «Sin carpeta».`,
+        action: 'Eliminar',
       };
     }
     return {
-      title: '¿Eliminar proyecto?',
-      body: `Se eliminará el proyecto «${pendingDeletion.item.name}», junto con sus carpetas. Los prompts y enlaces que contiene no se borran: pasarán a «Sin proyecto».`,
-      action: 'Eliminar proyecto',
+      title: '¿Eliminar carpeta?',
+      body: `Se eliminará «${node.name}» y sus subcarpetas. Lo que contengan no se borra: subirá al nivel de encima.`,
+      action: 'Eliminar',
     };
   }, [pendingDeletion]);
 
   /**
-   * Carpetas que se muestran como tarjetas.
-   *
-   * Sólo al mirar un proyecto entero: dentro de una carpeta ya no hay nada
-   * más abajo que enseñar, y en «Todos» serían ruido.
+   * Subcarpetas que se muestran como tarjetas: las hijas directas de donde
+   * estás. En «Todos» y en «Sin carpeta» no hay nada que enseñar.
    */
-  const visibleFolders = useMemo(
-    () =>
-      activeFilter.type === 'project'
-        ? folders.filter((folder) => folder.projectId === activeFilter.projectId)
-        : [],
-    [folders, activeFilter]
+  const visibleFolders = activeNode?.children ?? [];
+
+  /** Camino hasta la carpeta abierta, para las migas de pan. */
+  const breadcrumb = useMemo(
+    () => (activeNode ? pathTo(tree, activeNode.key) : []),
+    [tree, activeNode]
   );
+
 
   /** Mueve un recurso a la ubicación sobre la que se ha soltado. */
   const handleDropOnTarget = useCallback(
@@ -328,7 +320,7 @@ export default function PromptPage({ user }: { user: User }) {
       const item = source.find((candidate) => candidate.id === itemId);
       if (!item) return;
 
-      const destination = decodeLocation(encodedLocation, folders);
+      const destination = decodeLocation(encodedLocation, tree);
       const current = locationOf(item);
 
       // Soltar algo donde ya estaba no merece ni una escritura ni un aviso.
@@ -342,7 +334,7 @@ export default function PromptPage({ user }: { user: User }) {
       library.moveTo(kind, itemId, destination);
       toast({ title: 'Recurso movido' });
     },
-    [prompts, links, folders, library, toast]
+    [prompts, links, tree, library, toast]
   );
 
   const isEmpty =
@@ -359,17 +351,14 @@ export default function PromptPage({ user }: { user: User }) {
 
       <div className="flex flex-col gap-8 md:flex-row">
         <ProjectSidebar
-          projects={projects}
-          folders={folders}
+          tree={tree}
           counts={counts}
           activeFilter={activeFilter}
           onSelect={setActiveFilter}
-          onCreateProject={() => setFolderDialog({ mode: 'create', parentId: null })}
-          onEditProject={(project) => setFolderDialog({ mode: 'edit-project', project })}
-          onDeleteProject={(project) => setPendingDeletion({ kind: 'project', item: project })}
-          onCreateFolder={(project) => setFolderDialog({ mode: 'create', parentId: project.id })}
-          onEditFolder={(folder) => setFolderDialog({ mode: 'edit-folder', folder })}
-          onDeleteFolder={(folder) => setPendingDeletion({ kind: 'folder', item: folder })}
+          onCreateRoot={() => setFolderDialog({ mode: 'create', parent: NO_SELECTION })}
+          onCreateChild={(parent) => setFolderDialog({ mode: 'create', parent: parent.key })}
+          onEdit={(node) => setFolderDialog({ mode: 'edit', node })}
+          onDelete={(node) => setPendingDeletion({ kind: 'node', item: node })}
         />
 
         <main className="flex-1 pb-24">
@@ -382,6 +371,10 @@ export default function PromptPage({ user }: { user: User }) {
               allCategoriesLabel={ALL_CATEGORIES}
               resultCount={visiblePrompts.length + visibleLinks.length}
             />
+          )}
+
+          {breadcrumb.length > 0 && (
+            <BreadcrumbNav path={breadcrumb} onSelect={setActiveFilter} />
           )}
 
           {library.isLoading ? (
@@ -405,23 +398,23 @@ export default function PromptPage({ user }: { user: User }) {
               {visibleFolders.length > 0 && (
                 <section className="space-y-4">
                   <h2 className="flex items-center gap-2 px-1 text-sm font-bold uppercase tracking-widest text-muted-foreground">
-                    <FolderTree className="h-4 w-4" /> Carpetas ({visibleFolders.length})
+                    <FolderTree className="h-4 w-4" /> Subcarpetas ({visibleFolders.length})
                   </h2>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    {visibleFolders.map((folder) => (
+                    {visibleFolders.map((node) => (
                       <FolderCard
-                        key={folder.id}
-                        folder={folder}
-                        count={counts[`folder:${folder.id}`] ?? 0}
+                        key={node.key}
+                        node={node}
+                        count={counts[node.key] ?? 0}
                         onOpen={() =>
                           setActiveFilter({
                             type: 'folder',
-                            projectId: folder.projectId,
-                            folderId: folder.id,
+                            projectId: node.projectId,
+                            folderId: node.id,
                           })
                         }
-                        onEdit={() => setFolderDialog({ mode: 'edit-folder', folder })}
-                        onDelete={() => setPendingDeletion({ kind: 'folder', item: folder })}
+                        onEdit={() => setFolderDialog({ mode: 'edit', node })}
+                        onDelete={() => setPendingDeletion({ kind: 'node', item: node })}
                       />
                     ))}
                   </div>
@@ -443,10 +436,9 @@ export default function PromptPage({ user }: { user: User }) {
                       return (
                         <LinkCard
                           link={link}
-                          projects={projects}
+                          tree={tree}
                           onEdit={setEditingLink}
                           onDelete={(item) => setPendingDeletion({ kind: 'link', item })}
-                          folders={folders}
                           onMoveTo={(location) => moveTo('link', link.id, location)}
                           onMoveUp={step('link', visibleLinks, index, -1)}
                           onMoveDown={step('link', visibleLinks, index, 1)}
@@ -472,10 +464,9 @@ export default function PromptPage({ user }: { user: User }) {
                       return (
                         <PromptCard
                           prompt={prompt}
-                          projects={projects}
+                          tree={tree}
                           onEdit={setEditingPrompt}
                           onDelete={(item) => setPendingDeletion({ kind: 'prompt', item })}
-                          folders={folders}
                           onMoveTo={(location) => moveTo('prompt', prompt.id, location)}
                           onMoveUp={step('prompt', visiblePrompts, index, -1)}
                           onMoveDown={step('prompt', visiblePrompts, index, 1)}
@@ -495,7 +486,7 @@ export default function PromptPage({ user }: { user: User }) {
         <Button
           size="icon"
           className="h-16 w-16 rounded-full bg-violet-600 shadow-2xl hover:bg-violet-700"
-          onClick={() => setFolderDialog({ mode: 'create', parentId: null })}
+          onClick={() => setFolderDialog({ mode: 'create', parent: NO_SELECTION })}
         >
           <FolderPlus className="h-8 w-8 text-white" />
           <span className="sr-only">Crear una carpeta</span>
@@ -517,8 +508,7 @@ export default function PromptPage({ user }: { user: User }) {
               <DialogDescription>Guarda una dirección web en tu biblioteca.</DialogDescription>
             </DialogHeader>
             <LinkForm
-              projects={projects}
-              folders={folders}
+              tree={tree}
               onSave={(input) => {
                 library.saveLink(input);
                 toast({ title: 'Enlace guardado' });
@@ -541,8 +531,7 @@ export default function PromptPage({ user }: { user: User }) {
               <DialogDescription>Añade un prompt reutilizable a tu biblioteca.</DialogDescription>
             </DialogHeader>
             <PromptForm
-              projects={projects}
-              folders={folders}
+              tree={tree}
               onSave={(input) => {
                 library.savePrompt(input);
                 toast({ title: 'Prompt creado' });
@@ -564,8 +553,7 @@ export default function PromptPage({ user }: { user: User }) {
           {editingPrompt && (
             <PromptForm
               prompt={editingPrompt}
-              projects={projects}
-              folders={folders}
+              tree={tree}
               onSave={(input, id) => {
                 library.savePrompt(input, id);
                 toast({ title: 'Prompt actualizado' });
@@ -585,8 +573,7 @@ export default function PromptPage({ user }: { user: User }) {
           {editingLink && (
             <LinkForm
               link={editingLink}
-              projects={projects}
-              folders={folders}
+              tree={tree}
               onSave={(input, id) => {
                 library.saveLink(input, id);
                 toast({ title: 'Enlace actualizado' });
@@ -605,9 +592,10 @@ export default function PromptPage({ user }: { user: User }) {
           </DialogHeader>
           {folderDialog && folderCopy && (
             <FolderForm
-              projects={projects}
+              tree={tree}
+              moving={folderCopy.moving}
               initial={folderCopy.initial}
-              lockParent={folderDialog.mode === 'edit-project'}
+              lockParent={folderCopy.lockParent}
               submitLabel={folderCopy.submitLabel}
               onSave={saveFolder}
               onClose={() => setFolderDialog(null)}

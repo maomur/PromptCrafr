@@ -13,6 +13,13 @@ import {
   useMemoFirebase,
 } from '@/firebase';
 import {
+  buildTree,
+  countTree,
+  decodeParent,
+  subtreeFolderIds,
+  type TreeNode,
+} from '@/lib/tree';
+import {
   collections,
   type Folder,
   type FolderInput,
@@ -122,6 +129,16 @@ export function useLibrary(user: User) {
     [linksQuery.data]
   );
 
+  /**
+   * Árbol único de carpetas, con los proyectos como primer nivel.
+   *
+   * Se calcula aquí para que todos los componentes miren la misma estructura
+   * en lugar de recomponerla cada uno por su cuenta.
+   */
+  const tree = useMemo(() => buildTree(projects, folders), [projects, folders]);
+
+  const counts = useMemo(() => countTree(tree, [...prompts, ...links]), [tree, prompts, links]);
+
   const isLoading =
     projectsQuery.isLoading ||
     foldersQuery.isLoading ||
@@ -140,7 +157,7 @@ export function useLibrary(user: User) {
   );
 
   const createProject = useCallback(
-    (input: Omit<FolderInput, 'parentId'>) => {
+    (input: Omit<FolderInput, 'parent'>) => {
       const name = input.name.trim();
       if (!name) return;
 
@@ -156,24 +173,106 @@ export function useLibrary(user: User) {
     [firestore, uid]
   );
 
-  const updateProject = useCallback(
-    (projectId: string, input: Omit<FolderInput, 'parentId'>) => {
+  /**
+   * Crea una carpeta en el nivel que indique `parent`.
+   *
+   * Sin padre es una carpeta principal, que en Firestore sigue siendo un
+   * documento de `projects`. Esa correspondencia vive aquí y en ningún otro
+   * sitio: de puertas afuera todo son nodos del árbol.
+   */
+  const createNode = useCallback(
+    (input: FolderInput) => {
       const name = input.name.trim();
       if (!name) return;
-      updateDocumentNonBlocking(docRef(collections.projects, projectId), {
+
+      const parent = decodeParent(input.parent, tree);
+      if (parent.level === 'root') {
+        createProject(input);
+        return;
+      }
+
+      const newDoc = doc(collection(firestore, 'users', uid, collections.folders));
+      setDocumentNonBlocking(newDoc, {
+        id: newDoc.id,
         name,
         description: input.description || null,
+        projectId: parent.projectId,
+        parentId: parent.parentId,
+        ownerId: uid,
+        createdAt: new Date().toISOString(),
       });
     },
-    [docRef]
+    [firestore, uid, tree, createProject]
   );
 
   /**
-   * Borra un proyecto y desvincula su contenido en la misma operación atómica.
+   * Edita un nodo y, si es una carpeta que cambia de sitio, muda con ella todo
+   * lo que cuelga: subcarpetas y recursos.
    *
-   * Arrastra también sus carpetas. Sin esto, prompts y enlaces conservarían un
-   * `projectId` o un `folderId` que ya no existe y desaparecerían de todos los
-   * filtros salvo el de "Todos".
+   * `projectId` está repetido en cada descendiente para poder filtrar un
+   * proyecto sin recorrer el árbol, así que una mudanza tiene que reescribirlo
+   * en todos ellos. Va en un lote atómico porque dejarlo a medias partiría la
+   * jerarquía en dos.
+   */
+  const updateNode = useCallback(
+    (node: TreeNode, input: FolderInput) => {
+      const name = input.name.trim();
+      if (!name) return;
+
+      const fields = { name, description: input.description || null };
+
+      if (node.kind === 'project') {
+        updateDocumentNonBlocking(docRef(collections.projects, node.id), fields);
+        return;
+      }
+
+      const parent = decodeParent(input.parent, tree);
+      // Convertir una subcarpeta en principal implicaría cambiarla de
+      // colección; el formulario no lo ofrece, pero por si acaso.
+      const destination =
+        parent.level === 'root'
+          ? { projectId: node.projectId, parentId: null }
+          : { projectId: parent.projectId, parentId: parent.parentId };
+
+      const batch = writeBatch(firestore);
+      batch.update(docRef(collections.folders, node.id), { ...fields, ...destination });
+
+      if (destination.projectId !== node.projectId) {
+        const moved = subtreeFolderIds(node);
+
+        for (const descendant of folders) {
+          if (descendant.id !== node.id && moved.has(descendant.id)) {
+            batch.update(docRef(collections.folders, descendant.id), {
+              projectId: destination.projectId,
+            });
+          }
+        }
+        for (const prompt of prompts) {
+          if (prompt.folderId && moved.has(prompt.folderId)) {
+            batch.update(docRef(collections.prompts, prompt.id), {
+              projectId: destination.projectId,
+            });
+          }
+        }
+        for (const link of links) {
+          if (link.folderId && moved.has(link.folderId)) {
+            batch.update(docRef(collections.links, link.id), {
+              projectId: destination.projectId,
+            });
+          }
+        }
+      }
+
+      commitBatchNonBlocking(batch, `users/${uid}/${collections.folders}/${node.id}`);
+    },
+    [firestore, uid, tree, folders, prompts, links, docRef]
+  );
+
+  /**
+   * Borra un proyecto entero y suelta su contenido.
+   *
+   * Arrastra sus carpetas a cualquier profundidad: todas repiten el
+   * `projectId`, así que basta con filtrarlas por él.
    */
   const deleteProject = useCallback(
     (projectId: string) => {
@@ -202,89 +301,42 @@ export function useLibrary(user: User) {
     [firestore, uid, prompts, links, folders, docRef]
   );
 
-  const createFolder = useCallback(
-    (projectId: string, input: Omit<FolderInput, 'parentId'>) => {
-      const name = input.name.trim();
-      if (!name) return;
-
-      const newDoc = doc(collection(firestore, 'users', uid, collections.folders));
-      setDocumentNonBlocking(newDoc, {
-        id: newDoc.id,
-        name,
-        description: input.description || null,
-        projectId,
-        ownerId: uid,
-        createdAt: new Date().toISOString(),
-      });
-    },
-    [firestore, uid]
-  );
-
   /**
-   * Edita una carpeta y, si cambia de proyecto, se lleva su contenido consigo.
+   * Borra una carpeta y todas sus subcarpetas, subiendo el contenido un nivel.
    *
-   * Los recursos guardan tanto `projectId` como `folderId`; si sólo moviésemos
-   * la carpeta, su contenido seguiría contando para el proyecto anterior.
-   */
-  const updateFolder = useCallback(
-    (folderId: string, input: FolderInput) => {
-      const name = input.name.trim();
-      if (!name) return;
-
-      const folder = folders.find((candidate) => candidate.id === folderId);
-      const nextProjectId = input.parentId ?? folder?.projectId;
-      if (!nextProjectId) return;
-
-      const batch = writeBatch(firestore);
-      batch.update(docRef(collections.folders, folderId), {
-        name,
-        description: input.description || null,
-        projectId: nextProjectId,
-      });
-
-      if (folder && nextProjectId !== folder.projectId) {
-        for (const prompt of prompts) {
-          if (prompt.folderId === folderId) {
-            batch.update(docRef(collections.prompts, prompt.id), { projectId: nextProjectId });
-          }
-        }
-        for (const link of links) {
-          if (link.folderId === folderId) {
-            batch.update(docRef(collections.links, link.id), { projectId: nextProjectId });
-          }
-        }
-      }
-
-      commitBatchNonBlocking(batch, `users/${uid}/${collections.folders}/${folderId}`);
-    },
-    [firestore, uid, folders, prompts, links, docRef]
-  );
-
-  /**
-   * Borra una carpeta y saca su contenido al proyecto que la contenía.
-   *
-   * Nunca borra recursos: una carpeta es una forma de ordenar, no un
-   * contenedor cuya desaparición deba llevarse nada por delante.
+   * Nunca se lleva recursos por delante: una carpeta es una forma de ordenar,
+   * no un contenedor cuya desaparición deba borrar nada. Lo que hubiera dentro
+   * pasa a donde estaba la carpeta borrada.
    */
   const deleteFolder = useCallback(
-    (folderId: string) => {
-      const batch = writeBatch(firestore);
+    (node: TreeNode) => {
+      const folder = folders.find((candidate) => candidate.id === node.id);
+      if (!folder) return;
 
+      const removed = subtreeFolderIds(node);
+      const destination: Location = {
+        projectId: folder.projectId,
+        folderId: folder.parentId ?? null,
+      };
+
+      const batch = writeBatch(firestore);
       for (const prompt of prompts) {
-        if (prompt.folderId === folderId) {
-          batch.update(docRef(collections.prompts, prompt.id), { folderId: null });
+        if (prompt.folderId && removed.has(prompt.folderId)) {
+          batch.update(docRef(collections.prompts, prompt.id), destination);
         }
       }
       for (const link of links) {
-        if (link.folderId === folderId) {
-          batch.update(docRef(collections.links, link.id), { folderId: null });
+        if (link.folderId && removed.has(link.folderId)) {
+          batch.update(docRef(collections.links, link.id), destination);
         }
       }
-      batch.delete(docRef(collections.folders, folderId));
+      for (const id of removed) {
+        batch.delete(docRef(collections.folders, id));
+      }
 
-      commitBatchNonBlocking(batch, `users/${uid}/${collections.folders}/${folderId}`);
+      commitBatchNonBlocking(batch, `users/${uid}/${collections.folders}/${node.id}`);
     },
-    [firestore, uid, prompts, links, docRef]
+    [firestore, uid, folders, prompts, links, docRef]
   );
 
   const savePrompt = useCallback(
@@ -375,15 +427,15 @@ export function useLibrary(user: User) {
   return {
     projects,
     folders,
+    tree,
+    counts,
     prompts,
     links,
     isLoading,
     error,
-    createProject,
-    updateProject,
+    createNode,
+    updateNode,
     deleteProject,
-    createFolder,
-    updateFolder,
     deleteFolder,
     savePrompt,
     saveLink,

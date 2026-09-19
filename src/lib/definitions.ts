@@ -24,11 +24,29 @@ export type Folder = {
   id: string;
   name: string;
   description?: string | null;
-  /** Proyecto al que pertenece. Una carpeta nunca existe fuera de un proyecto. */
+  /**
+   * Proyecto raíz del que cuelga, sea directamente o a través de otra carpeta.
+   *
+   * Está desnormalizado a propósito: repetir aquí la raíz permite filtrar y
+   * contar un proyecto entero sin recorrer el árbol, a cambio de mantener la
+   * invariante de que siempre coincide con la del padre. De eso se encarga
+   * `updateFolder`, que es el único sitio donde una carpeta cambia de sitio.
+   */
   projectId: string;
+  /** Carpeta contenedora, o null si cuelga directamente del proyecto. */
+  parentId?: string | null;
   createdAt: string;
   ownerId: string;
 };
+
+/**
+ * Profundidad máxima de la jerarquía, contando la carpeta principal.
+ *
+ * 3 significa: proyecto › subcarpeta › subcarpeta. Toda la lógica de creación,
+ * movimiento y pintado se deriva de esta constante, así que subir o bajar el
+ * límite es cambiar este número.
+ */
+export const MAX_DEPTH = 3;
 
 /**
  * Datos comunes a un proyecto y a una carpeta.
@@ -39,8 +57,11 @@ export type Folder = {
 export type FolderInput = {
   name: string;
   description: string | null;
-  /** Proyecto contenedor, o null para crear un proyecto. */
-  parentId: string | null;
+  /**
+   * Contenedor, codificado como una ubicación: `none` para una carpeta
+   * principal, `project:<id>` o `folder:<id>` para anidarla.
+   */
+  parent: string;
 };
 
 export type Prompt = {
@@ -115,8 +136,18 @@ export function filterKey(filter: LibraryFilter): string {
   }
 }
 
-/** Decide si un recurso entra en la vista actual. */
-export function matchesFilter(item: Location, filter: LibraryFilter): boolean {
+/**
+ * Decide si un recurso entra en la vista actual.
+ *
+ * `folderScope` son las carpetas que cuentan para un filtro de carpeta: la
+ * propia y sus descendientes, de modo que entrar en una carpeta muestre
+ * también lo que hay en sus subcarpetas. Sin él sólo cuenta la carpeta exacta.
+ */
+export function matchesFilter(
+  item: Location,
+  filter: LibraryFilter,
+  folderScope?: ReadonlySet<string>
+): boolean {
   switch (filter.type) {
     case 'all':
       return true;
@@ -126,7 +157,8 @@ export function matchesFilter(item: Location, filter: LibraryFilter): boolean {
     case 'project':
       return item.projectId === filter.projectId;
     case 'folder':
-      return item.folderId === filter.folderId;
+      if (!item.folderId) return false;
+      return folderScope ? folderScope.has(item.folderId) : item.folderId === filter.folderId;
   }
 }
 
@@ -148,20 +180,6 @@ export function encodeLocation(location: Location): string {
   return NO_SELECTION;
 }
 
-/** Deshace `encodeLocation`, resolviendo a qué proyecto pertenece la carpeta. */
-export function decodeLocation(value: string, folders: Folder[]): Location {
-  if (value.startsWith('folder:')) {
-    const folderId = value.slice('folder:'.length);
-    const folder = folders.find((item) => item.id === folderId);
-    // Si la carpeta ha desaparecido mientras el formulario estaba abierto,
-    // dejamos el recurso suelto en lugar de apuntar a algo inexistente.
-    return folder ? { projectId: folder.projectId, folderId } : { projectId: null, folderId: null };
-  }
-  if (value.startsWith('project:')) {
-    return { projectId: value.slice('project:'.length), folderId: null };
-  }
-  return { projectId: null, folderId: null };
-}
 
 /** Colecciones de Firestore bajo `users/{uid}`. */
 export const collections = {

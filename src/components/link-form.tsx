@@ -23,15 +23,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import LocationSelect from '@/components/location-select';
+import { decodeLocation, type TreeNode } from '@/lib/tree';
 import {
   NO_SELECTION,
-  decodeLocation,
   encodeLocation,
   promptCategories,
-  type Folder,
   type Link,
   type LinkInput,
-  type Project,
 } from '@/lib/definitions';
 import {
   fromSelect,
@@ -44,13 +42,12 @@ import {
 
 interface LinkFormProps {
   link?: Link;
-  projects: Project[];
-  folders: Folder[];
+  tree: TreeNode[];
   onSave: (input: LinkInput, id?: string) => void;
   onClose: () => void;
 }
 
-export default function LinkForm({ link, projects, folders, onSave, onClose }: LinkFormProps) {
+export default function LinkForm({ link, tree, onSave, onClose }: LinkFormProps) {
   const isEditMode = !!link;
 
   const form = useForm<LinkFormValues>({
@@ -76,7 +73,7 @@ export default function LinkForm({ link, projects, folders, onSave, onClose }: L
         title: values.title || null,
         description: values.description || null,
         category: toCategory(fromSelect(values.category)),
-        ...decodeLocation(values.location, folders),
+        ...decodeLocation(values.location, tree),
       },
       link?.id
     );
@@ -116,8 +113,7 @@ export default function LinkForm({ link, projects, folders, onSave, onClose }: L
               <FormLabel>Ubicación</FormLabel>
               <FormControl>
                 <LocationSelect
-                  projects={projects}
-                  folders={folders}
+                  tree={tree}
                   value={field.value}
                   onChange={field.onChange}
                 />

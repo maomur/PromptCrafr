@@ -6,15 +6,15 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ExternalLink, Folder as FolderIcon, GripVertical, Link as LinkIcon } from 'lucide-react';
 import ItemActions from '@/components/item-actions';
-import type { Folder, Link, Location, Project } from '@/lib/definitions';
+import type { Link, Location } from '@/lib/definitions';
+import { findNode, type TreeNode } from '@/lib/tree';
 import { copyToClipboard } from '@/lib/clipboard';
 import { formatRelativeDate } from '@/lib/dates';
 import { useToast } from '@/hooks/use-toast';
 
 interface LinkCardProps {
   link: Link;
-  projects: Project[];
-  folders: Folder[];
+  tree: TreeNode[];
   onDelete: (link: Link) => void;
   onEdit: (link: Link) => void;
   onMoveTo: (location: Location) => void;
@@ -34,8 +34,7 @@ function displayUrl(url: string): string {
 
 export default function LinkCard({
   link,
-  projects,
-  folders,
+  tree,
   onDelete,
   onEdit,
   onMoveTo,
@@ -44,10 +43,12 @@ export default function LinkCard({
 }: LinkCardProps) {
   const { toast } = useToast();
 
-  const project = useMemo(
-    () => projects.find((p) => p.id === link.projectId),
-    [projects, link.projectId]
-  );
+  // La etiqueta muestra la carpeta concreta donde vive el recurso, no su raíz:
+  // con tres niveles, saber sólo el proyecto dice bastante poco.
+  const folder = useMemo(() => {
+    const key = link.folderId ? `folder:${link.folderId}` : `project:${link.projectId}`;
+    return link.projectId ? findNode(tree, key) : undefined;
+  }, [tree, link.projectId, link.folderId]);
 
   const copyUrl = useCallback(async () => {
     const copied = await copyToClipboard(link.url);
@@ -82,13 +83,13 @@ export default function LinkCard({
 
       <CardHeader className="space-y-4 pt-6 md:pt-10">
         <div className="flex flex-wrap items-center gap-2 pr-10">
-          {project && (
+          {folder && (
             <Badge
               variant="secondary"
               className="flex h-6 items-center gap-1.5 border-none bg-muted px-2.5 text-[11px] font-normal text-muted-foreground"
             >
               <FolderIcon className="h-4 w-4" />
-              {project.name}
+              {folder.name}
             </Badge>
           )}
           <div className="flex items-center gap-1.5">
@@ -127,8 +128,7 @@ export default function LinkCard({
         <span className="opacity-70">{formatRelativeDate(link.createdAt)}</span>
         <ItemActions
           label="enlace"
-          projects={projects}
-          folders={folders}
+          tree={tree}
           location={{ projectId: link.projectId ?? null, folderId: link.folderId ?? null }}
           onCopy={copyUrl}
           onEdit={() => onEdit(link)}

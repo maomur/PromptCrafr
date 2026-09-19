@@ -22,13 +22,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import LocationSelect from '@/components/location-select';
+import { decodeLocation, type TreeNode } from '@/lib/tree';
 import {
   NO_SELECTION,
-  decodeLocation,
   encodeLocation,
   promptCategories,
-  type Folder,
-  type Project,
   type Prompt,
   type PromptInput,
 } from '@/lib/definitions';
@@ -42,13 +40,12 @@ import {
 
 interface PromptFormProps {
   prompt?: Prompt;
-  projects: Project[];
-  folders: Folder[];
+  tree: TreeNode[];
   onSave: (input: PromptInput, id?: string) => void;
   onClose: () => void;
 }
 
-export default function PromptForm({ prompt, projects, folders, onSave, onClose }: PromptFormProps) {
+export default function PromptForm({ prompt, tree, onSave, onClose }: PromptFormProps) {
   const isEditMode = !!prompt;
 
   const form = useForm<PromptFormValues>({
@@ -72,7 +69,7 @@ export default function PromptForm({ prompt, projects, folders, onSave, onClose 
         description: values.description,
         content: values.content,
         category: toCategory(fromSelect(values.category)),
-        ...decodeLocation(values.location, folders),
+        ...decodeLocation(values.location, tree),
       },
       prompt?.id
     );
@@ -105,8 +102,7 @@ export default function PromptForm({ prompt, projects, folders, onSave, onClose 
                 <FormLabel>Ubicación</FormLabel>
                 <FormControl>
                   <LocationSelect
-                    projects={projects}
-                    folders={folders}
+                    tree={tree}
                     value={field.value}
                     onChange={field.onChange}
                   />

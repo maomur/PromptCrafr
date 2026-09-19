@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -24,13 +23,13 @@ import {
   MoreVertical,
   Trash2,
 } from 'lucide-react';
-import type { Folder, Location, Project } from '@/lib/definitions';
+import type { Location } from '@/lib/definitions';
+import { flatten, nodeLocation, type TreeNode } from '@/lib/tree';
 
 interface ItemActionsProps {
   /** Nombre del recurso en singular, para las etiquetas accesibles. */
   label: string;
-  projects: Project[];
-  folders: Folder[];
+  tree: TreeNode[];
   /** Ubicación actual del recurso, para marcar el destino en el que ya está. */
   location: Location;
   onEdit: () => void;
@@ -56,8 +55,7 @@ interface ItemActionsProps {
  */
 export default function ItemActions({
   label,
-  projects,
-  folders,
+  tree,
   location,
   onEdit,
   onDelete,
@@ -114,34 +112,28 @@ export default function ItemActions({
                 onSelect={() => onMoveTo({ projectId: null, folderId: null })}
                 disabled={location.projectId === null}
               >
-                Sin proyecto (General)
+                Sin carpeta
               </DropdownMenuItem>
 
-              {projects.map((project) => {
-                const projectFolders = folders.filter((f) => f.projectId === project.id);
-                return (
-                  <DropdownMenuGroup key={project.id}>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onSelect={() => onMoveTo({ projectId: project.id, folderId: null })}
-                      disabled={location.projectId === project.id && !location.folderId}
-                    >
-                      <FolderIcon className="mr-2 h-4 w-4" />
-                      <span className="truncate">{project.name}</span>
-                    </DropdownMenuItem>
+              <DropdownMenuSeparator />
 
-                    {/* Las carpetas van sangradas bajo su proyecto. */}
-                    {projectFolders.map((folder) => (
-                      <DropdownMenuItem
-                        key={folder.id}
-                        className="pl-8"
-                        onSelect={() => onMoveTo({ projectId: project.id, folderId: folder.id })}
-                        disabled={location.folderId === folder.id}
-                      >
-                        <span className="truncate">{folder.name}</span>
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuGroup>
+              {/* Toda la jerarquía sangrada, para poder archivar a cualquier
+                  profundidad sin encadenar submenús. */}
+              {flatten(tree).map((node) => {
+                const target = nodeLocation(node);
+                const isCurrent =
+                  location.projectId === target.projectId && location.folderId === target.folderId;
+
+                return (
+                  <DropdownMenuItem
+                    key={node.key}
+                    disabled={isCurrent}
+                    style={{ paddingLeft: `${(node.depth - 1) * 14 + 8}px` }}
+                    onSelect={() => onMoveTo(target)}
+                  >
+                    <FolderIcon className="mr-2 h-4 w-4 shrink-0 opacity-70" />
+                    <span className="truncate">{node.name}</span>
+                  </DropdownMenuItem>
                 );
               })}
             </DropdownMenuSubContent>

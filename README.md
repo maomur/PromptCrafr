@@ -86,36 +86,51 @@ ningún paso de build que lo haga solo.
 
 ### Proyectos y carpetas
 
-La jerarquía tiene **exactamente dos niveles**: un recurso está suelto, dentro
-de un proyecto, o dentro de una carpeta de ese proyecto. En la interfaz, un
-proyecto se presenta como **carpeta principal** y una carpeta como
-**subcarpeta**; los dos niveles se crean y se editan con el mismo formulario
-([`folder-form.tsx`](src/components/folder-form.tsx)), donde dejar la
-ubicación en «carpeta principal» es lo que crea un proyecto. Ambos tienen
-nombre y descripción opcional. Por eso `folders` es
+La jerarquía admite hasta **3 niveles**: carpeta principal › carpeta ›
+carpeta. El límite vive en la constante `MAX_DEPTH` de
+[`definitions.ts`](src/lib/definitions.ts), de la que se derivan el pintado,
+las opciones de ubicación y las reglas de movimiento; subirlo o bajarlo es
+cambiar ese número.
+
+En Firestore conviven dos colecciones —`projects` para el primer nivel y
+`folders` para los de abajo—, pero **la interfaz no lo sabe**:
+[`src/lib/tree.ts`](src/lib/tree.ts) monta un árbol único a partir de ambas y
+concentra el filtrado, los contadores, las migas de pan y las reglas de
+profundidad. Los componentes trabajan siempre contra `TreeNode`, nunca contra
+las colecciones, y esa correspondencia sólo existe en
+[`use-library.ts`](src/hooks/use-library.ts). Para el usuario todo son
+carpetas: unas principales y otras anidadas, todas con nombre y descripción
+opcional, creadas y editadas con el mismo formulario. Por eso `folders` es
 una colección aparte con un `projectId`, y no un `parentId` recursivo en
 `projects`: no hay anidamiento arbitrario que modelar.
 
-Cada prompt y cada enlace guardan `projectId` y `folderId`. Cuando están en una
-carpeta, **ambos** campos van informados, de modo que el filtro de un proyecto
-puede recoger todo su contenido con una sola comparación. Los documentos
-creados antes de esta función no tienen `folderId` y se tratan como sueltos
-dentro de su proyecto.
+Cada prompt y cada enlace guardan `projectId` y `folderId`; cada carpeta
+guarda `projectId` y `parentId`. El `projectId` está **desnormalizado** a
+propósito: repetir la raíz en cada descendiente permite filtrar y contar un
+proyecto entero sin recorrer el árbol, a cambio de mantener la invariante de
+que siempre coincide con la del padre. De eso se encarga `updateNode`, el
+único sitio donde una carpeta cambia de sitio, que reescribe la raíz en todo
+el subárbol dentro de un mismo lote atómico.
+
+Los documentos creados antes de las carpetas no tienen `folderId` ni
+`parentId` y se tratan como sueltos en su nivel. Una carpeta cuyo padre haya
+desaparecido no se pierde: el árbol la recoloca colgando de su proyecto.
 
 Borrar nunca arrastra recursos:
 
-| Se borra    | Qué pasa con lo que contenía                           |
-| ----------- | ------------------------------------------------------ |
-| Una carpeta | Sus recursos quedan sueltos dentro del proyecto        |
-| Un proyecto | Se borran sus carpetas; los recursos van a «Sin proyecto» |
+| Se borra            | Qué pasa con lo que contenía                                    |
+| ------------------- | --------------------------------------------------------------- |
+| Una carpeta         | Se borran sus subcarpetas; los recursos suben al nivel de encima  |
+| Una carpeta principal | Se borra su árbol entero; los recursos van a «Sin carpeta»      |
 
 Ambas operaciones son lotes atómicos. Cambiar una subcarpeta de proyecto
 también lo es: sus recursos guardan `projectId` además de `folderId`, así que
 la mudanza tiene que arrastrarlos a todos o a ninguno.
 
-Al entrar en un proyecto se ven primero sus carpetas como tarjetas y debajo
-todo su contenido, incluido el que vive dentro de esas carpetas. Al entrar en
-una carpeta, sólo lo suyo.
+Al entrar en una carpeta se ven primero sus subcarpetas directas como tarjetas
+y debajo todo su contenido, incluido el que vive más abajo en el árbol. Unas
+migas de pan indican dónde estás, porque con tres niveles la carpeta activa
+puede quedar fuera de la vista en la barra lateral.
 
 ### Arrastrar y soltar
 
