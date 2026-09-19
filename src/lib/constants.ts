@@ -17,3 +17,6 @@ export const APP_ICONS = {
   maskable512: '/icons/maskable-512.png',
   appleTouch: '/icons/apple-touch-icon.png',
 } as const;
+
+/** Valor que usan los <Select> para representar «sin asignar». */
+export const NO_SELECTION = 'none';

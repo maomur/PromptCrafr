@@ -4,11 +4,10 @@ import tailwindcssAnimate from 'tailwindcss-animate';
 
 export default {
   darkMode: ['class'],
-  content: [
-    './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/components/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/app/**/*.{js,ts,jsx,tsx,mdx}',
-  ],
+  // Todo `src/`, sin enumerar carpetas: la lista anterior no incluía
+  // `features/`, así que al mover los componentes allí Tailwind dejó de
+  // generar en silencio las clases que sólo se usaban en ellos.
+  content: ['./src/**/*.{js,ts,jsx,tsx,mdx}'],
   theme: {
     container: {
       center: true,

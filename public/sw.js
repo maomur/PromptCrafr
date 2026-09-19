@@ -9,8 +9,8 @@
  *  - Recursos estáticos de Next.js: caché primero, porque llevan un hash en el
  *    nombre y nunca cambian de contenido.
  *
- * Los datos nunca se cachean: de la sincronización sin conexión ya se encarga
- * la persistencia propia de Firestore.
+ * Los datos no pasan por aquí: viven en IndexedDB, que ya funciona sin
+ * conexión por su cuenta.
  */
 
 const VERSION = 'v2';
@@ -78,7 +78,7 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Las escrituras y las llamadas a Firebase no se tocan.
+  // Las escrituras y lo que no sea nuestro no se tocan.
   if (request.method !== 'GET' || !isSameOrigin(url)) return;
 
   if (request.mode === 'navigate') {

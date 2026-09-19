@@ -1,8 +1,8 @@
 # PromptCraft
 
-Biblioteca personal de **prompts de IA** y **enlaces**, organizados en proyectos y
-categorías. Es una PWA instalable: los datos se sincronizan con Firestore y
-siguen disponibles sin conexión.
+Biblioteca personal de **prompts de IA** y **enlaces**, organizados en carpetas
+de hasta tres niveles. Es una PWA instalable y **funciona entera en el
+navegador**: no hay servidor, ni cuentas, ni nada que se envíe fuera.
 
 ## Puesta en marcha
 
@@ -23,196 +23,170 @@ npm run dev        # http://localhost:9002
 
 El build **falla** si hay errores de tipos o de lint. Es intencionado.
 
-## Tests
-
-Vitest, con los ficheros junto al código que prueban (`src/lib/*.test.ts`).
-No hay tests de componentes: lo que se cubre es la lógica pura, que es donde
-están los fallos caros y silenciosos.
-
-| Fichero                                          | Qué protege                                                            |
-| ------------------------------------------------ | ---------------------------------------------------------------------- |
-| [`tree.test.ts`](src/lib/tree.test.ts)           | Jerarquía: filtros por descendencia, contadores acumulados, límite de niveles |
-| [`ordering.test.ts`](src/lib/ordering.test.ts)   | Reparto de posiciones al reordenar                                     |
-| [`search.test.ts`](src/lib/search.test.ts)       | Coincidencias sin tildes y por varias palabras                         |
-| [`csv.test.ts`](src/lib/csv.test.ts)             | Escapado del CSV: comillas, comas y saltos de línea                    |
-
-## Exportar a CSV
-
-El botón junto al buscador descarga **todos** los prompts, no sólo los que se
-estén viendo: el filtro activo no cambia lo que sale. Una columna lleva la
-ruta completa de la carpeta («Trabajo / Nómina / Recibos»).
-
-Dos detalles que hacen que el fichero se abra bien en cualquier sitio, en
-[`src/lib/csv.ts`](src/lib/csv.ts):
-
-- **Escapado RFC 4180.** El contenido de un prompt casi siempre tiene saltos
-  de línea, y sin entrecomillar convierte cada uno en una fila nueva que
-  descuadra la hoja entera.
-- **BOM de UTF-8** delante del fichero. Sin él, Excel lo abre en la
-  codificación del sistema y destroza tildes y eñes.
-
 ## Arquitectura
 
-Todo se ejecuta en el cliente: no hay rutas de API, ni Server Actions, ni
-lectura de datos en el servidor. Next.js aquí es empaquetador y enrutador.
+Organización por características (*Feature-Driven*). Cada feature agrupa lo
+suyo y sólo conoce lo que está por debajo de ella:
 
 ```
 src/
-├── app/            Layout, página raíz, manifest de la PWA y estilos globales
-├── components/     Interfaz (shadcn/ui en components/ui)
-├── firebase/       Inicialización, contexto, hooks de lectura y escrituras
-├── hooks/          use-library (acceso a los datos) y use-toast
-└── lib/            Tipos, árbol de carpetas, orden, búsqueda y validación
-                    (con sus tests al lado)
+├── app/            Sólo enrutado. Server Components que coordinan.
+├── features/       El núcleo modular
+│   ├── backup/     Exportar e importar la biblioteca en JSON
+│   ├── folders/    Jerarquía de carpetas: árbol, reglas y su interfaz
+│   ├── library/    Prompts y enlaces: estado, mutaciones y su interfaz
+│   └── pwa/        Instalación y service worker
+├── components/
+│   ├── layout/     Cabecera y pie
+│   └── ui/         Componentes genéricos y atómicos (shadcn/ui)
+├── hooks/          Hooks transversales de interfaz
+└── lib/            Cliente de la base local, utilidades compartidas
 ```
 
-### Datos
+Cada feature sigue el mismo reparto interno: `components/`, `hooks/`,
+`services/`, `types.ts` y `schemas.ts`. Todas las importaciones usan alias
+(`@/features/...`, `@/components/...`).
 
-Tres colecciones bajo `users/{uid}`, cada una aislada por las reglas de
-[firestore.rules](firestore.rules):
+### Sentido de las dependencias
 
-| Colección  | Contenido                                        |
-| ---------- | ------------------------------------------------ |
-| `projects` | Agrupaciones de primer nivel                     |
-| `folders`  | Subdivisiones dentro de un proyecto              |
-| `prompts`  | Prompts con título, descripción, contenido...    |
-| `links`    | URLs guardadas                                   |
+```
+app  ──►  features/library  ──►  features/folders  ──►  lib
+                  └─────────►  features/backup ──────►  lib
+```
 
-El esquema completo está en [docs/backend.json](docs/backend.json).
+`library` conoce a `folders`, nunca al revés: por eso «borrar una carpeta
+recoloca sus prompts» vive en `library/services/mutations.ts` y no en la
+feature de carpetas, que no sabe qué es un prompt. Así no hay ciclos.
 
-**[`useLibrary`](src/hooks/use-library.ts) es el único punto de acceso a los
-datos.** Expone las tres colecciones en tiempo real y todas las mutaciones; los
-componentes no hablan con Firestore directamente.
+### Sobre los Server Components
 
-### Cómo se escribe en Firestore
+`layout.tsx` y `page.tsx` **son** Server Components y se limitan a coordinar.
+De ahí para abajo todo es cliente, y no por comodidad: **los datos viven en el
+navegador de quien usa la aplicación**, así que no hay nada que el servidor
+pueda traer. No existe una capa de datos en servidor que mover.
 
-Las escrituras son *no bloqueantes*
-([`src/firebase/non-blocking-updates.tsx`](src/firebase/non-blocking-updates.tsx)):
-se lanzan sin esperar y la interfaz se actualiza sola cuando el listener de
-`onSnapshot` recibe el cambio. Los rechazos de las reglas de seguridad se
-propagan por un bus de eventos y, en desarrollo, aparecen en el overlay de
-Next.js con el detalle de la petición denegada.
+## Los datos
 
-Las operaciones que tocan varios documentos —reordenar una lista, borrar un
-proyecto— usan lotes atómicos.
+Todo se guarda en **IndexedDB**, en cuatro almacenes:
 
-### Logotipo e iconos
+| Almacén    | Contenido                               |
+| ---------- | --------------------------------------- |
+| `projects` | Carpetas principales                    |
+| `folders`  | Subcarpetas, con `projectId` y `parentId` |
+| `prompts`  | Prompts                                 |
+| `links`    | URLs guardadas                          |
 
-La marca es el signo `>_` de un prompt de línea de comandos con un destello que
-lo sitúa en el terreno de la IA. Dentro de la aplicación se pinta con el
-componente [`<Logo />`](src/components/logo.tsx), en línea, para que escale sin
-pérdida y no cueste una petición de red.
+El cliente está en [`src/lib/db.ts`](src/lib/db.ts), que es lo único que sabe
+abrir la base; las features trabajan sobre él.
 
-Hay cuatro variantes del mismo dibujo, cada una por un motivo concreto:
+**La biblioteca entera se carga en memoria al arrancar.** Son cientos de
+registros, no millones, y así filtrar o buscar no cuesta una consulta.
 
-| Fichero                        | Para qué                                                  |
-| ------------------------------ | --------------------------------------------------------- |
-| `public/icons/logo.svg`         | Original del que salen los PNG                             |
-| `src/app/icon.svg`              | Favicon: sin destello, que a 16 px sería una mancha        |
-| `public/icons/maskable.svg`     | Android: fondo a sangre y glifo al 62 %, porque el lanzador recorta |
-| `public/icons/apple.svg`        | iOS: fondo a sangre, porque el sistema aplica su redondeo  |
+### Cómo se escribe
 
-Los PNG del manifest se regeneran desde los SVG con Chrome headless; no hay
-ningún paso de build que lo haga solo.
+Toda la lógica de negocio son **funciones puras** en
+[`library/services/mutations.ts`](src/features/library/services/mutations.ts):
+reciben el estado actual y devuelven el estado siguiente junto con las
+operaciones a escribir.
 
-### Proyectos y carpetas
+```
+componente ──► useLibrary ──► mutación pura ──► { estado, operaciones }
+                    │                                    │
+                    ├── setState (la interfaz responde)   │
+                    └── applyOperations ◄─────────────────┘
+                              (una transacción)
+```
 
-La jerarquía admite hasta **3 niveles**: carpeta principal › carpeta ›
-carpeta. El límite vive en la constante `MAX_DEPTH` de
-[`definitions.ts`](src/lib/definitions.ts), de la que se derivan el pintado,
-las opciones de ubicación y las reglas de movimiento; subirlo o bajarlo es
-cambiar ese número.
+El hook no decide nada. Por eso cada regla —mover una carpeta arrastra su
+subárbol, borrarla sube el contenido un nivel— se prueba sin abrir una base de
+datos. Las operaciones de un mismo cambio van en **una sola transacción**, así
+que una mudanza no puede quedarse a medias.
 
-En Firestore conviven dos colecciones —`projects` para el primer nivel y
-`folders` para los de abajo—, pero **la interfaz no lo sabe**:
-[`src/lib/tree.ts`](src/lib/tree.ts) monta un árbol único a partir de ambas y
-concentra el filtrado, los contadores, las migas de pan y las reglas de
-profundidad. Los componentes trabajan siempre contra `TreeNode`, nunca contra
-las colecciones, y esa correspondencia sólo existe en
-[`use-library.ts`](src/hooks/use-library.ts). Para el usuario todo son
-carpetas: unas principales y otras anidadas, todas con nombre y descripción
-opcional, creadas y editadas con el mismo formulario. Por eso `folders` es
-una colección aparte con un `projectId`, y no un `parentId` recursivo en
-`projects`: no hay anidamiento arbitrario que modelar.
+Cuando una pestaña escribe, avisa a las demás por `BroadcastChannel` y éstas
+recargan ([`lib/broadcast.ts`](src/lib/broadcast.ts)).
 
-Cada prompt y cada enlace guardan `projectId` y `folderId`; cada carpeta
-guarda `projectId` y `parentId`. El `projectId` está **desnormalizado** a
-propósito: repetir la raíz en cada descendiente permite filtrar y contar un
-proyecto entero sin recorrer el árbol, a cambio de mantener la invariante de
-que siempre coincide con la del padre. De eso se encarga `updateNode`, el
-único sitio donde una carpeta cambia de sitio, que reescribe la raíz en todo
-el subárbol dentro de un mismo lote atómico.
+### Copias de seguridad
 
-Los documentos creados antes de las carpetas no tienen `folderId` ni
-`parentId` y se tratan como sueltos en su nivel. Una carpeta cuyo padre haya
-desaparecido no se pierde: el árbol la recoloca colgando de su proyecto.
+Sin servidor, **el archivo JSON es la única forma** de llevarse la biblioteca a
+otro navegador o de recuperarla si se borran los datos del sitio. El menú está
+a la vista en la cabecera, no escondido en unos ajustes.
 
-Borrar nunca arrastra recursos:
+La importación es deliberadamente tolerante
+([`backup/services/backup.ts`](src/features/backup/services/backup.ts)):
+descarta lo que no tenga identificador, ignora los campos que sobren y
+recoloca lo que apunte a una carpeta inexistente, en vez de rechazar el
+archivo entero.
 
-| Se borra            | Qué pasa con lo que contenía                                    |
-| ------------------- | --------------------------------------------------------------- |
-| Una carpeta         | Se borran sus subcarpetas; los recursos suben al nivel de encima  |
-| Una carpeta principal | Se borra su árbol entero; los recursos van a «Sin carpeta»      |
+## Carpetas
 
-Ambas operaciones son lotes atómicos. Cambiar una subcarpeta de proyecto
-también lo es: sus recursos guardan `projectId` además de `folderId`, así que
-la mudanza tiene que arrastrarlos a todos o a ninguno.
+La jerarquía admite hasta **3 niveles**. El límite vive en `MAX_DEPTH`
+([`features/folders/types.ts`](src/features/folders/types.ts)), de donde se
+derivan el pintado, las opciones de ubicación y las reglas de movimiento.
 
-Al entrar en una carpeta se ven primero sus subcarpetas directas como tarjetas
-y debajo todo su contenido, incluido el que vive más abajo en el árbol. Unas
-migas de pan indican dónde estás, porque con tres niveles la carpeta activa
-puede quedar fuera de la vista en la barra lateral.
+En la base conviven dos almacenes, `projects` para el primer nivel y `folders`
+para los de abajo, pero **la interfaz no lo sabe**:
+[`features/folders/tree.ts`](src/features/folders/tree.ts) monta un árbol
+único y concentra filtrado, contadores, migas de pan y reglas de profundidad.
 
-### Arrastrar y soltar
+`projectId` está **desnormalizado** en cada descendiente: repetir la raíz
+permite contar y filtrar sin recorrer el árbol, a cambio de mantener la
+invariante de que coincide con la del padre.
 
-Una tarjeta se puede arrastrar por su asa para reordenarla dentro de la lista o
-para archivarla en otro sitio. Los destinos válidos son las filas de la barra
-lateral («Sin proyecto», cada proyecto y cada carpeta) y las tarjetas de
-carpeta de la vista de proyecto; se insinúan con un borde discontinuo mientras
-dura el arrastre.
+Borrar nunca se lleva recursos por delante:
+
+| Se borra              | Qué pasa con lo que contenía                                    |
+| --------------------- | --------------------------------------------------------------- |
+| Una carpeta           | Se borran sus subcarpetas; los recursos suben al nivel de encima  |
+| Una carpeta principal | Se borra su árbol; los recursos van a «Sin carpeta»              |
+
+## Arrastrar y soltar
+
+Una tarjeta se arrastra por su asa para reordenarla o para archivarla en otro
+sitio: las filas de la barra lateral y las tarjetas de carpeta son destinos
+válidos, y se insinúan mientras dura el arrastre.
 
 SortableJS sólo sabe mover cosas entre listas, así que cada destino es
-[una lista más](src/components/drop-target.tsx), vacía y no ordenable, que
-anuncia su ubicación en `data-drop-target`. La rejilla de origen la lee al
-soltar, de modo que toda la lógica vive en un único sitio. El nodo vuelve
-siempre a su posición original y es React quien repinta la lista cuando
-Firestore confirma el cambio: nunca hay dos fuentes de verdad sobre el DOM.
+[una lista más](src/features/library/components/drop-target.tsx), vacía y no
+ordenable, que anuncia su ubicación en `data-drop-target`. El nodo vuelve
+siempre a su posición original y es React quien repinta.
 
 Arrastrar no es accesible con teclado, así que cada tarjeta mantiene
 «Subir/Bajar posición» y «Mover a» en su menú.
 
-### Búsqueda
+## Buscar y exportar
 
-El buscador filtra por título, descripción y **contenido** del prompt (o la URL,
-en los enlaces). Compara sin tildes y sin distinguir mayúsculas, y exige que
-aparezcan todas las palabras, aunque estén repartidas entre campos distintos.
-La tecla `/` lleva el foco al buscador y `Esc` lo limpia.
+El buscador filtra por título, descripción y **contenido**, sin tildes y sin
+distinguir mayúsculas, exigiendo todas las palabras aunque estén repartidas
+entre campos. `/` enfoca, `Esc` limpia.
 
-Todo se filtra en memoria: la biblioteca entera ya está cargada por los
-listeners de Firestore, así que no hay ninguna consulta extra al servidor. La
-lógica vive en [`src/lib/search.ts`](src/lib/search.ts).
+El botón junto al buscador descarga **todos** los prompts en CSV, con la ruta
+completa de su carpeta. Lleva escapado RFC 4180 y BOM de UTF-8: sin lo primero
+los saltos de línea parten las filas, y sin lo segundo Excel destroza las
+tildes.
 
-### Orden de los recursos
+## Tests
 
-Cada prompt y cada enlace tienen un campo `order`; **mayor valor, más arriba**.
-Se puede reordenar arrastrando por el asa de la tarjeta o desde el menú
-«Subir/Bajar posición», que es la vía accesible por teclado.
+Vitest, con los ficheros junto al código que prueban. No hay tests de
+componentes: se cubre la lógica pura, que es donde están los fallos caros y
+silenciosos.
 
-## Configuración
+| Fichero                                                              | Qué protege                                          |
+| -------------------------------------------------------------------- | ---------------------------------------------------- |
+| [`folders/tree.test.ts`](src/features/folders/tree.test.ts)           | Filtros, contadores acumulados y límite de niveles    |
+| [`library/services/mutations.test.ts`](src/features/library/services/mutations.test.ts) | Cada operación: qué estado deja y qué escribe |
+| [`backup/services/backup.test.ts`](src/features/backup/services/backup.test.ts) | Importación tolerante de archivos ajenos    |
+| [`lib/db.test.ts`](src/lib/db.test.ts)                                | Que lo guardado se vuelve a leer                      |
+| [`library/services/ordering.test.ts`](src/features/library/services/ordering.test.ts) | Reparto de posiciones al reordenar    |
+| [`library/services/csv.test.ts`](src/features/library/services/csv.test.ts) | Escapado del CSV                                |
+| [`library/services/search.test.ts`](src/features/library/services/search.test.ts) | Coincidencias sin tildes                  |
 
-Las credenciales de Firebase están en
-[`src/firebase/config.ts`](src/firebase/config.ts). Es correcto que estén en el
-repositorio: en una app web de Firebase son públicas por diseño y quien protege
-los datos son las reglas de Firestore, no la clave.
+## Límites que conviene conocer
 
-Despliegue: Firebase App Hosting, configurado en
-[apphosting.yaml](apphosting.yaml).
-
-## Genkit
-
-Hay un cliente de Genkit preparado con Gemini en
-[`src/ai/genkit.ts`](src/ai/genkit.ts), pero todavía **sin ningún flow**. Los que
-se creen se registran en [`src/ai/dev.ts`](src/ai/dev.ts).
+- **Los datos viven en un solo navegador.** Lo que guardes en el portátil no
+  aparece en el móvil. Para moverlos, exporta e importa el JSON.
+- **Borrar los datos del sitio borra la biblioteca.** No hay copia en ningún
+  servidor.
+- **Sin contraseña.** Quien use el equipo ve los prompts.
 
 ---
 
