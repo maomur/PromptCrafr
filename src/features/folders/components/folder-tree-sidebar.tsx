@@ -47,8 +47,8 @@ interface ProjectSidebarProps {
  * para el menú, tengan o no. Es lo que las mantiene alineadas en la misma
  * vertical en lugar de ir escalonándose según tengan hijos o no.
  */
-const CHEVRON_SLOT = 'w-6 shrink-0';
-const MENU_SLOT = 'w-7 shrink-0';
+const CHEVRON_SLOT = 'w-8 shrink-0 md:w-6';
+const MENU_SLOT = 'w-9 shrink-0 md:w-7';
 
 const rowClass = (isActive: boolean, depth: number) =>
   cn(
@@ -96,7 +96,7 @@ export default function ProjectSidebar({
         <DropTarget accepts={DRAGGABLE_GROUPS} location={node.key} className="group/row flex items-center gap-0.5">
           {hasChildren ? (
             <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="icon" className={cn(CHEVRON_SLOT, 'h-8 hover:bg-accent')}>
+              <Button variant="ghost" size="icon" className={cn(CHEVRON_SLOT, 'h-11 hover:bg-accent md:h-8')}>
                 <ChevronRight className={cn('h-4 w-4 transition-transform', open && 'rotate-90')} />
                 <span className="sr-only">
                   {open ? 'Contraer' : 'Desplegar'} {node.name}
@@ -135,7 +135,7 @@ export default function ProjectSidebar({
                 size="icon"
                 className={cn(
                   MENU_SLOT,
-                  'h-8 opacity-0 transition-opacity focus-visible:opacity-100 group-hover/row:opacity-100 data-[state=open]:opacity-100'
+                  'h-11 opacity-100 md:h-8 md:opacity-0 transition-opacity focus-visible:opacity-100 group-hover/row:opacity-100 data-[state=open]:opacity-100'
                 )}
               >
                 <MoreHorizontal className="h-4 w-4" />
@@ -183,7 +183,12 @@ export default function ProjectSidebar({
         <h2 className="flex items-center text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           <Folders className="mr-2 h-4 w-4" /> Carpetas
         </h2>
-        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onCreateRoot}>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-11 w-11 md:h-6 md:w-6"
+          onClick={onCreateRoot}
+        >
           <Plus className="h-4 w-4" />
           <span className="sr-only">Nueva carpeta principal</span>
         </Button>

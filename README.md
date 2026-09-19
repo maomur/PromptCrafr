@@ -277,6 +277,16 @@ arrastrar y soltar sin ganar nada.
 | --------------------- | ------------------------------------------------------------ |
 | Chrome                | Todo correcto, incluido sin conexión y con dos pestañas       |
 | WebKit 26.6 (Safari)  | Todo correcto: IndexedDB persiste, `:has()`, `BroadcastChannel`, `crypto.randomUUID` |
+| Móvil (390 px, táctil) | Sin desplazamiento horizontal; crear y **arrastrar con el dedo** funcionan |
+
+En táctil, los controles pequeños de la barra lateral y de la barra superior
+se agrandan a 44 px por debajo de `md`; en escritorio no cambian. Quedan
+algunas filas de 36 px de alto, pero ocupan casi todo el ancho y se tocan sin
+esfuerzo.
+
+Al desplegar una versión nueva, el service worker **no deja al usuario
+atrás**: la navegación va contra la red primero, así que la siguiente recarga
+ya trae la versión nueva, y sin conexión sigue sirviendo la última buena.
 
 La aplicación se apoya en `:has()` para resaltar el destino al arrastrar, en
 `BroadcastChannel` para avisar entre pestañas y en `crypto.randomUUID` para los

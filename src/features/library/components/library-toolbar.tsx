@@ -123,7 +123,7 @@ export default function LibraryToolbar({
               <Button
                 variant="outline"
                 size="icon"
-                className="shrink-0"
+                className="h-11 w-11 shrink-0 md:h-9 md:w-9"
                 onClick={onExport}
                 disabled={exportCount === 0}
               >

@@ -106,7 +106,7 @@ export default function BackupMenu({ state, onImport }: BackupMenuProps) {
     <>
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="icon">
+          <Button variant="outline" size="icon" className="h-11 w-11 md:h-9 md:w-9">
             <Database className="h-4 w-4" />
             <span className="sr-only">Copia de seguridad</span>
           </Button>
